@@ -1,0 +1,45 @@
+{
+  "task_id": "P03",
+  "io": [
+    {
+      "name": "Value",
+      "direction": "IN",
+      "type": "REAL"
+    },
+    {
+      "name": "hiLevel",
+      "direction": "IN",
+      "type": "REAL"
+    },
+    {
+      "name": "loLevel",
+      "direction": "IN",
+      "type": "REAL"
+    },
+    {
+      "name": "hystWindow",
+      "direction": "IN",
+      "type": "REAL"
+    },
+    {
+      "name": "hiAlarm",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "loAlarm",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "error",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "status",
+      "direction": "OUT",
+      "type": "WORD"
+    }
+  ]
+}

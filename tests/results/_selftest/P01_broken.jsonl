@@ -1,0 +1,6 @@
+{"task_id": "P01", "case_id": "P01-01", "status": "fail", "mismatch": {"cycle": 1, "variable": "Pump_Motor", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "P01", "case_id": "P01-02", "status": "fail", "mismatch": {"cycle": 1, "variable": "Pump_Motor", "expected": true, "actual": false}, "latency_s": 0.0}
+{"task_id": "P01", "case_id": "P01-03", "status": "fail", "mismatch": {"cycle": 1, "variable": "Pump_Motor", "expected": true, "actual": false}, "latency_s": 0.0}
+{"task_id": "P01", "case_id": "P01-04", "status": "fail", "mismatch": {"cycle": 1, "variable": "Pump_Motor", "expected": true, "actual": false}, "latency_s": 0.0}
+{"task_id": "P01", "case_id": "P01-05", "status": "fail", "mismatch": {"cycle": 1, "variable": "Pump_Motor", "expected": true, "actual": false}, "latency_s": 0.0}
+{"task_id": "P01", "case_id": "P01-06", "status": "fail", "mismatch": {"cycle": 1, "variable": "Pump_Motor", "expected": true, "actual": false}, "latency_s": 0.0}

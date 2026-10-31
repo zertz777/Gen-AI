@@ -1,0 +1,125 @@
+{
+  "task_id": "P19",
+  "io": [
+    {
+      "name": "ManualMode",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "SingleStepMode",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "SingleCycleMode",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "ContinuousMode",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "EmergencyStop",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "Start",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "DownButton",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "UpButton",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "LeftButton",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "RightButton",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "GripButton",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "ReleaseButton",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "DownLimitSwitch",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "UpLimitSwitch",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "LeftLimitSwitch",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "RightLimitSwitch",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "GripLimitSwitch",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "ReleaseLimitSwitch",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "MoveDown",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "MoveUp",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "MoveLeft",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "MoveRight",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "ActivateGrip",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "ActivateRelease",
+      "direction": "OUT",
+      "type": "BOOL"
+    }
+  ]
+}

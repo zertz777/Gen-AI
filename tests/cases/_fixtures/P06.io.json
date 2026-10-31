@@ -1,0 +1,25 @@
+{
+  "task_id": "P06",
+  "io": [
+    {
+      "name": "DO_LOW",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "AERATION_E_STOP_NC",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "BLOWER_RUN",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "AERATION_BLOWER_CYCLE_COUNT",
+      "direction": "OUT",
+      "type": "UINT"
+    }
+  ]
+}

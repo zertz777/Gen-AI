@@ -1,0 +1,6 @@
+{"task_id": "S10", "case_id": "S10-01", "status": "pass", "mismatch": null, "latency_s": 0.001}
+{"task_id": "S10", "case_id": "S10-02", "status": "pass", "mismatch": null, "latency_s": 0.0}
+{"task_id": "S10", "case_id": "S10-03", "status": "pass", "mismatch": null, "latency_s": 0.0}
+{"task_id": "S10", "case_id": "S10-04", "status": "pass", "mismatch": null, "latency_s": 0.0}
+{"task_id": "S10", "case_id": "S10-05", "status": "pass", "mismatch": null, "latency_s": 0.0}
+{"task_id": "S10", "case_id": "S10-06", "status": "pass", "mismatch": null, "latency_s": 0.0}

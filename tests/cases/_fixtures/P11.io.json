@@ -1,0 +1,65 @@
+{
+  "task_id": "P11",
+  "io": [
+    {
+      "name": "Mode",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "ForwardButton",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "ReverseButton",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "SensorA",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "SensorB",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "SensorC",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "ButtonA",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "ButtonB",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "ButtonC",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "MotorForward",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "MotorReverse",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "CompletionLight",
+      "direction": "OUT",
+      "type": "BOOL"
+    }
+  ]
+}

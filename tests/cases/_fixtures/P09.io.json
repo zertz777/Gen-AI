@@ -1,0 +1,50 @@
+{
+  "task_id": "P09",
+  "io": [
+    {
+      "name": "cyclicExecution",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "trigger",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "value",
+      "direction": "IN",
+      "type": "LREAL"
+    },
+    {
+      "name": "windowSize",
+      "direction": "IN",
+      "type": "INT"
+    },
+    {
+      "name": "reset",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "average",
+      "direction": "OUT",
+      "type": "LREAL"
+    },
+    {
+      "name": "windowSizeReached",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "error",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "status",
+      "direction": "OUT",
+      "type": "WORD"
+    }
+  ]
+}

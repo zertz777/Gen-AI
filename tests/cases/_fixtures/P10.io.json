@@ -1,0 +1,40 @@
+{
+  "task_id": "P10",
+  "io": [
+    {
+      "name": "TemperatureSensorInput",
+      "direction": "IN",
+      "type": "REAL"
+    },
+    {
+      "name": "SetTemperature",
+      "direction": "IN",
+      "type": "REAL"
+    },
+    {
+      "name": "CurrentTemperature",
+      "direction": "OUT",
+      "type": "REAL"
+    },
+    {
+      "name": "SetTempDisplay",
+      "direction": "OUT",
+      "type": "REAL"
+    },
+    {
+      "name": "HeaterStatus",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "OverheatProtection",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "HeaterOutput",
+      "direction": "OUT",
+      "type": "BOOL"
+    }
+  ]
+}

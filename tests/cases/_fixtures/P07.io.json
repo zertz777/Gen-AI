@@ -1,0 +1,35 @@
+{
+  "task_id": "P07",
+  "io": [
+    {
+      "name": "mode",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "start",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "stop",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "pumpGroup[].priority",
+      "direction": "IN",
+      "type": "ARRAY[1..5] OF INT"
+    },
+    {
+      "name": "pumpGroup[].selection",
+      "direction": "IN",
+      "type": "ARRAY[1..5] OF BOOL"
+    },
+    {
+      "name": "pumpGroup[].RunComd",
+      "direction": "OUT",
+      "type": "ARRAY[1..5] OF BOOL"
+    }
+  ]
+}

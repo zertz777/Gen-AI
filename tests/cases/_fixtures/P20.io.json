@@ -1,0 +1,90 @@
+{
+  "task_id": "P20",
+  "io": [
+    {
+      "name": "Mode",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "ForwardButton",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "ReverseButton",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "SensorFeed",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "SensorWash",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "SensorWeight",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "SensorFiring",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "SensorOutput",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "washComplete",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "weightComplete",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "weight",
+      "direction": "IN",
+      "type": "REAL"
+    },
+    {
+      "name": "firingComplete",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "MotorForward",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "MotorReverse",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "kick",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "CompletionLight",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "firingTemp",
+      "direction": "OUT",
+      "type": "REAL"
+    }
+  ]
+}

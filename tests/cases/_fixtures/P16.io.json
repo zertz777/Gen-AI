@@ -1,0 +1,70 @@
+{
+  "task_id": "P16",
+  "io": [
+    {
+      "name": "processLength",
+      "direction": "IN",
+      "type": "USINT"
+    },
+    {
+      "name": "sensor1",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "sensor2",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "sensor3",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "sensor4",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "sensor5",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "station1Start",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "station2Complete",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "station3Complete",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "station4Complete",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "processSequence",
+      "direction": "IN",
+      "type": "ARRAY[1..8] OF USINT"
+    },
+    {
+      "name": "conveyorLeft",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "conveyorRight",
+      "direction": "OUT",
+      "type": "BOOL"
+    }
+  ]
+}

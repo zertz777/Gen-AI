@@ -1,0 +1,85 @@
+{
+  "task_id": "P15",
+  "io": [
+    {
+      "name": "estop",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "opeMode",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "valveAStart",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "valveBStart",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "valveCStart",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "valveDStart",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "mixMotorStart",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "autoStart",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "processMode",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "levelSensor",
+      "direction": "IN",
+      "type": "INT"
+    },
+    {
+      "name": "mixMotorComplete",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "valveARun",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "valveBRun",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "valveCRun",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "valveDRun",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "mixMotorRun",
+      "direction": "OUT",
+      "type": "BOOL"
+    }
+  ]
+}

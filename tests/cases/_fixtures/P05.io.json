@@ -1,0 +1,30 @@
+{
+  "task_id": "P05",
+  "io": [
+    {
+      "name": "Gap_Exceeded",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "Weld_E_Stop_NC",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "DebounceTime",
+      "direction": "IN",
+      "type": "TIME"
+    },
+    {
+      "name": "Operator_Alert",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "Weld_Soft_Start_Active",
+      "direction": "OUT",
+      "type": "BOOL"
+    }
+  ]
+}
