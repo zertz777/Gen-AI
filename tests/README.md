@@ -67,7 +67,7 @@ python tests/run_tests.py --cases tests/cases/P03.csv \
 | --- | --- |
 | 已写用例的题目 | **34 / 34**（P01—P20 + S01—S14） |
 | 用例条数 | **214**（下限 150；每题 ≥4 条，平均 6.3 条） |
-| 逐拍行数 | **22 634** |
+| 逐拍行数 | **22 636** |
 | K 覆盖 | **143 / 143**（`coverage.csv` 零空格） |
 | 用例类别 | 正常 68 / 边界 38 / 异常 48 / 安全 60，**逐题四类齐**（`pytest` 断言） |
 | 执行器单测 | **50 passed**（含 actual CSV 契约、exec 硬超时、批量汇总、逐题四类齐、假数据干跑、对账） |
@@ -260,6 +260,7 @@ python tests/gen/gen_fixtures.py
 | D-11 | 计时类输出按「**同一拍先累加后判定**」写期望值（去抖满额那一拍就动作，运行时间在启动当拍即累加 CycleTime） | 需求原文「accumulate ... while VFD_RUN is TRUE」的直读；滞后一拍的实现会在边界拍差 1 个周期 | 各 `tests/gen/gen_Pxx.py` 的边界拍；`P04.csv` 的 `PUMP_RUNTIME_ACC` | 生效（假设，待确认） |
 | D-12 | 用例增加 `category` 列（正常/边界/异常/安全），由 `purpose` 自动推断、可显式覆盖 | 任务书 T4.2 要求四类必须齐、每题至少 1 条安全类；不落成列就只能靠人眼看 | `tests/gen/_emit.py` 的 `classify()`；`cases/_schema.md` 第 2 节 | 生效（8 字段之外的新增列，loader 向后兼容） |
 | D-13 | 四类缺口的 36 条用例由 `gen/gen_gap.py` 统一追加（边界 23 / 异常 12 / 正常 1），另将 P02-05、S05-05 改判为异常类；新增「逐题四类齐」断言 | 23 题有生成器、9 题是手写 CSV，逐题改生成器风险高；集中追加只碰新用例，已有用例零改动 | `tests/gen/gen_gap.py`；`test_runner.py::test_every_task_has_four_categories` | 生效（重跑任一题生成器后需再跑一次 `gen_gap.py`） |
+| D-14 | P19 的 `EmergencyStop` 按原始 I/O 表写：`FALSE`=急停触发、`TRUE`=正常；用例统一为此语义 | I/O 表是接口定义，优先于题内约束；P19-05 本来就是 FALSE=急停，只有 P19-08/09 原按 K4 的 TRUE 写反 | `tests/gen/gen_gap.py` 的 P19 段；`ambiguities.md` A-47 | 生效（假设，待成员1 修正 K4/C1/C2） |
 
 ### 6.1 仍需上游一句话确认的阻塞项
 
