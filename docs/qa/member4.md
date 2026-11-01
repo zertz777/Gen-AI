@@ -1,69 +1,92 @@
-# 成员4 答辩问答（3 条）
+# 成员4 答辩问答（3 条主答 + 3 条备用）
 
 给成员3 合并成 12 条主问答用。每条都能在 **10 秒内翻到证据文件**；括号里是证据路径。
 口径：只讲测试与验证，不替成员2 讲框架、不替成员3 讲统计。
+数字截至 2026-11-01 21:00，来源 `组员3_正式实验提交包_精简版_v1.1/正式实验_runs` 的 132 份 `evaluation.json`。
 
 ---
 
-## Q1　“编译通过不等于功能正确——你们凭什么说程序跑不对？”
+## Q1　"编译通过不等于功能正确——你们凭什么说程序跑不对？"
 
-**30 秒版**：我们不按“最终状态”判，也不抽查，而是**逐扫描周期**比对：每个周期注入输入、
-读全部输出，和期望值逐拍比；一旦不一致，直接报出**第几拍、哪个变量、期望值、实际值**。
-抽查会漏——任务书引用的实测是每 5 拍抽一次会漏掉约 21.66% 的失败样本，且漏检率随相位在
-12.10%—28.03% 之间波动，所以抽查出来的通过率既偏高又不稳。
+**30 秒版**：我们不按"最终状态"判，也不抽查，而是**逐扫描周期**比对：每周期注入输入、读全部输出，
+和期望值逐拍比；一旦不一致，直接报出**第几拍、哪个变量、期望值、实际值**。
+这组数据本身就是证据：E1 编译通过 32/34，整题功能通过只有 18/34；E4 编译通过 33/34，功能通过只有 7/34。
+抽查还会漏——每 5 拍抽一次会漏掉约 21.66% 的失败样本，且漏检率随相位在 12.10%—28.03% 之间波动。
 
 **证据**
 
-- `tests/runner/compare.py`：逐拍比对，返回首个失配的 `{cycle, variable, expected, actual}`；
-- `tests/results/_selftest/P03_broken.jsonl`：故意翻转第一拍 `hiAlarm`，结果精确报出
-  `cycle=1, variable=hiAlarm, expected=true, actual=false`；
-- `tests/runner/actual_io.py`：actual 缺列/拍号不对判 `error`，不会“缺列就当通过”；
-- `tests/cases/_schema.md`：期望输出逐拍写，`cycle=0` 只是初态行，不参与比对。
+- `组员4/tests/runner/compare.py`：逐拍比对，返回首个失配的 `{cycle, variable, expected, actual}`；
+- `组员4/tests/defects.md`：**316 条缺陷，每条都带拍号**，例如 `P13-05 cycle 1 TEMP_SETPOINT_ADJUST 期望 3 实际 0`；
+- `组员4/tests/results/_selftest/P03_broken.jsonl`：故意翻转第一拍，精确报出 `cycle=1, hiAlarm`；
+- `组员4/tests/runner/actual_io.py`：actual 缺列/拍号不对判 `error`，不会"缺列就当通过"。
 
-**追问兜底**：“长定时题 1500 拍怎么逐拍写？”——`gen/gen_P05.py`、`gen_P13.py`、`gen_S09.py`
+**追问兜底**："长定时题 1500 拍怎么逐拍写？"——`tests/gen/gen_P05.py`、`gen_P13.py`、`gen_S09.py`
 按采样点铺满全拍，人工只写边界拍；改生成器重跑，不手改 CSV。
 
 ---
 
-## Q2　“超时、编译失败、工具崩了，会不会都算成模型写错？”
+## Q2　"超时、编译失败、工具崩了，会不会都算成模型写错？"
 
-**30 秒版**：不会，我们分四态：`pass / fail / timeout / error`，批量汇总里再加 `missing`。
-**失败率的分母只含 pass + fail**；超时、工具故障、缺 actual 各自单列，既不进分子也不进分母。
-这一条是写死在脚本里的，不是口头约定——成员3 的 `summary.csv` 直接用这几列。
+**30 秒版**：不会。四态 `pass / fail / timeout / error`，批量汇总再加 `missing`；**失败率分母只含 pass + fail**。
+本批次 136 条最终 run 里有 132 条进入测试阶段，另 4 条是 `abandoned:timeout`，根本没有评价文件——
+不是"失败"，是"没测"；`工具超时` 9 条、`编译失败` 2 条在缺陷单里单独标 `kind`，不计入模型能力。
 
 **证据**
 
-- `tests/runner/verdict.py`：四态定义，`BackendTimeout`/`BackendError` 分别映射到 timeout/error；
-- `tests/run_batch.py` 的 `summary.csv` 字段：`test_passed / test_failed / test_timeout /
-  test_error / test_missing` 五列分开；
-- `tests/results/_dryrun/README.md`：136 个假 run 的压测里，5 个 missing、26 条 error、
-  11 条 timeout **都没有**被算进 `test_failed`；
-- `tests/runner/backends.py`：`exec` 后端用 `subprocess.run(timeout=)` 真杀进程，
-  不是线程软超时。
+- `组员4/tests/runner/verdict.py`：四态定义，`BackendTimeout`/`BackendError` 分别映射 timeout/error；
+- `组员4/tests/defects.md` §2.2：按原因分布（逻辑 182 / 时序 64 / 边界 61 / **工具超时 9**）；
+- `组员4/tests/report.md` §4：E1 18 通过 + 13 功能失败 + 2 超时 + 1 工具错误 = 34，账算得平；
+- `组员4/tests/runner/backends.py`：`exec` 后端用 `subprocess.run(timeout=)` 真杀进程，不是线程软超时。
 
-**追问兜底**：“编译超时怎么记？”——成员2 写 `<run>/test/status.json`：
-`{"status":"timeout","reason":"compile timeout 90s"}`，整题判 timeout，不读 actual、不判 fail。
+**追问兜底**："编译超时怎么记？"——写 `<run>/test/status.json`：`{"status":"timeout","reason":"compile timeout 90s"}`，
+整题判 timeout，不读 actual、不判 fail。
 
 ---
 
-## Q3　“用例的期望值是谁算的？会不会和被测程序同源，或者用 X 放水？”
+## Q3　"用例的期望值是谁算的？会不会和被测程序同源，或者用 X 放水？"
 
-**30 秒版**：期望值按**题面的 K 约束**手推，不读任何生成的 ST 代码，所以不存在“程序怎么写、
-用例就怎么判”。语义没定的拍才写 `X`，而且每一条 `X` 都在歧义单里登记、有编号、有处置；
-`X` 只出现在输出列，输入列写 `X` 会被 loader 直接拒掉。我们也在报告里如实写了两个局限：
-没有独立参考实现做交叉验证；`X` 拍上的错误测不出来。
+**30 秒版**：期望值按**题面的 K 约束手推**，不读任何生成的 ST，所以不存在"程序怎么写、用例就怎么判"。
+语义没定的拍才写 `X`，而且 `X` 只占**输出总格数的 0.62%**（565 / 91 541），输入列写 `X` 会被 loader 直接拒。
+我们主动做了三轮自检：**K 覆盖 143/143**、**四类用例（正常/边界/异常/安全）34 题全覆盖**、
+**D3 又人工复核出 33 条争议用例并逐条裁决**（`docs/判据与用例版本核对.md`）——其中 `S05-06` 确认是我方用例写错，
+已经写进缺陷单，没有掩盖。
 
 **证据**
 
-- `tests/cases/*.csv` 与 `tests/gen/*.py`：期望值来自 K 条款，逐拍写；
-- `tests/coverage.csv`：143 条 K 全部有用例对应；其中 35 条 LTL 表达不了的（R6 口径）
-  也逐条落到用例；
-- `tests/ambiguities.md`：A-01…A-46，每条写明“影响的拍 + 当前处置（按 X / 已澄清 / 自行决定）”；
-- `tests/report.md` §7：已披露“期望值无独立参考实现”“X 拍不判定”“S05 溢出边界不可达”；
+- `tests/cases/*.csv` + `tests/gen/*.py`：期望值来自 K 条款，逐拍写；
+- `tests/coverage.csv`：143 条 K 全部有用例对应；
+- `tests/report.md` §7.1：`X` 占比 0.62%，口径与算法写在正文；
+- `docs/判据与用例版本核对.md` §3：9 条争议逐条给依据与裁决（3 条用例错 / 3 条版本错 / 3 条歧义）；
 - `pytest::test_no_all_dont_care_case`：一条用例如果所有输出都写 X，测试直接失败。
 
-**追问兜底**：“X 占比多少？”——D2-6 第一轮跑完后由 `cases_result.jsonl` 统计，
-写进 `report.md` §7 第 1 条；现在不报口算数，避免和真实数据对不上。
+**追问兜底**："没有独立参考实现，怎么保证期望值对？"——诚实答：只能靠 K 条款 + 双人复核；
+D3 已用**三组独立实际值**交叉证实了 `S05-06` 的问题（E1/E2/E4 都算出 0.5，说明是判据错不是模型错），
+这是目前最硬的交叉验证形式。
+
+---
+
+# 备用（被追问时用）
+
+## Q4　"316 条缺陷，主要错在哪儿？"
+
+逻辑 182（57.6%）/ 时序 64（20.3%）/ 边界 61（19.3%）。按组 E1 42、E2 56、E3 103、E4 115。
+三个典型：`P13-05` 模式切换拍修正值滞后一拍（时序）、`P17-01` 整题 0/8 是 `VAR_IN_OUT` 配方结构根本没写出去（接口级）、
+`P17-08` 临界容量判错（`>=` 写成 `>`）。
+证据：`tests/defects.md` §2 + §5.1。
+
+## Q5　"你们和成员3 的统计对得上吗？"
+
+对得上。我独立读 132 份 `evaluation.json` 逐 run 重算：**132/132 一致，0 不一致**；
+用例级 155/197、147/203、72/175、94/209 与 `四组汇总.csv` 完全相同。
+一条命令可复现：`python tests/gen/gen_defects.py --runs <实验目录> --cases tests/cases`。
+证据：`tests/report.md` §4.1、`tests/defects.md` §0。
+
+## Q6　"如果用例本身有错，你们的数据还可信吗？"
+
+这正是我们 D3 做的事：逐条复核 9 处争议，结论是 **3 条用例真错、3 条是实验用了旧版用例、3 条题面歧义**。
+影响已经量化：`S05-06` 修正后 E1 18→19、E2 16→17、E4 7→8；`P19` 修正后结论不变
+（程序在急停期间仍动作，是真实缺陷）。原始记录不改，报告加脚注 + 附录给明细，可追溯。
+证据：`docs/判据与用例版本核对.md` §3、§4。
 
 ---
 
@@ -71,6 +94,7 @@
 
 | 追问 | 一句话回答 | 证据 |
 | --- | --- | --- |
-| 34 题还是 32 题？分母是多少？ | 按成员1 v1.6 的 34 题走，主轮 136 跑，分母恒为 34 | `tests/report.md` §7 第 3 条 |
+| 34 题还是 32 题？分母是多少？ | 按成员1 v1.6 的 34 题走，主轮 136 跑，分母恒为 34 | `tests/report.md` §7.3 |
 | 同一程序跑两次结论会变吗？ | 不会：用例固定、seed 固定，`run_batch` 同输入同输出 | `tests/README.md` §3.5 |
-| 缺 actual 的 run 怎么算？ | 记 `missing`，不进失败率、也不进分母，单独报缺失率 | `run_batch.py`、`results/_dryrun/README.md` |
+| 缺 actual 的 run 怎么算？ | 记 `missing`，不进失败率、也不进分母，单独报缺失率 | `run_batch.py`、`tests/report.md` §7.6 |
+| 为什么有些题没有测试结果？ | 编译失败/超时/预算终止的题没进测试阶段，按状态单列，不并入失败 | `tests/report.md` §4 |

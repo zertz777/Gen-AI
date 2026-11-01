@@ -9,11 +9,14 @@
 | 用例库 | `组员4/tests/cases/*.csv` | 34 份 / 214 条 / 22 634 拍 | `pytest` 47 passed；`coverage.csv` 143/143；逐题四类齐 | 成员2 |
 | 执行器 | `组员4/tests/run_tests.py`、`runner/` | 7 个模块 | echo 34/34 全 pass；broken 能定位到拍+变量 | 成员2 |
 | 批量入口 | `组员4/tests/run_batch.py` | 1 个 | 136 个假 run 干跑，0 失配（`results/_dryrun/`） | 成员3 |
-| 缺陷单 | `组员4/tests/defects.md` | 1 份 | 字段 11 列齐全；真实缺陷 0 条（等 actual） | 成员2 |
-| 测试报告 | `组员4/tests/report.md` | 1 份 | 口径/规模/链路已写实，结果节标“待填” | 成员3 |
+| 缺陷单 | `组员4/tests/defects.md` | 1 份 | **316 条真实缺陷**（来自 132 份 evaluation.json）；与成员3 逐题表对账 132/132 一致；争议 33 条单列 | 成员2 |
+| 测试报告 | `组员4/tests/report.md` | 1 份 | 四组结果、用例级通过率、失败分布全部填实；回归节如实标"不可得" | 成员3 |
+| 缺陷生成器 | `组员4/tests/gen/gen_defects.py` | 1 个 | 一条命令从 `evaluation.json` 重算 defects.md，数字可复现 | 成员3 |
+| 判据仲裁 | `组员4/docs/判据与用例版本核对.md` | 1 份 | 5 题用例版本差异 + 9 条争议逐条裁决 + 对主表数字的影响 | 成员3、成员5 |
 | D3 计划 | `组员4/tests/plan_d3.md` | 1 份 | 30 个变异体 + 14 条 PLCVerif 属性，题号已定 | 成员3 |
 | 答辩问答 | `组员4/docs/qa/member4.md` | 3 条 | 每条 10 秒内能翻到证据 | 成员3 |
 | 统计口径 | `组员4/docs/stats_alignment.md` | 1 份 | 字段与分母规则，供 `stats.py` 对齐 | 成员3 |
+| 兜底解释器 | `组员4/tests/runner/interp/`（6 个模块）+ `tests/refimpl/P03.st` | 7 个 | `pytest` 14 passed；P03 参考实现 6/6 pass；反相变异体 2/6 pass（能被杀死）；说明见 `docs/interp.md` | 成员2 |
 
 ## 2 需要成员5 合并的两个路径
 
@@ -36,6 +39,11 @@
 | 回归表 | `tests/defects.md` 末节 | 能算出“修复引入的破坏数” | D2 23:00 |
 | 变异得分 | `verify/mutants/` | 30 个变异体，killed/30 | D3 12:00 |
 | PLCVerif | `verify/plcverif/` | 14 条属性三态 + 至少 1 条反例 | D3 18:00 |
+
+> **D3 实际执行调整（20:50 更新）**：正式实验（136 跑）已由成员3 侧跑完并交付 evaluation.json，
+> 底本与执行通道都在实验机（CODESYS + matiec），本机无法复现 30 个变异体。
+> 因此 D3 的优先级改为：**判据仲裁 > 真实缺陷单 > 报告对账 > PLCVerif（降级 3 题）**，
+> 变异测试按"未执行"如实标注，不拿替代数据充数。
 
 ## 4 给成员2 的一句话（复制即用）
 

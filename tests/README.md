@@ -13,11 +13,13 @@ tests/
 ├── test_batch.py                # 批量汇总的端到端测试
 ├── test_dryrun.py               # 假实验目录的干跑测试（不依赖真 actual）
 ├── test_alignment.py            # 与成员3 summary.csv 的对账脚本单测
+├── test_interp.py               # 兜底解释器的单测（含 P03 参考实现逐拍全 pass）
 ├── coverage.csv                 # K 号 → LTL 条款 → 用例 的双向索引（脚本生成）
 ├── ambiguities.md               # 歧义单
 ├── defects.md                   # 缺陷单与回归记录（D4.4）
 ├── report.md                    # 测试报告（D4.3）
 ├── plan_d3.md                   # D3 变异测试 30 个 + PLCVerif 14 条属性的选样与计分
+├── refimpl/<题号>.st            # 成员4 自写的参考实现（变异测试底本，不是模型产物）
 ├── runner/
 │   ├── __init__.py
 │   ├── case_loader.py           # 读 CSV、校验字段与字面量
@@ -25,7 +27,14 @@ tests/
 │   ├── verdict.py               # 四态：pass / fail / timeout / error
 │   ├── actual_io.py             # actual CSV 的读取与校验（成员2 的契约）
 │   ├── backends.py              # echo / broken / replay / exec 四个后端
-│   └── io_normalize.py          # 把上游 io_table 转成 fixture
+│   ├── io_normalize.py          # 把上游 io_table 转成 fixture
+│   └── interp/                  # ST 子集解释器（exec 后端的兜底实现，见 3.7）
+│       ├── lexer.py             # 词法（含 (* *) 嵌套注释、16#、T#500ms）
+│       ├── parser.py            # 语法 → AST（VAR 块 / IF / CASE / FOR / ARRAY / STRUCT）
+│       ├── st_types.py          # IEC 类型、字面量、CSV 回写
+│       ├── state.py             # 变量表 + TON/TOF/R_TRIG/F_TRIG/CTU/CTD
+│       ├── eval.py              # 按拍执行
+│       └── run.py               # CLI：--inputs/--outputs 或 --cases/--out-dir
 ├── gen/
 │   ├── _emit.py                 # CSV 生成小工具（fmt / Case / write_cases）
 │   ├── gen_fixtures.py          # 34 份 fixture + coverage.csv 生成器
@@ -61,16 +70,18 @@ python tests/run_tests.py --cases tests/cases/P03.csv \
   --out tests/results/_selftest/P03_broken.jsonl --backend broken
 ```
 
-### 2.1 当前进度（D2 收尾）
+### 2.1 当前进度（D3 收尾）
 
 | 项 | 数量 |
 | --- | --- |
 | 已写用例的题目 | **34 / 34**（P01—P20 + S01—S14） |
 | 用例条数 | **214**（下限 150；每题 ≥4 条，平均 6.3 条） |
-| 逐拍行数 | **22 636** |
+| 逐拍行数 | **22 636 行**（含 214 条 `cycle=0` 初态行），实际扫描拍 **22 422** |
 | K 覆盖 | **143 / 143**（`coverage.csv` 零空格） |
 | 用例类别 | 正常 68 / 边界 38 / 异常 48 / 安全 60，**逐题四类齐**（`pytest` 断言） |
-| 执行器单测 | **50 passed**（含 actual CSV 契约、exec 硬超时、批量汇总、逐题四类齐、假数据干跑、对账） |
+| 单测 | **71 passed**（执行器 50 + 接口契约/批量/干跑/对账 + 解释器 15） |
+| 真实缺陷 | **316 条**（来自 132 份 `evaluation.json`，见 `defects.md`） |
+| 与成员3 对账 | **132 / 132 一致，0 不一致**（见 `report.md` §4.1） |
 
 生成器一览：`gen_P05/P06/P07/P10/P13/P15—P20.py`、`gen_S01—S14.py`、`gen_gap.py`。
 `gen_gap.py` 是 D2-5 的补缺脚本：只追加「边界/异常/正常」缺口用例（36 条），
@@ -206,6 +217,43 @@ python tests/tester_cli.py \
   --result examples/actual_package/E3_P03_r1_s42/test/result.demo.json
 ```
 
+
+### 3.7 兜底解释器（成员4 自写，绝不冒充成员2 产物）
+
+用途只有一条：**变异测试需要"能跑起来"的 ST**。成员2 的真实执行链没到位时，
+用 `tests/refimpl/*.st`（按 K 条款自己写的参考实现）+ `runner/interp/` 跑出逐拍 actual。
+
+| 项 | 说明 |
+|---|---|
+| 支持范围 | FUNCTION_BLOCK/PROGRAM、VAR 块、赋值、IF/CASE/FOR/WHILE/REPEAT/RETURN、AND/OR/XOR/NOT、算术与比较、ARRAY（含 `ARRAY[*]` 变长）、STRUCT、`STRING(n)`、TON/TOF/TP/R_TRIG/F_TRIG/CTU/CTD |
+| 不支持 | `VAR_EXTERNAL`、METHOD/PROPERTY、`AT %I*` 直接地址、指针/REF、VARIANT、FB 实例数组 → **明确报错**，不静默算错 |
+| 扫描周期 | 20 ms（`--cycle-ms` 可改）；时间语义"同一拍先累加后判定"（D-11） |
+| 边界 | `cycle=0` 只设初值、不执行；输出在 FB 体执行后采样；死循环兜底报错，不拖成 900 s 超时 |
+
+两条命令（契约与成员2 的 `runner-cmd` 一致，可互换）：
+
+```bash
+# 1) 单用例（ExecBackend 就是这么调的）
+python tests/runner/interp/run.py --source tests/refimpl/P03.st \
+  --inputs in.csv --outputs out.csv --case-id P03-01
+
+# 2) 整题（变异测试用）：一次写出该题全部 actual
+python tests/runner/interp/run.py --source tests/refimpl/P03.st \
+  --cases tests/cases/P03.csv --io tests/cases/_fixtures/P03.io.json \
+  --out-dir verify/mutants/M-P03-1/test/actual
+```
+
+接执行器的写法（已实测：参考实现 6/6 pass；把 `Value > hiLevel` 反相后 4/6 fail）：
+
+```bash
+python tests/run_tests.py --cases tests/cases/P03.csv \
+  --io tests/cases/_fixtures/P03.io.json --out tests/results/P03.exec.jsonl \
+  --backend exec --program tests/refimpl/P03.st \
+  --runner-cmd '["python","tests/runner/interp/run.py","--source","{source}","--inputs","{inputs}","--outputs","{outputs}","--case-id","{case_id}"]'
+```
+
+**红线**：解释器产出的 actual 只能用于变异测试底本。拿它当"模型产物跑出来的 L2 结果"，
+等于自己出题自己判——`report.md` §7 已按此写死。
 
 ## 4 I/O 规范化规则
 
