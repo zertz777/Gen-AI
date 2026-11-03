@@ -264,6 +264,43 @@ def _parse_jsonish(s):
         raise StTypeError("复杂类型需要 JSON 字面量：%r (%s)" % (s, e)) from e
 
 
+# ---------------------------------------------------------------- 类型转换函数
+#: IEC 的 `X_TO_Y` 系列。TIME / LTIME 在解释器里都是"毫秒浮点"，
+#: 所以 TIME_TO_LTIME 是一次无损的透传（单位一致，只差精度类型）。
+CONVERSION_TARGETS = (
+    INT_TYPES | REAL_TYPES | TIME_TYPES | STRING_TYPES | BOOL_TYPES
+)
+
+
+def split_conversion(name):
+    """`TIME_TO_LTIME` -> ("TIME", "LTIME")；不是转换函数返回 None。"""
+    txt = str(name).upper()
+    if "_TO_" not in txt:
+        return None
+    src, dst = txt.split("_TO_", 1)
+    if dst not in CONVERSION_TARGETS:
+        return None
+    return src, dst
+
+
+def convert_to(value, target):
+    """按目标类型做 IEC 隐式允许的显式转换（不做溢出告警，超出部分按位宽截断）。"""
+    target = target.upper()
+    if target in BOOL_TYPES:
+        return bool(value)
+    if target in REAL_TYPES:
+        return float(value)
+    if target in TIME_TYPES:
+        return float(value)
+    if target in STRING_TYPES:
+        return str(value)
+    iv = int(value)
+    bits = UNSIGNED_BITS.get(target)
+    if bits:
+        iv &= (1 << bits) - 1
+    return iv
+
+
 # ---------------------------------------------------------------- 回写 CSV
 
 def format_value(value, ts: TypeSpec, structs: StructTable) -> str:

@@ -68,6 +68,11 @@ python tests/run_tests.py --cases tests/cases/P03.csv \
 python tests/run_tests.py --cases tests/cases/P03.csv \
   --io tests/cases/_fixtures/P03.io.json \
   --out tests/results/_selftest/P03_broken.jsonl --backend broken
+
+# 4) 变异测试（真实底本 S10）：冻结用例 3/5，补 2 条后 5/5
+python verify/run_mutants.py --task S10 --out verify/mutants
+python verify/run_mutants.py --task S10 \
+  --extra verify/mutants/S10_extra_cases.csv --out verify/mutants_augmented
 ```
 
 ### 2.1 当前进度（D3 收尾）

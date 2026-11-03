@@ -331,6 +331,45 @@ END_FUNCTION_BLOCK
     assert "未声明的变量" in str(ei.value)
 
 
+# ---------------------------------------------------------------- 类型转换
+
+TIME_CONV_SRC = """
+FUNCTION_BLOCK FB_C
+VAR_INPUT
+    CycleTime : TIME;
+END_VAR
+VAR_OUTPUT
+    Acc : LTIME;
+    Flag : BOOL;
+    Ratio : REAL;
+END_VAR
+VAR
+    t : LTIME;
+    n : INT;
+END_VAR
+    t := TIME_TO_LTIME(CycleTime);
+    Acc := Acc + t;
+    Flag := Acc >= LTIME#40ms;
+    n := 3;
+    Ratio := INT_TO_REAL(n) / 2.0;
+END_FUNCTION_BLOCK
+"""
+
+
+def test_time_to_ltime_and_int_to_real():
+    """真实语料里出现过的转换函数（E3_P04 用到 TIME_TO_LTIME），补上后语义要自洽。"""
+    itp = Interpreter.from_source(TIME_CONV_SRC)
+    snap1 = _step(itp, {"CycleTime": "T#20ms"})
+    assert snap1["Acc"] == "T#20ms" and snap1["Flag"] == "FALSE"
+    snap2 = _step(itp, {"CycleTime": "T#20ms"})
+    assert snap2["Acc"] == "T#40ms" and snap2["Flag"] == "TRUE"
+    assert snap2["Ratio"] == "1.5"
+
+    itp2 = Interpreter.from_source(TIME_CONV_SRC)
+    snap3 = _step(itp2, {"CycleTime": "T#1s"})
+    assert snap3["Acc"] == "T#1000ms" and snap3["Flag"] == "TRUE"
+
+
 # ---------------------------------------------------------------- 字面量
 
 def test_literal_round_trip():

@@ -26,8 +26,8 @@ from .parser import (Assign, Binary, CallStmt, CaseStmt, ExitStmt, FieldRef, For
                      ReturnStmt, Unary, VarRef, WhileStmt, parse)
 from .state import FbInstance, VarStore, get_field, set_field
 from .st_types import (BOOL_TYPES, INT_TYPES, StTypeError, TypeSpec, coerce,
-                    default_value, field_of, format_value, parse_literal,
-                    struct_fields)
+                       convert_to, default_value, field_of, format_value,
+                       parse_literal, split_conversion, struct_fields)
 
 MAX_STEPS = 200_000
 MAX_LOOP = 100_000
@@ -449,9 +449,19 @@ class Interpreter:
     def _call_function(self, name, args, line):
         fname = name.upper()
         vals = [self._eval(e) for _, e in args]
+        conv = split_conversion(fname)
+        if conv is not None:
+            if len(vals) != 1:
+                raise InterpError("第 %d 行：%s 需要 1 个参数，给了 %d 个"
+                                  % (line, name, len(vals)))
+            try:
+                return convert_to(vals[0], conv[1])
+            except (TypeError, ValueError) as e:
+                raise InterpError("第 %d 行：%s 转换失败：%s" % (line, name, e)) from e
         table = {
             "ABS": lambda x: abs(x),
             "SQRT": lambda x: x ** 0.5,
+            "EXPT": lambda a, b: a ** b,
             "MIN": lambda *x: min(x),
             "MAX": lambda *x: max(x),
             "LIMIT": lambda lo, v, hi: max(lo, min(v, hi)),
@@ -462,7 +472,7 @@ class Interpreter:
             "SHR": lambda a, n: a >> int(n),
         }
         if fname not in table:
-            raise InterpError("第 %d 行：不支持或未定义的函数 %s（可用：%s）"
+            raise InterpError("第 %d 行：不支持或未定义的函数 %s（可用：%s；以及 X_TO_Y 转换）"
                               % (line, name, ", ".join(sorted(table))))
         try:
             return table[fname](*vals)
