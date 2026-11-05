@@ -1,0 +1,78 @@
+task_id: P11
+title: Automated Production Line Control
+difficulty: medium
+category: C
+requirement: |-
+  A simple automated production line consists of three workstations: Workstation A, Workstation B, and Workstation C. The product needs to go through these three stations in sequence to be considered fully completed. There is a motor in the production line that is responsible for moving the product from one workstation to the next. The sequence of the line is from Workstation A to Workstation B, and then to Workstation C. Each workstation has a sensor (used to detect if the product has arrived) and a button (used to trigger the signal that the station's processing is complete).
+  Control requirements:
+  1. Mode Switching: The mode switch (Mode) is used to switch between manual and automatic modes of the production line.
+  2. Manual Mode: In manual mode, the forward rotation button (ForwardButton) controls the forward rotation of the motor, and the reverse rotation button (ReverseButton) controls the reverse rotation of the motor. Forward and reverse rotation operations need to be interlocked and cannot be performed simultaneously.
+  3. Automatic Mode:
+     - When the product arrives at Workstation A, SensorA detects the product, and after the operator triggers the processing complete signal via ButtonA, the motor starts forward rotation to move the product to Workstation B.
+     - When the product arrives at Workstation B, SensorB detects the product, the motor stops, and after the operator triggers the processing complete signal via ButtonB, the motor starts forward rotation to move the product to Workstation C.
+     - When the product arrives at Workstation C, SensorC detects the product, the motor stops, and after the operator triggers the processing complete signal via ButtonC, the completion indicator light (CompletionLight) turns on, indicating that the product processing is complete. When the product is taken away, i.e., SensorC no longer detects the product, the completion indicator light (CompletionLight) turns off.
+
+  中文摘要：三工位生产线：手动模式正反转互锁，自动模式按 A→B→C 顺序推进，每站需到位信号与完成按钮，C 站完成后点亮完成灯。
+
+  扫描周期：20 ms（全组统一，见 docs/tasks_note.md）
+io_table:
+  - direction: IN
+    name: Mode
+    data_type: BOOL
+    description: Used to switch the production line between manual and automatic modes, 0=manual mode, 1=automatic mode
+  - direction: IN
+    name: ForwardButton
+    data_type: BOOL
+    description: Forward rotation button
+  - direction: IN
+    name: ReverseButton
+    data_type: BOOL
+    description: Reverse rotation button
+  - direction: IN
+    name: SensorA
+    data_type: BOOL
+    description: Sensor A
+  - direction: IN
+    name: SensorB
+    data_type: BOOL
+    description: Sensor B
+  - direction: IN
+    name: SensorC
+    data_type: BOOL
+    description: Sensor C
+  - direction: IN
+    name: ButtonA
+    data_type: BOOL
+    description: Button A
+  - direction: IN
+    name: ButtonB
+    data_type: BOOL
+    description: Button B
+  - direction: IN
+    name: ButtonC
+    data_type: BOOL
+    description: Button C
+  - direction: OUT
+    name: MotorForward
+    data_type: BOOL
+    description: Motor forward rotation output
+  - direction: OUT
+    name: MotorReverse
+    data_type: BOOL
+    description: Motor reverse rotation output
+  - direction: OUT
+    name: CompletionLight
+    data_type: BOOL
+    description: Indicator light for product processing completion
+initial_state: MotorForward = FALSE；MotorReverse = FALSE；CompletionLight = FALSE；工位状态 = IDLE；当前站 = A。
+constraints:
+  - K1 手动模式下 MotorForward 与 MotorReverse 互斥，任一为 TRUE 时另一个必须为 FALSE。
+  - K2 自动模式下产品必须依次经过 A、B、C 三站，不得跳站或回流。
+  - K3 每站推进的条件是「该站到位（SensorX）+ 该站完成按钮（ButtonX）」，缺一不可。
+  - K4 产品在 C 站完成加工后置 CompletionLight = TRUE。
+provenance: 课程公共题库 P11（Automated Production Line Control）；原文导入、变量名与需求未做任何改动；来源与审核记录见 data/provenance.csv 第 12 行
+spec_ref: data/specs/P11.ltl
+error_examples:
+  - 错误实现：自动模式只看完成按钮不看到位信号。症状——产品未到站就被判加工完成，三站节拍错位。
+  - 错误实现：正反转互锁只在手动模式下做。症状——模式切换瞬间两个接触器同时吸合。
+notes: ""

@@ -1,0 +1,11 @@
+# task: S07
+# meta: hard / C 状态机与节拍
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(!EStop_NC -> (!Conveyor && !FillValve && !CapMotor && !PackCyl))    -- 急停当周期四路执行器全停（K5）
+C2: G(FillValve -> BottleIn)    -- 开灌装阀的前提是瓶子到位（K2）
+C4: G(!(Conveyor && FillValve) && !(Conveyor && CapMotor) && !(Conveyor && PackCyl) && !(FillValve && CapMotor) && !(FillValve && PackCyl) && !(CapMotor && PackCyl))    -- 四路执行器两两互斥（单工步动作）（K4）
+C6: G(FillValve -> (FillValve W FillDone))    -- 灌装阀保持到灌装完成信号出现（K2）
+C9: G(FillValve -> G[0,5](FillValve))    -- 灌装动作至少保持 100 ms（防抖，避免单周期抖动误判完成）（K3）
+C10: G[0,1](!Conveyor && !FillValve && !CapMotor && !PackCyl)    -- 上电首周期无动作（初态）

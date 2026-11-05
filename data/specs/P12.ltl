@@ -1,0 +1,12 @@
+# task: P12
+# meta: medium / D 故障与安全
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+#
+# note: 本题只给了品质信号与切割运行信号，没有急停，因此 C1 以「信号无效即不报警」的形式归入 C2/C8。
+
+C2: G(THICKNESS_ALARM -> THICKNESS_SIGNAL_VALID)    -- 信号无效期间不得报警（报警的前提是信号有效）（K1）
+C5: G(THICKNESS_FAULT && THICKNESS_SIGNAL_VALID -> F[0,25](THICKNESS_ALARM))    -- 故障出现后 500 ms 内必须报警（响应时限）（K3）
+C6: G(THICKNESS_ALARM -> (THICKNESS_ALARM W !THICKNESS_FAULT))    -- 故障持续期间报警保持（至少 500 ms 由此推出）（K3）
+C8: G(!THICKNESS_SIGNAL_VALID -> X(!THICKNESS_ALARM))    -- 信号失效后下一周期清报警，不保留陈旧报警（K1）
+C10: G[0,1](!THICKNESS_ALARM)    -- 上电首周期不报警（初态）

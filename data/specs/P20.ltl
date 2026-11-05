@@ -1,0 +1,10 @@
+# task: P20
+# meta: hard / C 状态机与节拍
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C4: G(!(MotorForward && MotorReverse))    -- 正反转互斥（K1）
+C2: G(kick -> SensorOutput)    -- 出料动作的前提是成品站到位（K4）
+C1: G(CompletionLight -> X(!kick))    -- 完成灯点亮后下一周期出料动作必须停止（K4）
+C6: G(CompletionLight -> (CompletionLight W !SensorOutput))    -- 完成灯保持到产品离开成品站（K4）
+C10: G[0,1](!MotorForward && !MotorReverse && !kick && !CompletionLight)    -- 上电首周期无输出（初态）

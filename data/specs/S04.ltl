@@ -1,0 +1,17 @@
+# task: S04
+# meta: medium / B 模拟量与数据处理
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+#
+# 命题映射（I/O 名 -> 派生命题）：
+# alias: zeroDelta := RawWeight - ZeroOffset
+# alias: driftOut := RawWeight - ZeroOffset >= 200 || ZeroOffset - RawWeight >= 200
+# alias: driftBack := RawWeight - ZeroOffset <= 150 && ZeroOffset - RawWeight <= 150
+#
+# note: 称重补偿属模拟量处理，题目未设急停；信号断线/失效的降级由 tests/cases/S04.csv 覆盖，规约层只约束换算与滞回。
+
+C4: G(CompensatedWeight == (RawWeight - ZeroOffset) * 0.01)    -- 输出必须等于换算式（不得沿用上一周期的结果）（K2）
+C2: G(DriftAlarm -> driftOut)    -- 报警的前提是偏差确实超限（不得空报）（K3）
+C6: G(DriftAlarm -> (DriftAlarm W driftBack))    -- 偏差回落到 ±150 以内才允许撤警（滞回保持）（K3）
+C7: G(DriftAlarm && driftBack -> X(!DriftAlarm))    -- 偏差回到 ±150 死区内就必须下一周期撤报（不得滞留）（K3）
+C10: G[0,1](ZeroOffset == 0 && !DriftAlarm && CompensatedWeight == 0.0)    -- 上电首周期零点为 0、无报警（K4）

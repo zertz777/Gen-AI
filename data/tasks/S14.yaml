@@ -1,0 +1,63 @@
+task_id: S14
+title: 液压站压力分级加载与卸荷
+difficulty: medium
+category: B
+requirement: |-
+  液压站按系统压力自动投切泵组与卸荷阀，要求不频繁启停、越界立即保护。
+
+  控制要求：
+  1. PumpEnable = TRUE 且 AlarmLamp = FALSE 时按压力分级加载：Pressure < 120.0 bar → LowPump = TRUE。
+  2. 高压泵投入：Pressure >= 140.0 bar → HighPump = TRUE。
+  3. 滞回：HighPump 投入后，只有 Pressure < 100.0 bar 才断开；100.0 <= Pressure < 140.0 区间保持原状态，不得反复启停。
+  4. 卸荷：Pressure > 160.0 bar → ReliefValve = TRUE 且 LowPump、HighPump 同时 FALSE；Pressure < 150.0 bar 后 ReliefValve = FALSE。
+  5. 卸荷阀与泵互斥：ReliefValve 与 LowPump/HighPump 不得同时为 TRUE。
+  6. 传感器越界：Pressure < 0.5 bar 或 Pressure > 250.0 bar 视为断线/短路 → 两泵 FALSE、AlarmLamp = TRUE、Status = 16#8D01；故障消失后需 ResetBtn 上升沿复位（复位前 Status = 16#8D02）。
+  7. Status：16#0000 正常、16#8D01 传感器故障、16#8D02 待复位。
+
+  扫描周期：20 ms（全组统一，见 docs/tasks_note.md）
+io_table:
+  - direction: IN
+    name: Pressure
+    data_type: REAL
+    description: 系统压力，单位 bar
+  - direction: IN
+    name: PumpEnable
+    data_type: BOOL
+    description: 允许加载
+  - direction: IN
+    name: ResetBtn
+    data_type: BOOL
+    description: 复位按钮，上升沿有效
+  - direction: OUT
+    name: LowPump
+    data_type: BOOL
+    description: 低压泵
+  - direction: OUT
+    name: HighPump
+    data_type: BOOL
+    description: 高压泵
+  - direction: OUT
+    name: ReliefValve
+    data_type: BOOL
+    description: 卸荷阀
+  - direction: OUT
+    name: AlarmLamp
+    data_type: BOOL
+    description: 报警灯
+  - direction: OUT
+    name: Status
+    data_type: WORD
+    description: 状态码
+initial_state: "LowPump = HighPump = ReliefValve = AlarmLamp = FALSE；Status = 16#0000；ResetBtnLast = FALSE；HighPumpLatched = FALSE。"
+constraints:
+  - K1 Pressure > 160.0 bar 时必须在同一周期卸荷并停泵。
+  - K2 Pressure < 120.0 bar 且 PumpEnable 时必须加载低压泵（允许一个扫描周期延迟）。
+  - K3 高压泵在 100.0—140.0 bar 之间保持原状态，构成 40 bar 滞回带。
+  - "K4 传感器越界（< 0.5 或 > 250.0 bar）必须在 200 ms 内停机报警，Status = 16#8D01。"
+  - K5 卸荷阀与任一台泵不得同时为 TRUE。
+provenance: 自拟（液压站分级加载与卸荷为通用液压控制惯例（压力继电器 + 卸荷阀组））；改编点：新增 40 bar 滞回带、卸荷阀与泵互斥、传感器越界停机三组要求；为什么这样改：模拟量题最容易写成「单阈值比较」，加上滞回与量程检查才考得出现场真正会犯的错（抖动、断线干转）；来源与审核记录见 data/provenance.csv 第 35 行
+spec_ref: data/specs/S14.ltl
+error_examples:
+  - 错误实现：只要 Pressure < 120 就投高压泵。症状——高低压泵同时运行，压力在 120 bar 附近抖动，两台泵每小时启停上百次。
+  - 错误实现：不对 Pressure 做量程检查，直接参与比较。症状——传感器断线时 Pressure 读数为 0，程序判定「压力过低」长期加载，泵干转。
+notes: ""

@@ -1,0 +1,10 @@
+# task: P09
+# meta: medium / B 模拟量与数据处理
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(reset -> !windowSizeReached)    -- 复位当周期必须清除窗口满标志（复位优先于周期与触发）（K4）
+C3: G(windowSize < 1 -> F[0,1](error))    -- 窗口长度小于 1 时必须报错（不得静默）（K3）
+C3b: G(windowSize > 100 -> F[0,1](error))    -- 窗口长度大于 100 时必须报错（K3）
+C2: G(windowSizeReached -> !error)    -- 窗口满标志与错误标志不得同时为真（K3）
+C10: G[0,1](!windowSizeReached && !error && average == 0.0)    -- 上电首周期无窗口、无错误、平均值为 0（初态）

@@ -1,0 +1,12 @@
+# task: P13
+# meta: medium / B 模拟量与数据处理
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+#
+# note: 暖通控制没有急停开关，“停机优先”表现为“占用丢失立即停风机”，已由 C3 覆盖；C1（急停优先）在本题无对应信号。
+
+C2: G(SUPPLY_FAN_RUN -> (OCCUPANCY_DETECTED && HVAC_MODE_SELECTOR != 3))    -- 风机运行的许可：有占用且未选夜间模式（模式取值 0 自动 / 1 舒适 / 2 节能 / 3 夜间）（K1/K2）
+C3: G(!OCCUPANCY_DETECTED -> X(!SUPPLY_FAN_RUN))    -- 占用丢失后下一周期必须停风机（启动延时不适用停机）（K2）
+C6: G(SUPPLY_FAN_RUN -> (SUPPLY_FAN_RUN W !OCCUPANCY_DETECTED))    -- 占用期间风机保持，不因单周期抖动反复启停（K2）
+C4: G(TEMP_SETPOINT_ADJUST >= -4 && TEMP_SETPOINT_ADJUST <= 4)    -- 温度修正必须限制在 ±4 ℃（输出限幅）（K4）
+C10: G[0,1](!SUPPLY_FAN_RUN && TEMP_SETPOINT_ADJUST == 0)    -- 上电首周期风机不运行、修正为 0（初态）
