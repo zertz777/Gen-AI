@@ -89,7 +89,7 @@ python tests/gen/gen_defects.py --runs <实验包>/正式实验_runs --cases tes
 关键文档：`tests/report.md`（结果与对账）、`tests/defects.md`（316 条缺陷）、
 `docs/判据与用例版本核对.md`（争议裁决）、`docs/interp.md`（解释器边界）。
 
-## 成员1 数据与规约（v1.7，已入库）
+## GenAI大作业成员1内容
 
 - 题集：34 题（P01—P20 公共题 + S01—S14 自编题）
 - 规约：34 份 LTL，177 条条款
