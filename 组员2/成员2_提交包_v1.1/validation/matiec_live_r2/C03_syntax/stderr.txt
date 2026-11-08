@@ -1,0 +1,3 @@
+.\validation\matiec_live_r2\C03_syntax\source.st:8-6..8-6: error: expecting 'THEN' after test expression in ST 'IF' statement.
+
+1 error(s) found. Bailing out!

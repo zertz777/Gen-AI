@@ -1,0 +1,10 @@
+# task: P15
+# meta: hard / C 状态机与节拍
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(!estop -> (!valveARun && !valveBRun && !valveCRun && !valveDRun && !mixMotorRun))    -- 急停当周期全部设备停止（优先于手动与自动）（K1）
+C2: G(mixMotorRun -> !estop)    -- 搅拌运行的许可：无急停（K1）
+C4: G(!(valveDRun && (valveARun || valveBRun || valveCRun)))    -- 出料阀与前三个配比阀互斥（配比与出料不得同时进行）（K3）
+C6: G(mixMotorRun -> (mixMotorRun W mixMotorComplete))    -- 搅拌保持到完成信号出现（K3）
+C10: G[0,1](!valveARun && !valveBRun && !valveCRun && !valveDRun && !mixMotorRun)    -- 上电首周期全部设备停止（初态）

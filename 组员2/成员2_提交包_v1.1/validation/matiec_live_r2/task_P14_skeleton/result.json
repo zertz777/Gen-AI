@@ -1,0 +1,26 @@
+{
+  "case_id": "task_P14_skeleton",
+  "kind": "task_skeleton",
+  "expected": "observe",
+  "status": "fail",
+  "elapsed_s": 0.093,
+  "source_sha256": "f589905ccc3fe61f0db85dc5eab535e1b5617d14b8f02e47abcb779d11d78c85",
+  "errors": [
+    {
+      "code": "E_COMPILE",
+      "severity": "error",
+      "line": 3,
+      "message": ".\\validation\\matiec_live_r2\\task_P14_skeleton\\source.st:3-19..3-20: error: ';' missing at end of input variable(s) declaration.",
+      "raw": ".\\validation\\matiec_live_r2\\task_P14_skeleton\\source.st:3-19..3-20: error: ';' missing at end of input variable(s) declaration."
+    },
+    {
+      "code": "E_COMPILE",
+      "severity": "error",
+      "line": 3,
+      "message": ".\\validation\\matiec_live_r2\\task_P14_skeleton\\source.st:3-20..3-24: error: invalid input variable(s) declaration.",
+      "raw": ".\\validation\\matiec_live_r2\\task_P14_skeleton\\source.st:3-20..3-24: error: invalid input variable(s) declaration."
+    }
+  ],
+  "evidence_kind": "live_fast_compiler",
+  "functional_tests_run": false
+}

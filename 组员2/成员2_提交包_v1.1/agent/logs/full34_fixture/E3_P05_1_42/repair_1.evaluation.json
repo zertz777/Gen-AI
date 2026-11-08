@@ -1,0 +1,36 @@
+{
+  "source": "FUNCTION_BLOCK FB_P05\nVAR_INPUT\n    Gap_Exceeded : BOOL;\n    Weld_E_Stop_NC : BOOL;\n    DebounceTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    Operator_Alert : BOOL;\n    Weld_Soft_Start_Active : BOOL;\nEND_VAR\n(* Add a VAR block for internal state/timers before the implementation, if needed. *)\n(* SKELETON ONLY: replace this RETURN with scan logic and required initial state. *)\nRETURN;\nEND_FUNCTION_BLOCK\n\n(*  *)\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.0,
+      "evidence_kind": "fixture"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.0,
+      "evidence_kind": "fixture"
+    },
+    "errors": [],
+    "authoritative_available": false,
+    "evidence_kind": "fixture"
+  },
+  "test": {
+    "status": "pass",
+    "total": 3,
+    "passed": 3,
+    "passed_ids": [
+      "fixture_case_1",
+      "fixture_case_2",
+      "fixture_case_3"
+    ],
+    "failures": [],
+    "evidence_kind": "fixture"
+  },
+  "repair_rounds": 1,
+  "token_count": 0,
+  "tag": "repair_1"
+}

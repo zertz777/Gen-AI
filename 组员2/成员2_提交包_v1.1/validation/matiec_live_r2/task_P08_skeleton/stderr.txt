@@ -1,0 +1,5 @@
+.\validation\matiec_live_r2\task_P08_skeleton\source.st:10-10..11-1: error: ';' missing at end of data type declaration.
+.\validation\matiec_live_r2\task_P08_skeleton\source.st:17-26..17-26: error: invalid subrange list defined in array specification.
+.\validation\matiec_live_r2\task_P08_skeleton\source.st:18-22..18-22: error: invalid subrange list defined in array specification.
+
+3 error(s) found. Bailing out!

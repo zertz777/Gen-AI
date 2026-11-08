@@ -1,0 +1,199 @@
+{
+  "elapsed_s": 2.2980117797851563, 
+  "evidence_kind": "live", 
+  "messages": [
+    {
+      "stage": "build", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "------ 开始编译应用程序 PLCWinNT.Application -------"
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "代码典型化..."
+    }, 
+    {
+      "stage": "build", 
+      "native_number": 77, 
+      "native_prefix": "C", 
+      "severity": "error", 
+      "object_name": "FB_P18", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "13行 (Decl)", 
+      "raw": "未知的类型: 'VARIANT'"
+    }, 
+    {
+      "stage": "build", 
+      "native_number": 77, 
+      "native_prefix": "C", 
+      "severity": "error", 
+      "object_name": "FB_P18", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "14行 (Decl)", 
+      "raw": "未知的类型: 'VARIANT'"
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "编译完成--2错误,0警告"
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "SA", 
+      "severity": "text", 
+      "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+      "position_text": "", 
+      "raw": "其他代码检查..."
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "SA", 
+      "severity": "text", 
+      "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+      "position_text": "", 
+      "raw": "其他代码检查完成-0 个错误"
+    }
+  ], 
+  "errors": [
+    {
+      "code": "E_TYPE", 
+      "severity": "error", 
+      "line": 12, 
+      "raw": "未知的类型: 'VARIANT'", 
+      "message": "未知的类型: 'VARIANT'"
+    }, 
+    {
+      "code": "E_TYPE", 
+      "severity": "error", 
+      "line": 13, 
+      "raw": "未知的类型: 'VARIANT'", 
+      "message": "未知的类型: 'VARIANT'"
+    }
+  ], 
+  "code_generated": false, 
+  "stages": {
+    "build": {
+      "status": "fail", 
+      "elapsed_s": 0.8394622802734375, 
+      "errors": [
+        {
+          "code": "E_TYPE", 
+          "severity": "error", 
+          "line": 12, 
+          "raw": "未知的类型: 'VARIANT'", 
+          "message": "未知的类型: 'VARIANT'"
+        }, 
+        {
+          "code": "E_TYPE", 
+          "severity": "error", 
+          "line": 13, 
+          "raw": "未知的类型: 'VARIANT'", 
+          "message": "未知的类型: 'VARIANT'"
+        }
+      ], 
+      "messages": [
+        {
+          "stage": "build", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "------ 开始编译应用程序 PLCWinNT.Application -------"
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "代码典型化..."
+        }, 
+        {
+          "stage": "build", 
+          "native_number": 77, 
+          "native_prefix": "C", 
+          "severity": "error", 
+          "object_name": "FB_P18", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "13行 (Decl)", 
+          "raw": "未知的类型: 'VARIANT'"
+        }, 
+        {
+          "stage": "build", 
+          "native_number": 77, 
+          "native_prefix": "C", 
+          "severity": "error", 
+          "object_name": "FB_P18", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "14行 (Decl)", 
+          "raw": "未知的类型: 'VARIANT'"
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "编译完成--2错误,0警告"
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "SA", 
+          "severity": "text", 
+          "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+          "position_text": "", 
+          "raw": "其他代码检查..."
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "SA", 
+          "severity": "text", 
+          "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+          "position_text": "", 
+          "raw": "其他代码检查完成-0 个错误"
+        }
+      ]
+    }, 
+    "generate": {
+      "status": "skipped", 
+      "elapsed_s": 0.0, 
+      "errors": [], 
+      "reason": "build_fail", 
+      "messages": []
+    }
+  }, 
+  "linked_pou": "FB_P18", 
+  "status": "fail", 
+  "compiler": "CODESYS", 
+  "case_id": "task_P18_skeleton", 
+  "source_line_mapping": {
+    "status": "known_object_partitions_calibrated", 
+    "imported_text_spans": [
+      {
+        "object_name": "FB_P18", 
+        "imported_prefix_lines": 1, 
+        "part": "declaration", 
+        "source_start_line": 1, 
+        "source_end_line": 14
+      }, 
+      {
+        "object_name": "FB_P18", 
+        "imported_prefix_lines": 0, 
+        "part": "implementation", 
+        "source_start_line": 15, 
+        "source_end_line": 17
+      }
+    ], 
+    "note": "Decl/Impl line mapping calibrated with native diagnostics; unknown objects/positions remain null"
+  }, 
+  "source_sha256": "bb7139f8151d7824603e23379b7c24833cef8eb251f47b87b297c6e127fe3d0a"
+}

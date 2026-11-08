@@ -1,0 +1,5 @@
+{"ts": "2026-10-31T08:26:10.889996+00:00", "event": "evaluation", "tag": "candidate_1", "compile_status": "fail", "test_status": "skipped", "test_passed": 0, "test_total": 0}
+{"ts": "2026-10-31T08:26:10.910710+00:00", "event": "evaluation", "tag": "candidate_2", "compile_status": "fail", "test_status": "skipped", "test_passed": 0, "test_total": 0}
+{"ts": "2026-10-31T08:26:10.926311+00:00", "event": "evaluation", "tag": "candidate_3", "compile_status": "fail", "test_status": "skipped", "test_passed": 0, "test_total": 0}
+{"ts": "2026-10-31T08:26:10.946187+00:00", "event": "evaluation", "tag": "repair_1", "compile_status": "pass", "test_status": "pass", "test_passed": 3, "test_total": 3}
+{"ts": "2026-10-31T08:26:10.946187+00:00", "event": "repair_decision", "round": 1, "rollback": false, "improved": true}

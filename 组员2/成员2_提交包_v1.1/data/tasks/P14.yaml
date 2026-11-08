@@ -1,0 +1,35 @@
+task_id: P14
+title: IPv4 Parsing with Format and Range Checks
+difficulty: medium
+category: B
+requirement: |-
+  Design a PLC function block in Structured Text (ST) that parses a dotted-decimal IPv4 string into a 32-bit unsigned integer.
+
+  1. ipText must contain four nonempty decimal-digit segments separated by periods. Each segment must have a value from 0 through 255.
+  2. Assemble the address in network byte order: the first segment occupies the most significant 8 bits and the fourth occupies the least significant 8 bits. Write the result to ipValue.
+  3. Set ipValue to 0 for malformed input, a nondigit segment, an incorrect segment count or any out-of-range segment. The valid address 0.0.0.0 also produces 0.
+
+  中文摘要：IPv4 点分十进制解析：校验四段、纯数字与 0—255 范围，按网络字节序组装为 32 位无符号整数，非法输入输出 0。
+
+  扫描周期：20 ms（全组统一，见 docs/tasks_note.md）
+io_table:
+  - direction: IN
+    name: ipText
+    data_type: STRING(254)
+    description: IPv4 text to parse, with a capacity of 254 characters. A valid dotted-decimal address requires at most 15 characters.
+  - direction: OUT
+    name: ipValue
+    data_type: UDINT
+    description: 32-bit address in network byte order; zero for invalid input.
+initial_state: ipValue = 0；解析状态机处于等待第 1 段。
+constraints:
+  - K1 输入必须是四段、段间以点分隔、每段非空且全部为十进制数字。
+  - K2 每段数值必须在 0—255 之间（含端点）。
+  - K3 按网络字节序组装：第 1 段占最高 8 位，第 4 段占最低 8 位。
+  - K4 段数不对、含非数字字符、任一段越界时一律输出 ipValue = 0（合法地址 0.0.0.0 也输出 0，测试需靠返回状态区分）。
+provenance: 课程公共题库 P14（IPv4 Parsing with Format and Range Checks）；原文导入、变量名与需求未做任何改动；来源与审核记录见 data/provenance.csv 第 15 行
+spec_ref: data/specs/P14.ltl
+error_examples:
+  - 错误实现：允许空段（如 192.168..1）。症状——空段被当 0，非法地址被解析成合法值。
+  - "错误实现：按小端组装。症状——10.0.0.1 解析成 16#0100000A，与网络字节序相反。"
+notes: ""

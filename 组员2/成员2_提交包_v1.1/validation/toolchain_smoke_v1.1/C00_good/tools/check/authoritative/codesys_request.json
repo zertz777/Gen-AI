@@ -1,0 +1,8 @@
+{
+  "source": ".\\validation\\toolchain_smoke_v1.1\\C00_good\\tools\\check\\authoritative\\source.st",
+  "result": ".\\validation\\toolchain_smoke_v1.1\\C00_good\\tools\\check\\authoritative\\result.json",
+  "project": ".\\validation\\toolchain_smoke_v1.1\\C00_good\\tools\\check\\authoritative\\compile.project",
+  "application": "Application",
+  "task_card": ".\\validation\\codesys_release_v1.1\\C00_good\\task_card.json",
+  "source_sha256": "073e6c87203fb7cd6030eb01a9333cc8f4e26d023baed2897fa8276b24be522c"
+}

@@ -1,0 +1,55 @@
+{
+  "source": "FUNCTION_BLOCK FB_P04\nVAR_INPUT\n    VISCOSITY_OK : BOOL;\n    PASTE_E_STOP_NC : BOOL;\n    DebounceTime : TIME;\n    CycleTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    VFD_RUN : BOOL;\n    PUMP_MAINT_DUE : BOOL;\n    PUMP_RUNTIME_ACC : LTIME;\nEND_VAR\n(* Add a VAR block for internal state/timers before the implementation, if needed. *)\n(* SKELETON ONLY: replace this RETURN with scan logic and required initial state. *)\nRETURN;\nEND_FUNCTION_BLOCK\n\n(* FIXTURE_TOOL_ERROR *)\n",
+  "compile": {
+    "status": "tool_error",
+    "fast": {
+      "status": "tool_error",
+      "errors": [
+        {
+          "code": "E_TOOL_ERROR",
+          "severity": "error",
+          "line": null,
+          "message": "FIXTURE ONLY: simulated tool_error",
+          "raw": "FIXTURE ONLY: simulated tool_error"
+        }
+      ],
+      "elapsed_s": 0.0,
+      "evidence_kind": "fixture"
+    },
+    "authoritative": {
+      "status": "tool_error",
+      "errors": [
+        {
+          "code": "E_TOOL_ERROR",
+          "severity": "error",
+          "line": null,
+          "message": "FIXTURE ONLY: simulated tool_error",
+          "raw": "FIXTURE ONLY: simulated tool_error"
+        }
+      ],
+      "elapsed_s": 0.0,
+      "evidence_kind": "fixture"
+    },
+    "errors": [
+      {
+        "code": "E_TOOL_ERROR",
+        "severity": "error",
+        "line": null,
+        "message": "FIXTURE ONLY: simulated tool_error",
+        "raw": "FIXTURE ONLY: simulated tool_error"
+      }
+    ],
+    "authoritative_available": false,
+    "evidence_kind": "fixture"
+  },
+  "test": {
+    "status": "skipped",
+    "total": 0,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": []
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "candidate_1"
+}

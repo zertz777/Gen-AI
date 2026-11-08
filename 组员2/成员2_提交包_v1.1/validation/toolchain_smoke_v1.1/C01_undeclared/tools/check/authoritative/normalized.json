@@ -1,0 +1,21 @@
+{
+  "status": "fail",
+  "errors": [
+    {
+      "code": "E_TYPE",
+      "severity": "error",
+      "line": 5,
+      "message": "不能将类型 '未知的类型: 'AgentSignalNotDeclared_6E79B1'' 转换为类型'BOOL'",
+      "raw": "不能将类型 '未知的类型: 'AgentSignalNotDeclared_6E79B1'' 转换为类型'BOOL'"
+    },
+    {
+      "code": "E_UNDECLARED",
+      "severity": "error",
+      "line": 5,
+      "message": "没有定义标识符'AgentSignalNotDeclared_6E79B1' ",
+      "raw": "没有定义标识符'AgentSignalNotDeclared_6E79B1' "
+    }
+  ],
+  "elapsed_s": 32.235,
+  "evidence_kind": "live"
+}

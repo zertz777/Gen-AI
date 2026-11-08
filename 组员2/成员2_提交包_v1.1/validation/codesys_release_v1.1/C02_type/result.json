@@ -1,0 +1,165 @@
+{
+  "elapsed_s": 1.9670028686523438, 
+  "evidence_kind": "live", 
+  "messages": [
+    {
+      "stage": "build", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "------ 开始编译应用程序 PLCWinNT.Application -------"
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "代码典型化..."
+    }, 
+    {
+      "stage": "build", 
+      "native_number": 32, 
+      "native_prefix": "C", 
+      "severity": "error", 
+      "object_name": "FB_AgentProbeType", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "行1,列1 (Impl)", 
+      "raw": "不能将类型 'STRING(INT#10)' 转换为类型'BOOL'"
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "编译完成--1错误,0警告"
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "SA", 
+      "severity": "text", 
+      "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+      "position_text": "", 
+      "raw": "其他代码检查..."
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "SA", 
+      "severity": "text", 
+      "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+      "position_text": "", 
+      "raw": "其他代码检查完成-0 个错误"
+    }
+  ], 
+  "errors": [
+    {
+      "code": "E_TYPE", 
+      "severity": "error", 
+      "line": 5, 
+      "raw": "不能将类型 'STRING(INT#10)' 转换为类型'BOOL'", 
+      "message": "不能将类型 'STRING(INT#10)' 转换为类型'BOOL'"
+    }
+  ], 
+  "code_generated": false, 
+  "stages": {
+    "build": {
+      "status": "fail", 
+      "elapsed_s": 0.6602783203125, 
+      "errors": [
+        {
+          "code": "E_TYPE", 
+          "severity": "error", 
+          "line": 5, 
+          "raw": "不能将类型 'STRING(INT#10)' 转换为类型'BOOL'", 
+          "message": "不能将类型 'STRING(INT#10)' 转换为类型'BOOL'"
+        }
+      ], 
+      "messages": [
+        {
+          "stage": "build", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "------ 开始编译应用程序 PLCWinNT.Application -------"
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "代码典型化..."
+        }, 
+        {
+          "stage": "build", 
+          "native_number": 32, 
+          "native_prefix": "C", 
+          "severity": "error", 
+          "object_name": "FB_AgentProbeType", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "行1,列1 (Impl)", 
+          "raw": "不能将类型 'STRING(INT#10)' 转换为类型'BOOL'"
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "编译完成--1错误,0警告"
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "SA", 
+          "severity": "text", 
+          "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+          "position_text": "", 
+          "raw": "其他代码检查..."
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "SA", 
+          "severity": "text", 
+          "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+          "position_text": "", 
+          "raw": "其他代码检查完成-0 个错误"
+        }
+      ]
+    }, 
+    "generate": {
+      "status": "skipped", 
+      "elapsed_s": 0.0, 
+      "errors": [], 
+      "reason": "build_fail", 
+      "messages": []
+    }
+  }, 
+  "linked_pou": "FB_AgentProbeType", 
+  "status": "fail", 
+  "compiler": "CODESYS", 
+  "case_id": "C02_type", 
+  "source_line_mapping": {
+    "status": "known_object_partitions_calibrated", 
+    "imported_text_spans": [
+      {
+        "object_name": "FB_AgentProbeType", 
+        "imported_prefix_lines": 1, 
+        "part": "declaration", 
+        "source_start_line": 1, 
+        "source_end_line": 4
+      }, 
+      {
+        "object_name": "FB_AgentProbeType", 
+        "imported_prefix_lines": 0, 
+        "part": "implementation", 
+        "source_start_line": 5, 
+        "source_end_line": 5
+      }
+    ], 
+    "note": "Decl/Impl line mapping calibrated with native diagnostics; unknown objects/positions remain null"
+  }, 
+  "source_sha256": "e83155bc35aa0dfa829d346499d9faab94a909fc447bc17c9ab31899207e91d6"
+}

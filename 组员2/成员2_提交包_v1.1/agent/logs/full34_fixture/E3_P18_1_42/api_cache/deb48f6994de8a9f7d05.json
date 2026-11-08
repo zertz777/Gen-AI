@@ -1,0 +1,14 @@
+{
+  "choices": [
+    {
+      "message": {
+        "content": "FUNCTION_BLOCK FB_P18\nVAR_INPUT\n    enqueue : BOOL;\n    dequeue : BOOL;\n    reset : BOOL;\nEND_VAR\nVAR_OUTPUT\n    elementCount : DINT;\n    status : WORD;\nEND_VAR\nVAR_IN_OUT\n    item : VARIANT;\n    buffer : VARIANT;\nEND_VAR\n(* Add a VAR block for internal state/timers before the implementation, if needed. *)\n(* SKELETON ONLY: replace this RETURN with scan logic and required initial state. *)\nRETURN;\nEND_FUNCTION_BLOCK\n\n(* FIXTURE_COMPILE_FAIL *)\n"
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0
+  },
+  "fixture": true
+}

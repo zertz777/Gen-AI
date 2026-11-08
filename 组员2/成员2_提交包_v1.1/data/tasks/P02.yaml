@@ -1,0 +1,55 @@
+task_id: P02
+title: Dual-Word Edge Detection
+difficulty: easy
+category: B
+requirement: |-
+  Write a function block FB that checks for rising and falling edges in each bit of a dual-word (DWord) input value every cycle. The function block should be able to detect and report changes, rising edges, and falling edges in the input value.
+
+  中文摘要：双字（DWORD）逐位边沿检测：每周期比较本期与上期值，输出变化位、上升沿位、下降沿位及其个数。
+
+  扫描周期：20 ms（全组统一，见 docs/tasks_note.md）
+io_table:
+  - direction: IN
+    name: value
+    data_type: DWORD
+    description: The input value to be checked for changes and edge triggering
+  - direction: OUT
+    name: hasChanged
+    data_type: BOOL
+    description: True indicates that the input value has changed
+  - direction: OUT
+    name: hasRisingEdges
+    data_type: BOOL
+    description: True indicates that rising edges have occurred in the input value
+  - direction: OUT
+    name: risingBits
+    data_type: DWORD
+    description: The bit stream of rising edges, where each bit indicates whether the corresponding input bit has experienced a rising edge (1 for a rising edge, 0 for no rising edge)
+  - direction: OUT
+    name: noOfRisingBits
+    data_type: USINT
+    description: The number of rising edges in the input value
+  - direction: OUT
+    name: hasFallingEdges
+    data_type: BOOL
+    description: True indicates that falling edges have occurred in the input value
+  - direction: OUT
+    name: fallingBits
+    data_type: DWORD
+    description: The bit stream of falling edges, where each bit indicates whether the corresponding input bit has experienced a falling edge (1 for a falling edge, 0 for no falling edge)
+  - direction: OUT
+    name: noOfFallingBits
+    data_type: USINT
+    description: The number of falling edges in the input value
+initial_state: "内部 lastValue = 16#00000000；hasChanged/hasRisingEdges/hasFallingEdges = FALSE；risingBits/fallingBits = 16#00000000；noOfRisingBits/noOfFallingBits = 0。"
+constraints:
+  - K1 每个扫描周期只做一次比较，比较对象是本周期的 value 与上一周期保存的 value。
+  - K2 risingBits 只在 0→1 的位上置 1，fallingBits 只在 1→0 的位上置 1，其余位为 0。
+  - K3 noOfRisingBits 必须等于 risingBits 中 1 的个数，noOfFallingBits 同理。
+  - K4 上电后的第一个周期没有「上一周期」，hasChanged/hasRisingEdges/hasFallingEdges 一律为 FALSE，避免上电误报。
+provenance: 课程公共题库 P02（Dual-Word Edge Detection）；原文导入、变量名与需求未做任何改动；来源与审核记录见 data/provenance.csv 第 3 行
+spec_ref: data/specs/P02.ltl
+error_examples:
+  - 错误实现：hasChanged 写成 value <> 0。症状——value 恒为非零时每周期都报「有变化」。
+  - 错误实现：计数用累加器 noOfRisingBits := noOfRisingBits + 1。症状——连续 10 个周期同一位抖动，计数值远大于实际置位数。
+notes: ""

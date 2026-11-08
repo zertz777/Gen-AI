@@ -1,0 +1,33 @@
+{
+  "case_id": "task_P18_skeleton",
+  "kind": "task_skeleton",
+  "expected": "observe",
+  "status": "timeout",
+  "elapsed_s": 3.109,
+  "source_sha256": "bb7139f8151d7824603e23379b7c24833cef8eb251f47b87b297c6e127fe3d0a",
+  "errors": [
+    {
+      "code": "E_COMPILE",
+      "severity": "error",
+      "line": 12,
+      "message": ".\\validation\\matiec_live_r2\\task_P18_skeleton\\source.st:12-12..12-19: error: invalid variable(s) declaration.",
+      "raw": ".\\validation\\matiec_live_r2\\task_P18_skeleton\\source.st:12-12..12-19: error: invalid variable(s) declaration."
+    },
+    {
+      "code": "E_COMPILE",
+      "severity": "error",
+      "line": 13,
+      "message": ".\\validation\\matiec_live_r2\\task_P18_skeleton\\source.st:13-5..13-20: error: invalid variable(s) declaration.",
+      "raw": ".\\validation\\matiec_live_r2\\task_P18_skeleton\\source.st:13-5..13-20: error: invalid variable(s) declaration."
+    },
+    {
+      "code": "E_SYNTAX",
+      "severity": "error",
+      "line": 12,
+      "message": ".\\validation\\matiec_live_r2\\task_P18_skeleton\\source.st:12-5..12-18: error: unexpected token after 'VAR_IN_OUT' in in_out variable(s) declaration.",
+      "raw": ".\\validation\\matiec_live_r2\\task_P18_skeleton\\source.st:12-5..12-18: error: unexpected token after 'VAR_IN_OUT' in in_out variable(s) declaration."
+    }
+  ],
+  "evidence_kind": "live_fast_compiler",
+  "functional_tests_run": false
+}

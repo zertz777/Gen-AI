@@ -1,0 +1,38 @@
+P01.ltl       Automated Filling Line Control             6 条  别名 0 个  I/O 11
+P02.ltl       Dual-Word Edge Detection                   5 条  别名 0 个  I/O 8
+P03.ltl       Alarm Handling                             6 条  别名 1 个  I/O 8
+P04.ltl       Jam Pump Debouncing and Runtime Maintena   5 条  别名 0 个  I/O 7
+P05.ltl       Weld Gap Alarm and Startup Inhibition      5 条  别名 0 个  I/O 5
+P06.ltl       Aeration Blower Delayed Start              5 条  别名 0 个  I/O 4
+P07.ltl       Multi-Pump Switching Control System        5 条  别名 0 个  I/O 7
+P08.ltl       Analog Batch Processing                    5 条  别名 3 个  I/O 10
+P09.ltl       Calculate Moving Average                   5 条  别名 0 个  I/O 9
+P10.ltl       Temperature Logic Control                  6 条  别名 0 个  I/O 7
+P11.ltl       Automated Production Line Control          5 条  别名 0 个  I/O 12
+P12.ltl       Slab Thickness Alarm and Fault History     5 条  别名 0 个  I/O 9
+P13.ltl       Office HVAC Multi-mode Energy-Saving Con   5 条  别名 0 个  I/O 5
+P14.ltl       IPv4 Parsing with Format and Range Check   2 条  别名 0 个  I/O 2
+P15.ltl       Material Proportioning Process Control     5 条  别名 0 个  I/O 16
+P16.ltl       Flexible Processing Control                5 条  别名 0 个  I/O 13
+P17.ltl       Recipe Management System                   5 条  别名 0 个  I/O 16
+P18.ltl       FIFO First-In-First-Out Queue              5 条  别名 0 个  I/O 7
+P19.ltl       Mechanical Arm Control                     6 条  别名 0 个  I/O 24
+P20.ltl       Production Control                         5 条  别名 0 个  I/O 17
+S01.ltl       双工位气动夹具互锁                                  5 条  别名 0 个  I/O 8
+S02.ltl       输送线正反转与检修锁                                 6 条  别名 0 个  I/O 8
+S03.ltl       安全门分级停机                                    6 条  别名 0 个  I/O 9
+S04.ltl       称重零点漂移补偿                                   5 条  别名 3 个  I/O 7
+S05.ltl       泵站流量累计与班次清零                                6 条  别名 0 个  I/O 8
+S06.ltl       烘箱分段升温与超温降载                                6 条  别名 0 个  I/O 9
+S07.ltl       灌装四工位节拍控制                                  6 条  别名 0 个  I/O 12
+S08.ltl       分拣线配方切换                                    5 条  别名 0 个  I/O 9
+S09.ltl       CIP 三步清洗时序                                 5 条  别名 0 个  I/O 9
+S10.ltl       变频器故障码分级报警                                 5 条  别名 0 个  I/O 6
+S11.ltl       传感器断线检测与降级运行                               5 条  别名 0 个  I/O 7
+S12.ltl       急停后安全重启与班次统计                               5 条  别名 0 个  I/O 8
+S13.ltl       双段输送合流同步与堵料防撞                              6 条  别名 0 个  I/O 11
+S14.ltl       液压站压力分级加载与卸荷                               6 条  别名 0 个  I/O 8
+
+规约文件 34 份，条款合计 178 条
+条款覆盖：C1=28，C10=33，C1b=1，C2=33，C2b=4，C3=6，C3b=1，C4=22，C5=4，C6=19，C7=10，C7b=2，C8=5，C8b=1，C9=9
+全部通过：语法合法，命题均可溯源到本题 I/O 或已声明的别名。

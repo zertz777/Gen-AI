@@ -1,0 +1,42 @@
+{
+  "status": "tool_error",
+  "fast": {
+    "status": "tool_error",
+    "errors": [
+      {
+        "code": "E_TOOL_ERROR",
+        "severity": "error",
+        "line": null,
+        "message": "FIXTURE ONLY: simulated tool_error",
+        "raw": "FIXTURE ONLY: simulated tool_error"
+      }
+    ],
+    "elapsed_s": 0.0,
+    "evidence_kind": "fixture"
+  },
+  "authoritative": {
+    "status": "tool_error",
+    "errors": [
+      {
+        "code": "E_TOOL_ERROR",
+        "severity": "error",
+        "line": null,
+        "message": "FIXTURE ONLY: simulated tool_error",
+        "raw": "FIXTURE ONLY: simulated tool_error"
+      }
+    ],
+    "elapsed_s": 0.0,
+    "evidence_kind": "fixture"
+  },
+  "errors": [
+    {
+      "code": "E_TOOL_ERROR",
+      "severity": "error",
+      "line": null,
+      "message": "FIXTURE ONLY: simulated tool_error",
+      "raw": "FIXTURE ONLY: simulated tool_error"
+    }
+  ],
+  "authoritative_available": false,
+  "evidence_kind": "fixture"
+}

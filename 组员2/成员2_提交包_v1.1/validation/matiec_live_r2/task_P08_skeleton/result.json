@@ -1,0 +1,33 @@
+{
+  "case_id": "task_P08_skeleton",
+  "kind": "task_skeleton",
+  "expected": "observe",
+  "status": "fail",
+  "elapsed_s": 0.094,
+  "source_sha256": "3932a02270fd4d943e53aa5b7b31f4ea998736bcea76ed6a599e254a0983346e",
+  "errors": [
+    {
+      "code": "E_COMPILE",
+      "severity": "error",
+      "line": 10,
+      "message": ".\\validation\\matiec_live_r2\\task_P08_skeleton\\source.st:10-10..11-1: error: ';' missing at end of data type declaration.",
+      "raw": ".\\validation\\matiec_live_r2\\task_P08_skeleton\\source.st:10-10..11-1: error: ';' missing at end of data type declaration."
+    },
+    {
+      "code": "E_COMPILE",
+      "severity": "error",
+      "line": 17,
+      "message": ".\\validation\\matiec_live_r2\\task_P08_skeleton\\source.st:17-26..17-26: error: invalid subrange list defined in array specification.",
+      "raw": ".\\validation\\matiec_live_r2\\task_P08_skeleton\\source.st:17-26..17-26: error: invalid subrange list defined in array specification."
+    },
+    {
+      "code": "E_COMPILE",
+      "severity": "error",
+      "line": 18,
+      "message": ".\\validation\\matiec_live_r2\\task_P08_skeleton\\source.st:18-22..18-22: error: invalid subrange list defined in array specification.",
+      "raw": ".\\validation\\matiec_live_r2\\task_P08_skeleton\\source.st:18-22..18-22: error: invalid subrange list defined in array specification."
+    }
+  ],
+  "evidence_kind": "live_fast_compiler",
+  "functional_tests_run": false
+}

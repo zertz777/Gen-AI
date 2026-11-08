@@ -1,0 +1,19 @@
+{
+  "case_id": "task_P04_skeleton",
+  "kind": "task_skeleton",
+  "expected": "observe",
+  "status": "timeout",
+  "elapsed_s": 3.109,
+  "source_sha256": "31658eeba6938c2378fe75e4d38f5444d016a537aaa1d9ab15a3dadc5a0c3072",
+  "errors": [
+    {
+      "code": "E_COMPILE",
+      "severity": "error",
+      "line": 11,
+      "message": ".\\validation\\matiec_live_r2\\task_P04_skeleton\\source.st:11-24..11-28: error: invalid specification in variable declaration.",
+      "raw": ".\\validation\\matiec_live_r2\\task_P04_skeleton\\source.st:11-24..11-28: error: invalid specification in variable declaration."
+    }
+  ],
+  "evidence_kind": "live_fast_compiler",
+  "functional_tests_run": false
+}

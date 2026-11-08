@@ -1,0 +1,9 @@
+{
+  "case_id": "C04_missing_dependency",
+  "source": ".\\validation\\codesys_release_v1.1\\C04_missing_dependency\\source.st",
+  "project": ".\\validation\\codesys_release_v1.1\\C04_missing_dependency\\compile.project",
+  "result": ".\\validation\\codesys_release_v1.1\\C04_missing_dependency\\result.json",
+  "source_sha256": "8b67b9d358d2481cd1a4b238ea233627ea1fbd89ac48fbbdaaf74cd065202e33",
+  "application": "Application",
+  "task_card": ".\\validation\\codesys_release_v1.1\\C04_missing_dependency\\task_card.json"
+}

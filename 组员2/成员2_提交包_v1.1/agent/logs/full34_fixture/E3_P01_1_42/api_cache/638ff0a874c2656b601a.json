@@ -1,0 +1,14 @@
+{
+  "choices": [
+    {
+      "message": {
+        "content": "FUNCTION_BLOCK FB_P01\nVAR_INPUT\n    bottleSensor : BOOL;\n    cleaningConfirmButton : BOOL;\n    fillingConfirmButton : BOOL;\n    cappingConfirmButton : BOOL;\n    packingConfirmButton : BOOL;\n    finishedButton : BOOL;\nEND_VAR\nVAR_OUTPUT\n    Pump_Motor : BOOL;\n    Filling_Valve : BOOL;\n    Capping_Machine : BOOL;\n    Packing_Machine : BOOL;\n    Completion_Light : BOOL;\nEND_VAR\n(* Add a VAR block for internal state/timers before the implementation, if needed. *)\n(* SKELETON ONLY: replace this RETURN with scan logic and required initial state. *)\nRETURN;\nEND_FUNCTION_BLOCK\n\n(* FIXTURE_COMPILE_FAIL *)\n"
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0
+  },
+  "fixture": true
+}

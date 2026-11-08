@@ -1,0 +1,65 @@
+task_id: S08
+title: 分拣线配方切换
+difficulty: hard
+category: C
+requirement: |-
+  分拣线按产品高度分到左右两条支线，阈值来自配方。切换配方必须在线上无料时进行。
+
+  控制要求：
+  1. RecipeSelect 为 1—3 时对应三组配方：1 = 左 30 mm / 右 60 mm；2 = 左 50 mm / 右 90 mm；3 = 左 70 mm / 右 120 mm（阈值为分界高度）。
+  2. ChangeoverReq 上升沿时，若 Busy = FALSE 且当前无料（PartHeight = 0.0），则 ActiveRecipe 切换为 RecipeSelect，Busy 置 TRUE 并保持 2 s 后自动清除。
+  3. Busy = TRUE 期间 SortLeft 与 SortRight 必须都为 FALSE。
+  4. RecipeSelect 不在 1—3 时拒绝切换，ActiveRecipe 保持不变，Status = 16#8801。
+  5. 正常分拣：PartHeight 小于左阈值时 SortLeft = TRUE；大于等于左阈值且小于右阈值时 SortRight = TRUE；超过右阈值时不动作并置 Status = 16#8802（超规格）。
+  6. 上电时 ActiveRecipe = 1，Busy = FALSE。
+
+  扫描周期：20 ms（全组统一，见 docs/tasks_note.md）
+io_table:
+  - direction: IN
+    name: RecipeSelect
+    data_type: INT
+    description: 请求的配方号 1—3
+  - direction: IN
+    name: ChangeoverReq
+    data_type: BOOL
+    description: 切换请求（上升沿有效）
+  - direction: IN
+    name: PartHeight
+    data_type: REAL
+    description: 当前产品高度（mm），0 表示无料
+  - direction: IN
+    name: EStop_NC
+    data_type: BOOL
+    description: 急停常闭触点，TRUE = 正常
+  - direction: OUT
+    name: ActiveRecipe
+    data_type: INT
+    description: 当前生效配方号
+  - direction: OUT
+    name: SortLeft
+    data_type: BOOL
+    description: 分到左支线
+  - direction: OUT
+    name: SortRight
+    data_type: BOOL
+    description: 分到右支线
+  - direction: OUT
+    name: Busy
+    data_type: BOOL
+    description: 切换进行中
+  - direction: OUT
+    name: Status
+    data_type: WORD
+    description: 状态码
+initial_state: "ActiveRecipe = 1；SortLeft = FALSE；SortRight = FALSE；Busy = FALSE；Status = 16#0000；ChangeoverReqLast = FALSE。"
+constraints:
+  - K1 Busy = TRUE 期间 SortLeft 与 SortRight 均为 FALSE。
+  - K2 只有在无料且非忙时才允许切换配方。
+  - K3 RecipeSelect 非法（不在 1—3）时 ActiveRecipe 不变，仅置错误码。
+  - K4 分拣两路互斥，且同一产品只能分到一条支线。
+provenance: 改编自公开题（P17 Recipe Management System（课程题库））；改编点：把「配方增删改查」改为「按配方阈值分拣」，把配方管理压缩成 3 组固定配方 + 切换请求；为什么这样改：原题的数据库式增删改查在 ST 里难以自动化评测；改成阈值分拣后，配方切换的互斥与时序都能逐周期判定；来源与审核记录见 data/provenance.csv 第 29 行
+spec_ref: data/specs/S08.ltl
+error_examples:
+  - 错误实现：切换配方时不清分拣输出。症状——切换瞬间零件被旧阈值分到错误支线。
+  - 错误实现：RecipeSelect 非法时把 ActiveRecipe 置 0。症状——所有产品都判超规格，整线停摆且无人知道原因。
+notes: ""

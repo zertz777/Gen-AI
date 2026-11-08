@@ -1,0 +1,15 @@
+{
+  "execution_mode": "fixture",
+  "eligible_for_experiments": false,
+  "status": "completed",
+  "failure_reason": null,
+  "first_compile_status": "fail",
+  "selected_candidate": "repair_1",
+  "semantic_warnings": [],
+  "degraded": false,
+  "environment_blockers": [],
+  "fingerprint": "0599c53895a0769eb61bd06c08a0cb674eaf3b837dbcc67ed8f2f25357028284",
+  "seed_sent_to_api": false,
+  "tokens_estimate_upper_bound": 28411,
+  "tool_verify_status": "skipped"
+}

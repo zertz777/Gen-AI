@@ -1,0 +1,11 @@
+# task: P19
+# meta: hard / C 状态机与节拍
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(EmergencyStop -> X(!MoveDown && !MoveUp && !MoveLeft && !MoveRight && !ActivateGrip && !ActivateRelease))    -- 急停后下一周期六路动作全部停止（K4）
+C2: G(ManualMode && DownButton && !DownLimitSwitch && !EmergencyStop -> MoveDown)    -- 手动模式下的启动条件：按钮按下且未到限位（其余方向同构，见用例）（K1）
+C4: G(!(MoveDown && MoveUp) && !(MoveLeft && MoveRight) && !(ActivateGrip && ActivateRelease))    -- 三对反向动作两两互斥（K1/K5）
+C7: G(DownLimitSwitch -> X(!MoveDown))    -- 到达下限位后下一周期必须停止下行动作（K1）
+C6: G(ActivateGrip -> (ActivateGrip W GripLimitSwitch))    -- 抓取输出保持到抓取限位到位为止（K5）
+C10: G[0,1](!MoveDown && !MoveUp && !MoveLeft && !MoveRight && !ActivateGrip && !ActivateRelease)    -- 上电首周期无动作输出（初态）

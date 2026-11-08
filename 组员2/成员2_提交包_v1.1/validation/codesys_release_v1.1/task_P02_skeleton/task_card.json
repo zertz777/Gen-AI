@@ -1,0 +1,137 @@
+{
+  "task_id": "P02",
+  "title": "Dual-Word Edge Detection",
+  "difficulty": "easy",
+  "category": "B",
+  "requirement": "Write a function block FB that checks for rising and falling edges in each bit of a dual-word (DWord) input value every cycle. The function block should be able to detect and report changes, rising edges, and falling edges in the input value.\n\n中文摘要：双字（DWORD）逐位边沿检测：每周期比较本期与上期值，输出变化位、上升沿位、下降沿位及其个数。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）",
+  "io_table": [
+    {
+      "direction": "IN",
+      "name": "value",
+      "data_type": "DWORD",
+      "description": "The input value to be checked for changes and edge triggering"
+    },
+    {
+      "direction": "OUT",
+      "name": "hasChanged",
+      "data_type": "BOOL",
+      "description": "True indicates that the input value has changed"
+    },
+    {
+      "direction": "OUT",
+      "name": "hasRisingEdges",
+      "data_type": "BOOL",
+      "description": "True indicates that rising edges have occurred in the input value"
+    },
+    {
+      "direction": "OUT",
+      "name": "risingBits",
+      "data_type": "DWORD",
+      "description": "The bit stream of rising edges, where each bit indicates whether the corresponding input bit has experienced a rising edge (1 for a rising edge, 0 for no rising edge)"
+    },
+    {
+      "direction": "OUT",
+      "name": "noOfRisingBits",
+      "data_type": "USINT",
+      "description": "The number of rising edges in the input value"
+    },
+    {
+      "direction": "OUT",
+      "name": "hasFallingEdges",
+      "data_type": "BOOL",
+      "description": "True indicates that falling edges have occurred in the input value"
+    },
+    {
+      "direction": "OUT",
+      "name": "fallingBits",
+      "data_type": "DWORD",
+      "description": "The bit stream of falling edges, where each bit indicates whether the corresponding input bit has experienced a falling edge (1 for a falling edge, 0 for no falling edge)"
+    },
+    {
+      "direction": "OUT",
+      "name": "noOfFallingBits",
+      "data_type": "USINT",
+      "description": "The number of falling edges in the input value"
+    }
+  ],
+  "initial_state": "内部 lastValue = 16#00000000；hasChanged/hasRisingEdges/hasFallingEdges = FALSE；risingBits/fallingBits = 16#00000000；noOfRisingBits/noOfFallingBits = 0。",
+  "constraints": [
+    "K1 每个扫描周期只做一次比较，比较对象是本周期的 value 与上一周期保存的 value。",
+    "K2 risingBits 只在 0→1 的位上置 1，fallingBits 只在 1→0 的位上置 1，其余位为 0。",
+    "K3 noOfRisingBits 必须等于 risingBits 中 1 的个数，noOfFallingBits 同理。",
+    "K4 上电后的第一个周期没有「上一周期」，hasChanged/hasRisingEdges/hasFallingEdges 一律为 FALSE，避免上电误报。"
+  ],
+  "provenance": "课程公共题库 P02（Dual-Word Edge Detection）；原文导入、变量名与需求未做任何改动；来源与审核记录见 data/provenance.csv 第 3 行",
+  "spec_ref": "data/specs/P02.ltl",
+  "error_examples": [
+    "错误实现：hasChanged 写成 value <> 0。症状——value 恒为非零时每周期都报「有变化」。",
+    "错误实现：计数用累加器 noOfRisingBits := noOfRisingBits + 1。症状——连续 10 个周期同一位抖动，计数值远大于实际置位数。"
+  ],
+  "notes": "",
+  "spec_text": "# task: P02\n# meta: easy / B 模拟量与数据处理\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n#\n# note: 本题是纯数据处理（双字边沿），题库未给出任何停止类信号，因此不写 C1（停止优先）；边沿标志的一致性由 C2/C7/C8 覆盖。\n\nC2: G(hasChanged -> (hasRisingEdges || hasFallingEdges))    -- 报了变化就必须报出至少一类边沿（三个标志不得自相矛盾）（K1）\nC2b: G((hasRisingEdges || hasFallingEdges) -> hasChanged)    -- 报了边沿就必然有变化（防止上电或复位时误报）（K4）\nC7: G(!hasChanged -> X(!hasRisingEdges && !hasFallingEdges))    -- 无变化的周期之后不得凭空出现边沿标志（不抖动）（K1）\nC8: G(hasChanged == FALSE -> noOfRisingBits == 0 && noOfFallingBits == 0)    -- 无变化时两个计数必须为 0（计数与标志同源）（K3）\nC10: G[0,1](!hasChanged && !hasRisingEdges && !hasFallingEdges && noOfRisingBits == 0 && noOfFallingBits == 0)    -- 上电首周期不报变化（没有上一周期可比）（K4）\n",
+  "spec_sha256": "12b9e112108605b60aaf35a89a011c9419c6904fd9fbd99a76f772589b211611",
+  "task_version": "dfaf8efb",
+  "task_sha256": "dfaf8efb985c67559807ff81c2fee0c608d81de08d7d018e7227a57c875c26d4",
+  "source_path": "data/tasks/P02.yaml",
+  "degraded": false,
+  "missing_fields": [],
+  "warnings": [],
+  "semantic_warnings": [],
+  "interface_io_table": [
+    {
+      "direction": "IN",
+      "name": "value",
+      "data_type": "DWORD",
+      "description": "The input value to be checked for changes and edge triggering"
+    },
+    {
+      "direction": "OUT",
+      "name": "hasChanged",
+      "data_type": "BOOL",
+      "description": "True indicates that the input value has changed"
+    },
+    {
+      "direction": "OUT",
+      "name": "hasRisingEdges",
+      "data_type": "BOOL",
+      "description": "True indicates that rising edges have occurred in the input value"
+    },
+    {
+      "direction": "OUT",
+      "name": "risingBits",
+      "data_type": "DWORD",
+      "description": "The bit stream of rising edges, where each bit indicates whether the corresponding input bit has experienced a rising edge (1 for a rising edge, 0 for no rising edge)"
+    },
+    {
+      "direction": "OUT",
+      "name": "noOfRisingBits",
+      "data_type": "USINT",
+      "description": "The number of rising edges in the input value"
+    },
+    {
+      "direction": "OUT",
+      "name": "hasFallingEdges",
+      "data_type": "BOOL",
+      "description": "True indicates that falling edges have occurred in the input value"
+    },
+    {
+      "direction": "OUT",
+      "name": "fallingBits",
+      "data_type": "DWORD",
+      "description": "The bit stream of falling edges, where each bit indicates whether the corresponding input bit has experienced a falling edge (1 for a falling edge, 0 for no falling edge)"
+    },
+    {
+      "direction": "OUT",
+      "name": "noOfFallingBits",
+      "data_type": "USINT",
+      "description": "The number of falling edges in the input value"
+    }
+  ],
+  "type_declarations": "",
+  "type_origins": {},
+  "pou_name": "FB_P02",
+  "pou_kind": "FUNCTION_BLOCK",
+  "dialect_requirements": [],
+  "skeleton_compiled": false,
+  "scan_cycle_ms": 20
+}

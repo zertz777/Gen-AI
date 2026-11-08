@@ -1,0 +1,247 @@
+{
+  "status": "completed", 
+  "elapsed_s": 108.49925231933594, 
+  "evidence_kind": "live", 
+  "cases_completed": [
+    {
+      "status": "pass", 
+      "elapsed_s": 10.60321044921875, 
+      "case_id": "C00_good", 
+      "code_generated": true
+    }, 
+    {
+      "status": "fail", 
+      "elapsed_s": 2.0949630737304688, 
+      "case_id": "C01_undeclared", 
+      "code_generated": false
+    }, 
+    {
+      "status": "fail", 
+      "elapsed_s": 1.9670028686523438, 
+      "case_id": "C02_type", 
+      "code_generated": false
+    }, 
+    {
+      "status": "fail", 
+      "elapsed_s": 1.9687271118164063, 
+      "case_id": "C03_syntax", 
+      "code_generated": false
+    }, 
+    {
+      "status": "fail", 
+      "elapsed_s": 2.026458740234375, 
+      "case_id": "C04_missing_dependency", 
+      "code_generated": false
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.2057571411132813, 
+      "case_id": "C05_dead_code", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.2461166381835938, 
+      "case_id": "task_P01_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.1984176635742188, 
+      "case_id": "task_P02_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.5209121704101563, 
+      "case_id": "task_P03_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.2629623413085938, 
+      "case_id": "task_P04_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.1320648193359375, 
+      "case_id": "task_P05_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.3458175659179688, 
+      "case_id": "task_P06_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 3.6904754638671875, 
+      "case_id": "task_P07_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.828460693359375, 
+      "case_id": "task_P08_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.5039901733398438, 
+      "case_id": "task_P09_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.5531158447265625, 
+      "case_id": "task_P10_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.3378829956054688, 
+      "case_id": "task_P11_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.25006103515625, 
+      "case_id": "task_P12_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.5611419677734375, 
+      "case_id": "task_P13_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.77154541015625, 
+      "case_id": "task_P14_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.911163330078125, 
+      "case_id": "task_P15_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.83343505859375, 
+      "case_id": "task_P16_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.7720184326171875, 
+      "case_id": "task_P17_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "fail", 
+      "elapsed_s": 2.2980117797851563, 
+      "case_id": "task_P18_skeleton", 
+      "code_generated": false
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.2149887084960938, 
+      "case_id": "task_P19_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.3961639404296875, 
+      "case_id": "task_P20_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.3539199829101563, 
+      "case_id": "task_S01_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.4651641845703125, 
+      "case_id": "task_S02_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.4250259399414063, 
+      "case_id": "task_S03_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.3179397583007813, 
+      "case_id": "task_S04_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.217010498046875, 
+      "case_id": "task_S05_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.344757080078125, 
+      "case_id": "task_S06_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.2947463989257813, 
+      "case_id": "task_S07_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.3264694213867188, 
+      "case_id": "task_S08_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.2880706787109375, 
+      "case_id": "task_S09_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.6641769409179688, 
+      "case_id": "task_S10_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.7012252807617188, 
+      "case_id": "task_S11_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 2.5824203491210938, 
+      "case_id": "task_S12_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 3.9632644653320313, 
+      "case_id": "task_S13_skeleton", 
+      "code_generated": true
+    }, 
+    {
+      "status": "pass", 
+      "elapsed_s": 3.1519012451171875, 
+      "case_id": "task_S14_skeleton", 
+      "code_generated": true
+    }
+  ]
+}

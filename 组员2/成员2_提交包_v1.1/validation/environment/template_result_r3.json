@@ -1,0 +1,65 @@
+{
+  "device": {
+    "vendor": "CODESYS", 
+    "name": "CODESYS Control Win V3 x64", 
+    "id": "0000 0004", 
+    "type": 4096, 
+    "version": "3.5.22.40"
+  }, 
+  "compiler": "CODESYS", 
+  "action": "create", 
+  "template_created": true, 
+  "output": ".\\local\\compile_template_r3.project", 
+  "application": "Application", 
+  "task": {
+    "task": "MainTask", 
+    "program": "PLC_PRG", 
+    "interval": "20", 
+    "interval_unit": "ms"
+  }, 
+  "scope": "offline template rebuild only; no PLC login/download/start", 
+  "status": "pass", 
+  "library_updates": [
+    {
+      "new": "Standard, 3.5.22.0 (System)", 
+      "old": "Standard, * (System)"
+    }
+  ], 
+  "template_ready": true, 
+  "mode": "clone", 
+  "messages": [
+    {
+      "severity": "text", 
+      "position_text": "", 
+      "raw": "------ 开始编译应用程序 PLCWinNT.Application -------"
+    }, 
+    {
+      "severity": "text", 
+      "position_text": "", 
+      "raw": "代码典型化..."
+    }, 
+    {
+      "severity": "text", 
+      "position_text": "", 
+      "raw": "编译完成 -- 0错误,0警告"
+    }, 
+    {
+      "severity": "text", 
+      "position_text": "", 
+      "raw": "其他代码检查..."
+    }, 
+    {
+      "severity": "text", 
+      "position_text": "", 
+      "raw": "其他代码检查完成-0 个错误"
+    }
+  ], 
+  "libraries": [
+    "#IoStandard", 
+    "#3SLicense", 
+    "#CAA Device Diagnosis", 
+    "#BreakpointLogging", 
+    "IoStandard, 3.5.22.0 (System)", 
+    "Standard, 3.5.22.0 (System)"
+  ]
+}

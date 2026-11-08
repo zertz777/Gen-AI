@@ -1,0 +1,72 @@
+task_id: P08
+title: Analog Batch Processing
+difficulty: medium
+category: B
+requirement: |-
+  Write a PLC function block that processes analog inputs in batches and converts them into engineering values.
+
+  1. analogValues supplies the raw-value array. channels supplies per-channel settings and receives conversion results. count specifies how many channels to process from the beginning of the arrays. The caller must provide count from zero through the smaller of the two array lengths. Match channels by ordinal position starting at each array's own lower bound. Read analogValues without modifying it.
+  2. Each channel is enabled by its enable field and converted according to measuringMode. Read configuration fields without modifying them; write only retVal and outputValue.
+  3. For measuringMode 0, perform non-temperature linear scaling: when bipolar is FALSE, map raw values 0..27648 to loLIM..hiLIM; when TRUE, map -27648..27648 to loLIM..hiLIM.
+  4. For measuringMode 1, perform standard-temperature conversion: outputValue is one tenth of the raw analog value.
+  5. For measuringMode 2, perform climatic-temperature conversion: outputValue is one hundredth of the raw analog value.
+  6. If measuringMode is not 0, 1 or 2, set that channel's retVal to 16#8001 and skip its conversion.
+  7. If hiLIM is less than or equal to loLIM, set that channel's retVal to 16#8002 and skip its conversion.
+
+  中文摘要：模拟量批量转换：按 count 逐通道把原始值换算为工程量，支持非温度线性标定、标准温度与气候温度三种模式。
+
+  扫描周期：20 ms（全组统一，见 docs/tasks_note.md）
+io_table:
+  - direction: IN
+    name: count
+    data_type: DINT
+    description: Number of channels to be converted
+  - direction: INOUT
+    name: analogValues
+    data_type: ARRAY[*] OF INT
+    description: Variable-length analog array passed by reference to preserve its bounds. Read-only to the function block; no element may be modified.
+  - direction: INOUT
+    name: channels
+    data_type: ARRAY[*] OF ST_AnalogChannel
+    description: Channel records passed by reference. Configuration fields are read-only; write only retVal and outputValue.
+  - direction: IN
+    name: channels[].enable
+    data_type: BOOL
+    description: Channel conversion enable. Read-only to the function block.
+  - direction: IN
+    name: channels[].hiLIM
+    data_type: REAL
+    description: Upper engineering-unit limit. Read-only to the function block.
+  - direction: IN
+    name: channels[].loLIM
+    data_type: REAL
+    description: Lower engineering-unit limit. Read-only to the function block.
+  - direction: IN
+    name: channels[].bipolar
+    data_type: BOOL
+    description: FALSE selects unipolar and TRUE selects bipolar operation. Read-only to the function block.
+  - direction: IN
+    name: channels[].measuringMode
+    data_type: INT
+    description: 0 non-temperature, 1 standard temperature, 2 climatic temperature. Read-only to the function block.
+  - direction: OUT
+    name: channels[].retVal
+    data_type: WORD
+    description: Per-channel status code written by the function block.
+  - direction: OUT
+    name: channels[].outputValue
+    data_type: REAL
+    description: Converted value written by the function block.
+initial_state: 不保留上次结果：每次调用按当前输入重算 retVal 与 outputValue；count = 0 时不做任何通道。
+constraints:
+  - K1 只处理从两个数组各自下界开始的前 count 个通道；count 必须落在 0 到两数组长度较小者之间。
+  - K2 只读 analogValues 与配置字段，仅写 retVal 与 outputValue，不得就地修改输入数组。
+  - K3 measuringMode = 0 时做线性标定：bipolar = FALSE 把 0..27648 映射到 loLIM..hiLIM，bipolar = TRUE 把 -27648..27648 映射到同一区间。
+  - K4 measuringMode = 1 时输出为原始值的 1/10，measuringMode = 2 时输出为原始值的 1/100。
+  - K5 count 越界或模式非法时置错误码并停止处理后续通道，已处理的通道结果保持有效。
+provenance: 课程公共题库 P08（Analog Batch Processing）；原文导入、变量名与需求未做任何改动；来源与审核记录见 data/provenance.csv 第 9 行
+spec_ref: data/specs/P08.ltl
+error_examples:
+  - 错误实现：直接在 analogValues 上做原地换算。症状——同一通道在第二个扫描周期被重复换算，工程量越算越小。
+  - 错误实现：单双极性判断写反。症状——单极性输入算出负的工程量，输出值整体偏移满量程。
+notes: ""

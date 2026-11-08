@@ -1,0 +1,173 @@
+{
+  "task_id": "P01",
+  "title": "Automated Filling Line Control",
+  "difficulty": "easy",
+  "category": "C",
+  "requirement": "An automated filling line responsible for cleaning, filling, capping, and packaging bottles. Each step of the production line is controlled by PLC and triggered by signals from sensors and operators.\nControl requirements:\nWhen the sensor bottleSensor detects a bottle, it triggers the start of the cleaning pump and continues to work.\nAfter cleaning is completed, the operator operates the button cleaningConfirmButton to trigger the cleaning completion signal, automatically starting the filling valve for filling.\nAfter filling is completed, the operator operates the button fillingConfirmButton to trigger the filling completion signal, automatically starting the capping machine for capping.\nAfter capping is completed, the operator operates the button cappingConfirmButton to trigger the capping completion signal, starting the packing machine for packaging.\nAfter packaging is completed, the operator operates the button packingConfirmButton to trigger the packaging completion signal, lighting up the packaging completion indicator light.\nAfter the operator picks up the packaged bottle, they press the confirmation button finishedButton to reset the indicator light and prepare for the next bottle's production cycle.\n\n中文摘要：灌装线四步顺序控制：瓶子到位启清洗泵，操作员逐工步确认后依次进入灌装、封盖、包装，最后点亮完成灯等待取瓶。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）",
+  "io_table": [
+    {
+      "direction": "IN",
+      "name": "bottleSensor",
+      "data_type": "BOOL",
+      "description": "The bottle reaches the sensor, triggering a signal when a bottle is detected"
+    },
+    {
+      "direction": "IN",
+      "name": "cleaningConfirmButton",
+      "data_type": "BOOL",
+      "description": "Operator confirmation button, used to confirm the completion of the cleaning process"
+    },
+    {
+      "direction": "IN",
+      "name": "fillingConfirmButton",
+      "data_type": "BOOL",
+      "description": "Operator confirmation button, used to confirm the completion of the filling process"
+    },
+    {
+      "direction": "IN",
+      "name": "cappingConfirmButton",
+      "data_type": "BOOL",
+      "description": "Operator confirmation button, used to confirm the completion of the capping process"
+    },
+    {
+      "direction": "IN",
+      "name": "packingConfirmButton",
+      "data_type": "BOOL",
+      "description": "Operator confirmation button, used to confirm the completion of the packaging process"
+    },
+    {
+      "direction": "IN",
+      "name": "finishedButton",
+      "data_type": "BOOL",
+      "description": "Operator confirmation button, used to confirm that the bottle has been picked up"
+    },
+    {
+      "direction": "OUT",
+      "name": "Pump_Motor",
+      "data_type": "BOOL",
+      "description": "Control output for the operation of the cleaning pump motor"
+    },
+    {
+      "direction": "OUT",
+      "name": "Filling_Valve",
+      "data_type": "BOOL",
+      "description": "Control output for the operation of the filling valve"
+    },
+    {
+      "direction": "OUT",
+      "name": "Capping_Machine",
+      "data_type": "BOOL",
+      "description": "Control output for the operation of the capping machine"
+    },
+    {
+      "direction": "OUT",
+      "name": "Packing_Machine",
+      "data_type": "BOOL",
+      "description": "Control output for the operation of the packing machine"
+    },
+    {
+      "direction": "OUT",
+      "name": "Completion_Light",
+      "data_type": "BOOL",
+      "description": "Indicator light for packaging completion"
+    }
+  ],
+  "initial_state": "全部输出 FALSE（Pump_Motor/Filling_Valve/Capping_Machine/Packing_Machine/Completion_Light），工步状态 = 0（等待瓶子），不保留上一瓶的完成标记。",
+  "constraints": [
+    "K1 四道工序只能按 清洗→灌装→封盖→包装 的顺序推进，前一步的完成确认是后一步启动的必要条件。",
+    "K2 同一时刻只允许一个执行器输出为 TRUE（Pump_Motor/Filling_Valve/Capping_Machine/Packing_Machine 两两互斥）。",
+    "K3 清洗泵只在 bottleSensor 检测到瓶子且当前工步为 0 时启动；泵运行期间再次检测到瓶子不得重复触发。",
+    "K4 finishedButton 有效后回到工步 0，并熄灭 Completion_Light。"
+  ],
+  "provenance": "课程公共题库 P01（Automated Filling Line Control）；原文导入、变量名与需求未做任何改动；来源与审核记录见 data/provenance.csv 第 2 行",
+  "spec_ref": "data/specs/P01.ltl",
+  "error_examples": [
+    "错误实现：用一堆与门直接驱动四个执行器，未记录工步。症状——操作员连按两次 fillingConfirmButton，灌装阀与封盖机同时为 TRUE，瓶子未灌满就被封盖。",
+    "错误实现：finishedButton 只清 Completion_Light 不清工步号。症状——下一只瓶子进站时程序仍停在工步 4，清洗泵不启动。"
+  ],
+  "notes": "",
+  "spec_text": "# task: P01\n# meta: easy / C 状态机与节拍\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(finishedButton -> X(!Pump_Motor && !Filling_Valve && !Capping_Machine && !Packing_Machine))    -- 完成按钮按下后下一周期四路执行器全部停止（停止优先于继续推进）（K4）\nC2: G(Pump_Motor -> bottleSensor)    -- 清洗泵运行期间必须有瓶子在传感器上（泵不得空转）（K3）\nC3: G(Filling_Valve -> (cleaningConfirmButton W Filling_Valve))    -- 灌装阀打开前，清洗确认必须已成立并保持（顺序推进）（K1）\nC4: G(!(Pump_Motor && Filling_Valve) && !(Pump_Motor && Capping_Machine) && !(Pump_Motor && Packing_Machine) && !(Filling_Valve && Capping_Machine) && !(Filling_Valve && Packing_Machine) && !(Capping_Machine && Packing_Machine))    -- 四路执行器两两互斥（同一时刻只有一个动作）（K2）\nC6: G(Completion_Light -> (Completion_Light W finishedButton))    -- 完成灯点亮后保持，直到操作员按下 finishedButton（K4）\nC9: G[0,1](!Pump_Motor && !Filling_Valve && !Capping_Machine && !Packing_Machine && !Completion_Light)    -- 上电首周期所有输出为 FALSE（初态无动作）（初态）\n",
+  "spec_sha256": "455faf7064d8d254512ff36a0de6011dab8f69647d281534b782a7c8c57b9224",
+  "task_version": "4a6a1376",
+  "task_sha256": "4a6a13768e9026f447e03c9e73ef285917e161d3a4abdecfd46bbd7d9ab72b81",
+  "source_path": "data/tasks/P01.yaml",
+  "degraded": false,
+  "missing_fields": [],
+  "warnings": [],
+  "semantic_warnings": [],
+  "interface_io_table": [
+    {
+      "direction": "IN",
+      "name": "bottleSensor",
+      "data_type": "BOOL",
+      "description": "The bottle reaches the sensor, triggering a signal when a bottle is detected"
+    },
+    {
+      "direction": "IN",
+      "name": "cleaningConfirmButton",
+      "data_type": "BOOL",
+      "description": "Operator confirmation button, used to confirm the completion of the cleaning process"
+    },
+    {
+      "direction": "IN",
+      "name": "fillingConfirmButton",
+      "data_type": "BOOL",
+      "description": "Operator confirmation button, used to confirm the completion of the filling process"
+    },
+    {
+      "direction": "IN",
+      "name": "cappingConfirmButton",
+      "data_type": "BOOL",
+      "description": "Operator confirmation button, used to confirm the completion of the capping process"
+    },
+    {
+      "direction": "IN",
+      "name": "packingConfirmButton",
+      "data_type": "BOOL",
+      "description": "Operator confirmation button, used to confirm the completion of the packaging process"
+    },
+    {
+      "direction": "IN",
+      "name": "finishedButton",
+      "data_type": "BOOL",
+      "description": "Operator confirmation button, used to confirm that the bottle has been picked up"
+    },
+    {
+      "direction": "OUT",
+      "name": "Pump_Motor",
+      "data_type": "BOOL",
+      "description": "Control output for the operation of the cleaning pump motor"
+    },
+    {
+      "direction": "OUT",
+      "name": "Filling_Valve",
+      "data_type": "BOOL",
+      "description": "Control output for the operation of the filling valve"
+    },
+    {
+      "direction": "OUT",
+      "name": "Capping_Machine",
+      "data_type": "BOOL",
+      "description": "Control output for the operation of the capping machine"
+    },
+    {
+      "direction": "OUT",
+      "name": "Packing_Machine",
+      "data_type": "BOOL",
+      "description": "Control output for the operation of the packing machine"
+    },
+    {
+      "direction": "OUT",
+      "name": "Completion_Light",
+      "data_type": "BOOL",
+      "description": "Indicator light for packaging completion"
+    }
+  ],
+  "type_declarations": "",
+  "type_origins": {},
+  "pou_name": "FB_P01",
+  "pou_kind": "FUNCTION_BLOCK",
+  "dialect_requirements": [],
+  "skeleton_compiled": false,
+  "scan_cycle_ms": 20
+}

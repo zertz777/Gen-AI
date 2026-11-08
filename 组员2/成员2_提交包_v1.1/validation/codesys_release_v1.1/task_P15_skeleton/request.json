@@ -1,0 +1,9 @@
+{
+  "case_id": "task_P15_skeleton",
+  "source": ".\\validation\\codesys_release_v1.1\\task_P15_skeleton\\source.st",
+  "project": ".\\validation\\codesys_release_v1.1\\task_P15_skeleton\\compile.project",
+  "result": ".\\validation\\codesys_release_v1.1\\task_P15_skeleton\\result.json",
+  "source_sha256": "d1dfd03ff2e3b071a1300970ee1cb21e36ad4dab44f77a56b796ab825d79544a",
+  "application": "Application",
+  "task_card": ".\\validation\\codesys_release_v1.1\\task_P15_skeleton\\task_card.json"
+}

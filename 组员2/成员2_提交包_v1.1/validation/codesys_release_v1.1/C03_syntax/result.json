@@ -1,0 +1,165 @@
+{
+  "elapsed_s": 1.9687271118164063, 
+  "evidence_kind": "live", 
+  "messages": [
+    {
+      "stage": "build", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "------ 开始编译应用程序 PLCWinNT.Application -------"
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "代码典型化..."
+    }, 
+    {
+      "stage": "build", 
+      "native_number": 6, 
+      "native_prefix": "C", 
+      "severity": "error", 
+      "object_name": "FB_AgentProbeSyntax", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "行1,列1 (Impl)", 
+      "raw": "应该采用'THEN' 取代'y'"
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "编译完成--1错误,0警告"
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "SA", 
+      "severity": "text", 
+      "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+      "position_text": "", 
+      "raw": "其他代码检查..."
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "SA", 
+      "severity": "text", 
+      "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+      "position_text": "", 
+      "raw": "其他代码检查完成-0 个错误"
+    }
+  ], 
+  "errors": [
+    {
+      "code": "E_SYNTAX", 
+      "severity": "error", 
+      "line": 8, 
+      "raw": "应该采用'THEN' 取代'y'", 
+      "message": "应该采用'THEN' 取代'y'"
+    }
+  ], 
+  "code_generated": false, 
+  "stages": {
+    "build": {
+      "status": "fail", 
+      "elapsed_s": 0.6739044189453125, 
+      "errors": [
+        {
+          "code": "E_SYNTAX", 
+          "severity": "error", 
+          "line": 8, 
+          "raw": "应该采用'THEN' 取代'y'", 
+          "message": "应该采用'THEN' 取代'y'"
+        }
+      ], 
+      "messages": [
+        {
+          "stage": "build", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "------ 开始编译应用程序 PLCWinNT.Application -------"
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "代码典型化..."
+        }, 
+        {
+          "stage": "build", 
+          "native_number": 6, 
+          "native_prefix": "C", 
+          "severity": "error", 
+          "object_name": "FB_AgentProbeSyntax", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "行1,列1 (Impl)", 
+          "raw": "应该采用'THEN' 取代'y'"
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "编译完成--1错误,0警告"
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "SA", 
+          "severity": "text", 
+          "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+          "position_text": "", 
+          "raw": "其他代码检查..."
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "SA", 
+          "severity": "text", 
+          "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+          "position_text": "", 
+          "raw": "其他代码检查完成-0 个错误"
+        }
+      ]
+    }, 
+    "generate": {
+      "status": "skipped", 
+      "elapsed_s": 0.0, 
+      "errors": [], 
+      "reason": "build_fail", 
+      "messages": []
+    }
+  }, 
+  "linked_pou": "FB_AgentProbeSyntax", 
+  "status": "fail", 
+  "compiler": "CODESYS", 
+  "case_id": "C03_syntax", 
+  "source_line_mapping": {
+    "status": "known_object_partitions_calibrated", 
+    "imported_text_spans": [
+      {
+        "object_name": "FB_AgentProbeSyntax", 
+        "imported_prefix_lines": 1, 
+        "part": "declaration", 
+        "source_start_line": 1, 
+        "source_end_line": 7
+      }, 
+      {
+        "object_name": "FB_AgentProbeSyntax", 
+        "imported_prefix_lines": 0, 
+        "part": "implementation", 
+        "source_start_line": 8, 
+        "source_end_line": 8
+      }
+    ], 
+    "note": "Decl/Impl line mapping calibrated with native diagnostics; unknown objects/positions remain null"
+  }, 
+  "source_sha256": "61195556b53a9e1757c6561dbf77d98ed5ae40b04227268b8bbb0538aebdef60"
+}

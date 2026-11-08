@@ -1,0 +1,365 @@
+{
+  "cases": [
+    {
+      "case_id": "C00_good",
+      "source": ".\\validation\\codesys_release_v1.1\\C00_good\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\C00_good\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\C00_good\\result.json",
+      "source_sha256": "a30363a54ce95bfe964499f0692fe447a0272a4886053b3e2b11240efcf2e343",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\C00_good\\task_card.json"
+    },
+    {
+      "case_id": "C01_undeclared",
+      "source": ".\\validation\\codesys_release_v1.1\\C01_undeclared\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\C01_undeclared\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\C01_undeclared\\result.json",
+      "source_sha256": "938fe28d7ed276f3adbc2598220984afb0437ab8204952e2697edf6955b7882d",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\C01_undeclared\\task_card.json"
+    },
+    {
+      "case_id": "C02_type",
+      "source": ".\\validation\\codesys_release_v1.1\\C02_type\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\C02_type\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\C02_type\\result.json",
+      "source_sha256": "e83155bc35aa0dfa829d346499d9faab94a909fc447bc17c9ab31899207e91d6",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\C02_type\\task_card.json"
+    },
+    {
+      "case_id": "C03_syntax",
+      "source": ".\\validation\\codesys_release_v1.1\\C03_syntax\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\C03_syntax\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\C03_syntax\\result.json",
+      "source_sha256": "61195556b53a9e1757c6561dbf77d98ed5ae40b04227268b8bbb0538aebdef60",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\C03_syntax\\task_card.json"
+    },
+    {
+      "case_id": "C04_missing_dependency",
+      "source": ".\\validation\\codesys_release_v1.1\\C04_missing_dependency\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\C04_missing_dependency\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\C04_missing_dependency\\result.json",
+      "source_sha256": "8b67b9d358d2481cd1a4b238ea233627ea1fbd89ac48fbbdaaf74cd065202e33",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\C04_missing_dependency\\task_card.json"
+    },
+    {
+      "case_id": "C05_dead_code",
+      "source": ".\\validation\\codesys_release_v1.1\\C05_dead_code\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\C05_dead_code\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\C05_dead_code\\result.json",
+      "source_sha256": "1aca0a4230a2d2a557bc49bb4e75c1b1a7d3ed51062663f39a5a4cfeb6b971b8",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\C05_dead_code\\task_card.json"
+    },
+    {
+      "case_id": "task_P01_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_P01_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_P01_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_P01_skeleton\\result.json",
+      "source_sha256": "ee17525c23dd45b2f297c62c3e2b5e9e92140b4f49edc8b0b0c03cd25422a7a2",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_P01_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_P02_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_P02_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_P02_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_P02_skeleton\\result.json",
+      "source_sha256": "95f8705a14f0122aa88c8c051668e23f5c6a0ff143c9626ccca6c74c3892b6df",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_P02_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_P03_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_P03_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_P03_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_P03_skeleton\\result.json",
+      "source_sha256": "8a785394f6ab6463c82207102210342ada258c7d93011ec39d8e94dc01bb8469",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_P03_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_P04_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_P04_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_P04_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_P04_skeleton\\result.json",
+      "source_sha256": "31658eeba6938c2378fe75e4d38f5444d016a537aaa1d9ab15a3dadc5a0c3072",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_P04_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_P05_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_P05_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_P05_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_P05_skeleton\\result.json",
+      "source_sha256": "a0535179b36b96ebc7e4ee139c2dc1d8518737d22e2ff67ed72ee216e180eae5",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_P05_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_P06_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_P06_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_P06_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_P06_skeleton\\result.json",
+      "source_sha256": "768037fe5e815f4fd81dca458906ef71dc7e1dec69c81a11f77a170def872968",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_P06_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_P07_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_P07_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_P07_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_P07_skeleton\\result.json",
+      "source_sha256": "81864fbfbccf5926fbff61d4bab51f4dd766d50392e03b8b21097c9e9bec5ed9",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_P07_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_P08_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_P08_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_P08_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_P08_skeleton\\result.json",
+      "source_sha256": "3932a02270fd4d943e53aa5b7b31f4ea998736bcea76ed6a599e254a0983346e",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_P08_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_P09_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_P09_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_P09_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_P09_skeleton\\result.json",
+      "source_sha256": "0ac0d90e1212c9803992291ef4e6ab3c762fa2a3f8e719760d59c0d92b9e7474",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_P09_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_P10_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_P10_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_P10_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_P10_skeleton\\result.json",
+      "source_sha256": "9abe46d24ddf0fb3e7ae309dbd72804a6a4d5f9002226b52be44eb595af971d0",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_P10_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_P11_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_P11_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_P11_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_P11_skeleton\\result.json",
+      "source_sha256": "9f3569ef8a909f1167efe28bb8ceef4019ccfbda8cf24f512844c292e6e39363",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_P11_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_P12_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_P12_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_P12_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_P12_skeleton\\result.json",
+      "source_sha256": "c74e3d2893ecc79e91c3b2a6f02741af5e3c5514cc45e7198812b8251237bb4f",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_P12_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_P13_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_P13_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_P13_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_P13_skeleton\\result.json",
+      "source_sha256": "a1f0f1c05d961be856893dd36c3851d6616639e043287d75dab2d39be655b0eb",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_P13_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_P14_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_P14_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_P14_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_P14_skeleton\\result.json",
+      "source_sha256": "f589905ccc3fe61f0db85dc5eab535e1b5617d14b8f02e47abcb779d11d78c85",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_P14_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_P15_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_P15_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_P15_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_P15_skeleton\\result.json",
+      "source_sha256": "d1dfd03ff2e3b071a1300970ee1cb21e36ad4dab44f77a56b796ab825d79544a",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_P15_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_P16_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_P16_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_P16_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_P16_skeleton\\result.json",
+      "source_sha256": "bb6a4071340c40e0e0a8f77f2cb63064d75e5c14b9488073a8ba102bd0928503",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_P16_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_P17_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_P17_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_P17_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_P17_skeleton\\result.json",
+      "source_sha256": "e58b5773bc23b82f188574796ad9117c3fbc21624cf40ac894d74f8348f4aab3",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_P17_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_P18_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_P18_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_P18_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_P18_skeleton\\result.json",
+      "source_sha256": "bb7139f8151d7824603e23379b7c24833cef8eb251f47b87b297c6e127fe3d0a",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_P18_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_P19_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_P19_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_P19_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_P19_skeleton\\result.json",
+      "source_sha256": "be81793dd74e0eca3bf985628dbd2c4f80539ee34b27d5d9f96a8b490de8dae0",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_P19_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_P20_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_P20_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_P20_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_P20_skeleton\\result.json",
+      "source_sha256": "a9f22566f17e4b5b7416f35e4a601e167714cc836cfa462b6f2f61bdd0f712cf",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_P20_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_S01_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_S01_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_S01_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_S01_skeleton\\result.json",
+      "source_sha256": "a414205596be375575fbac4911e0688b017bdb17632cc68684f0a7f4c6d81794",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_S01_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_S02_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_S02_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_S02_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_S02_skeleton\\result.json",
+      "source_sha256": "2316287df9cb5f8c896cc229a84450ccc455288ac3293886e4cda448eb92a2aa",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_S02_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_S03_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_S03_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_S03_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_S03_skeleton\\result.json",
+      "source_sha256": "f2d9d9b06109df3ec555c2ada7315fe52e548bd019efd1ee84dcc458b77bd802",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_S03_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_S04_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_S04_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_S04_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_S04_skeleton\\result.json",
+      "source_sha256": "9ade2c555e526ba8975ba0b362b458367ca174587cd56e3940b2c4f25abef47a",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_S04_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_S05_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_S05_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_S05_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_S05_skeleton\\result.json",
+      "source_sha256": "68334f70a5faeccf3f8d7602f1ce2dac631fc224d8b104ef21a3ea6830ab705b",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_S05_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_S06_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_S06_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_S06_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_S06_skeleton\\result.json",
+      "source_sha256": "90d10d9500b9f226c42a58e55019caf59f7ad97a1bd8b15e515c227b15313437",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_S06_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_S07_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_S07_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_S07_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_S07_skeleton\\result.json",
+      "source_sha256": "11a085f8da516845c35b99e5d45fba49a61c0d9ea0c6d4ca05b10ad1d73cc4cc",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_S07_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_S08_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_S08_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_S08_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_S08_skeleton\\result.json",
+      "source_sha256": "2b9af7c59e270afa15a1ac6f1d7c742c2096f5742199c1c3cfe5697cacbddc0c",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_S08_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_S09_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_S09_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_S09_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_S09_skeleton\\result.json",
+      "source_sha256": "c9f2fa34f07b175c53b59c0bc929104a83c621512c15e3a0bb08110970488193",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_S09_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_S10_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_S10_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_S10_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_S10_skeleton\\result.json",
+      "source_sha256": "782456dd318a797700c82b784b96efb5f1d4b90587150fbce50b19a31bdd12f6",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_S10_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_S11_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_S11_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_S11_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_S11_skeleton\\result.json",
+      "source_sha256": "0e3300207e38ecd94f260917cea5f25cc37be89b020bf3a4bc534ecc054db31e",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_S11_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_S12_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_S12_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_S12_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_S12_skeleton\\result.json",
+      "source_sha256": "b0c1054b153b95eef78ab40228e898c90cafa4616a44ff299ce40e6a7b0b0112",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_S12_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_S13_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_S13_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_S13_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_S13_skeleton\\result.json",
+      "source_sha256": "3a46a04b5c64b099147cd2ab6f78e3a919f2ce629b27a133edf46b8d192b6d1f",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_S13_skeleton\\task_card.json"
+    },
+    {
+      "case_id": "task_S14_skeleton",
+      "source": ".\\validation\\codesys_release_v1.1\\task_S14_skeleton\\source.st",
+      "project": ".\\validation\\codesys_release_v1.1\\task_S14_skeleton\\compile.project",
+      "result": ".\\validation\\codesys_release_v1.1\\task_S14_skeleton\\result.json",
+      "source_sha256": "eff3164013939d551efa677bbfb2c179c1876e96fe9570573297b7ddb43e69bc",
+      "application": "Application",
+      "task_card": ".\\validation\\codesys_release_v1.1\\task_S14_skeleton\\task_card.json"
+    }
+  ],
+  "summary": ".\\validation\\codesys_release_v1.1\\native_batch.json"
+}

@@ -1,0 +1,113 @@
+{
+  "task_id": "S10",
+  "title": "变频器故障码分级报警",
+  "difficulty": "easy",
+  "category": "D",
+  "requirement": "变频器通过故障码上报状态，需要按严重程度分级处理。\n\n控制要求：\n1. VFDFaultCode = 16#0001 为轻故障：只点亮 AlarmLamp，不跳闸，VFDRun 保持。\n2. VFDFaultCode = 16#0002 或 16#0003 为重故障：立即置 TripOutput = TRUE，AlarmLamp = TRUE，并锁存故障码。\n3. 重故障锁存后，即使 VFDFaultCode 恢复为 16#0000 也不得自动复位；必须 ResetBtn 上升沿且当前无故障才解除 TripOutput。\n4. 运行中（VFDRun = TRUE）出现任何非零故障码时，TripOutput 立即为 TRUE。\n5. Status 输出当前生效的故障码（16#0000 表示无故障）。\n6. 上电时 TripOutput = FALSE、AlarmLamp = FALSE、Status = 16#0000。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）",
+  "io_table": [
+    {
+      "direction": "IN",
+      "name": "VFDFaultCode",
+      "data_type": "WORD",
+      "description": "变频器故障码"
+    },
+    {
+      "direction": "IN",
+      "name": "VFDRun",
+      "data_type": "BOOL",
+      "description": "变频器运行反馈"
+    },
+    {
+      "direction": "IN",
+      "name": "ResetBtn",
+      "data_type": "BOOL",
+      "description": "复位按钮（上升沿有效）"
+    },
+    {
+      "direction": "OUT",
+      "name": "AlarmLamp",
+      "data_type": "BOOL",
+      "description": "报警灯"
+    },
+    {
+      "direction": "OUT",
+      "name": "TripOutput",
+      "data_type": "BOOL",
+      "description": "跳闸输出"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "当前生效故障码"
+    }
+  ],
+  "initial_state": "AlarmLamp = FALSE；TripOutput = FALSE；Status = 16#0000；ResetBtnLast = FALSE；锁存故障码 = 16#0000。",
+  "constraints": [
+    "K1 重故障必须在同一周期内置 TripOutput。",
+    "K2 重故障锁存，故障码消失后不自动复位。",
+    "K3 复位只在 ResetBtn 上升沿且当前无故障时生效。",
+    "K4 VFDRun = TRUE 且故障码非零时 TripOutput 立即为 TRUE。"
+  ],
+  "provenance": "改编自公开题（P03 Alarm Handling（课程题库））；改编点：把「模拟量滞回报警」换成「故障码分级 + 锁存 + 复位」，滞回改为分级判据；为什么这样改：现场报警管理的核心不是阈值而是「分级 + 锁存 + 复位条件」，原题的滞回结构正好可以平移成三档判据；来源与审核记录见 data/provenance.csv 第 31 行",
+  "spec_ref": "data/specs/S10.ltl",
+  "error_examples": [
+    "错误实现：TripOutput := (VFDFaultCode <> 0)。症状——故障码自己消失后跳闸自动复位，设备在无人确认下重新启动。",
+    "错误实现：复位用 ResetBtn 电平。症状——按住复位按钮时故障每周期被清掉又重现。"
+  ],
+  "notes": "",
+  "spec_text": "# task: S10\n# meta: easy / D 故障与安全\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(VFDRun && VFDFaultCode != 16#0000 && VFDFaultCode != 16#0001 -> TripOutput)    -- 运行中出现重故障码（除 16#0001 轻故障外）必须当周期跳闸（K4）\nC2: G(TripOutput -> !VFDRun)    -- 跳闸的许可形式：跳闸时不得处于运行状态（K2）\nC6: G(TripOutput -> (TripOutput W ResetBtn))    -- 跳闸保持到复位按钮（不能随故障码消失自动复位）（K3）\nC7: G(VFDFaultCode == 16#0001 && VFDRun -> X(VFDRun))    -- 轻故障只报警不跳闸，运行状态不得因轻故障改变（K1）\nC10: G[0,1](!TripOutput && !AlarmLamp && Status == 16#0000)    -- 上电首周期不跳闸、不报警（初态）\n",
+  "spec_sha256": "0d298e2cbeb117513c76cd9ea18b796eadad71eb66a88f816e06225e0c9c8904",
+  "task_version": "f4877e10",
+  "task_sha256": "f4877e10f7f1c13c28138dbbe68cee494e94f24730fa3ecc37f84974e3886626",
+  "source_path": "data/tasks/S10.yaml",
+  "degraded": false,
+  "missing_fields": [],
+  "warnings": [],
+  "semantic_warnings": [],
+  "interface_io_table": [
+    {
+      "direction": "IN",
+      "name": "VFDFaultCode",
+      "data_type": "WORD",
+      "description": "变频器故障码"
+    },
+    {
+      "direction": "IN",
+      "name": "VFDRun",
+      "data_type": "BOOL",
+      "description": "变频器运行反馈"
+    },
+    {
+      "direction": "IN",
+      "name": "ResetBtn",
+      "data_type": "BOOL",
+      "description": "复位按钮（上升沿有效）"
+    },
+    {
+      "direction": "OUT",
+      "name": "AlarmLamp",
+      "data_type": "BOOL",
+      "description": "报警灯"
+    },
+    {
+      "direction": "OUT",
+      "name": "TripOutput",
+      "data_type": "BOOL",
+      "description": "跳闸输出"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "当前生效故障码"
+    }
+  ],
+  "type_declarations": "",
+  "type_origins": {},
+  "pou_name": "FB_S10",
+  "pou_kind": "FUNCTION_BLOCK",
+  "dialect_requirements": [],
+  "skeleton_compiled": false,
+  "scan_cycle_ms": 20
+}

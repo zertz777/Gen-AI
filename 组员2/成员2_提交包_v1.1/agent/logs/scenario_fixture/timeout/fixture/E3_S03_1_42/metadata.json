@@ -1,0 +1,15 @@
+{
+  "execution_mode": "fixture",
+  "eligible_for_experiments": false,
+  "status": "timeout",
+  "failure_reason": "timeout",
+  "first_compile_status": "timeout",
+  "selected_candidate": "candidate_1",
+  "semantic_warnings": [],
+  "degraded": false,
+  "environment_blockers": [],
+  "fingerprint": "986d211196619430a50b4f295087d928b3550d10460f730baeb8bbebb73ac89b",
+  "seed_sent_to_api": false,
+  "tokens_estimate_upper_bound": 6940,
+  "tool_verify_status": "skipped"
+}

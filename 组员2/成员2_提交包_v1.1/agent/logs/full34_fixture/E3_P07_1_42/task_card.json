@@ -1,0 +1,116 @@
+{
+  "task_id": "P07",
+  "title": "Multi-Pump Switching Control System",
+  "difficulty": "medium",
+  "category": "A",
+  "requirement": "In an industrial water supply system, there are 5 pumps, each of which can be controlled independently. The system needs to support both manual and automatic operating modes.\nBased on the value of the mode variable, switch to the corresponding operating mode.\nIn manual mode, control the start and stop of the selected pump based on the value of pumpGroup[1..5].selection.\nIn automatic mode, compare the priority of each pump, and automatically select the 3 pumps with higher priority for water supply according to the method of three in use and two on standby.\n\n中文摘要：五泵切换控制：手动模式按选择开关单泵启停，自动模式按优先级选出 3 台运行、2 台备用（三用两备）。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）",
+  "io_table": [
+    {
+      "direction": "IN",
+      "name": "mode",
+      "data_type": "BOOL",
+      "description": "FALSE: Manual mode<br>TRUE: Automatic mode"
+    },
+    {
+      "direction": "IN",
+      "name": "start",
+      "data_type": "BOOL",
+      "description": "Start button, used to start the manually selected or automatically selected pump"
+    },
+    {
+      "direction": "IN",
+      "name": "stop",
+      "data_type": "BOOL",
+      "description": "Stop button, used to stop all pumps"
+    },
+    {
+      "direction": "INOUT",
+      "name": "pumpGroup",
+      "data_type": "ARRAY[1..5] OF ST_Pump",
+      "description": "Five pump records passed by reference. Read priority and selection; write only RunComd."
+    },
+    {
+      "direction": "IN",
+      "name": "priority",
+      "data_type": "INT",
+      "description": "Priority; larger values have higher priority. Read-only to the function block."
+    },
+    {
+      "direction": "IN",
+      "name": "selection",
+      "data_type": "BOOL",
+      "description": "Manual-selection state. Read-only to the function block."
+    },
+    {
+      "direction": "OUT",
+      "name": "RunComd",
+      "data_type": "BOOL",
+      "description": "Run command written by the function block; TRUE runs and FALSE stops."
+    }
+  ],
+  "initial_state": "5 台泵输出全 FALSE；pumpGroup[1..5].selection 全 FALSE；自动模式下运行台数目标 = 3。",
+  "constraints": [
+    "K1 mode 决定工作模式，手动与自动互斥，同一时刻只有一种模式的动作生效。",
+    "K2 自动模式下同时运行的泵数恰为 3 台，其余 2 台作为备用。",
+    "K3 自动模式下按优先级选出运行泵：优先级高者先启，优先级相同时按泵号升序，保证结果确定。",
+    "K4 stop 信号优先于 start：停止请求有效时不得因 start 或自动需求而启动任何泵。"
+  ],
+  "provenance": "课程公共题库 P07（Multi-Pump Switching Control System）；原文导入、变量名与需求未做任何改动；来源与审核记录见 data/provenance.csv 第 8 行",
+  "spec_ref": "data/specs/P07.ltl",
+  "error_examples": [
+    "错误实现：自动模式把所有 selection 为 TRUE 的泵一起启动。症状——5 台泵同时运行，超出「三用两备」的供水策略。",
+    "错误实现：优先级比较没有打破平局的规则。症状——两台泵优先级相同，每个周期轮流被选中，输出抖动。"
+  ],
+  "notes": "",
+  "spec_text": "# task: P07\n# meta: easy / A 开关量联锁\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(stop -> !RunComd)    -- 停止请求当周期必须清除运行命令（stop 优先于 start）（K4）\nC2: G(RunComd -> !stop)    -- 运行命令的前提是没有停止请求（互斥的许可形式）（K4）\nC4: G(!(start && stop))    -- 启动与停止同时有效属于非法请求，不得出现（K4）\nC6: G(RunComd -> (RunComd W stop))    -- 运行命令保持到停止请求出现为止（不自行掉线）（K1）\nC10: G[0,1](!RunComd)    -- 上电首周期无运行命令（初态）\n",
+  "spec_sha256": "ab3578b6e218678168a134c6c436c107242096d7812c8324ef12a2530e780150",
+  "task_version": "e3f84560",
+  "task_sha256": "e3f84560732ac7c4b6e590416c5aa42b21678bee9e91803f346628fa45807adf",
+  "source_path": "data/tasks/P07.yaml",
+  "degraded": false,
+  "missing_fields": [],
+  "warnings": [],
+  "semantic_warnings": [],
+  "interface_io_table": [
+    {
+      "direction": "IN",
+      "name": "mode",
+      "data_type": "BOOL",
+      "description": "FALSE: Manual mode<br>TRUE: Automatic mode"
+    },
+    {
+      "direction": "IN",
+      "name": "start",
+      "data_type": "BOOL",
+      "description": "Start button, used to start the manually selected or automatically selected pump"
+    },
+    {
+      "direction": "IN",
+      "name": "stop",
+      "data_type": "BOOL",
+      "description": "Stop button, used to stop all pumps"
+    },
+    {
+      "direction": "INOUT",
+      "name": "pumpGroup",
+      "data_type": "ARRAY[1..5] OF ST_Pump",
+      "description": "Five pump records passed by reference. Read priority and selection; write only RunComd."
+    }
+  ],
+  "type_declarations": "TYPE ST_Pump :\nSTRUCT\n    priority : INT;\n    selection : BOOL;\n    RunComd : BOOL;\nEND_STRUCT\nEND_TYPE",
+  "type_origins": {
+    "ST_Pump": {
+      "evidence": "requirement中的结构说明 + io_table字段类型",
+      "fields": [
+        "priority",
+        "selection",
+        "RunComd"
+      ]
+    }
+  },
+  "pou_name": "FB_P07",
+  "pou_kind": "FUNCTION_BLOCK",
+  "dialect_requirements": [],
+  "skeleton_compiled": false,
+  "scan_cycle_ms": 20
+}

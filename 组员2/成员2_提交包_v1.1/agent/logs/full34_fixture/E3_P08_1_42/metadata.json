@@ -1,0 +1,32 @@
+{
+  "execution_mode": "fixture",
+  "eligible_for_experiments": false,
+  "status": "completed",
+  "failure_reason": null,
+  "first_compile_status": "fail",
+  "selected_candidate": "repair_1",
+  "semantic_warnings": [
+    {
+      "code": "DATA_P08_ERROR_HANDLING_CONFLICT",
+      "message": "英文需求逐通道跳过非法模式/量程；K5要求遇错停止后续通道。须由数据负责人确认，框架保留两者。",
+      "evidence": [
+        "requirement 第6/7项",
+        "constraints K5"
+      ]
+    },
+    {
+      "code": "DATA_P08_SPEC_BOUNDS_CONFLICT",
+      "message": "题面按调用方两数组长度确定count上界；LTL C2b另引入32路上限，且首周期/未使能输出要求与题面未统一。",
+      "evidence": [
+        "requirement 第1项",
+        "spec C1/C2b/C10"
+      ]
+    }
+  ],
+  "degraded": true,
+  "environment_blockers": [],
+  "fingerprint": "f0fe5e6584b6043f63e4c8c2fd708a0017bb1336efdcfe20a5ce765abb1a46d0",
+  "seed_sent_to_api": false,
+  "tokens_estimate_upper_bound": 40366,
+  "tool_verify_status": "skipped"
+}

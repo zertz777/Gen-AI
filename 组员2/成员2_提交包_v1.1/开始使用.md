@@ -1,0 +1,38 @@
+# 成员2：运行与交接说明 v1.1
+
+更新日期：2026-10-31。CODESYS x64 3.5.22.40（V3.5 SP22 Patch 4）与MATIEC已安装、接通并实测。开始菜单可打开“CODESYS V3.5 SP22 Patch 4”。
+
+## 当前可交付内容
+
+成员2七模块、统一入口、三套提示词、配置、Aider适配、真实CODESYS模板、报告第3章、架构图、答辩问答、演示日志和真实编译记录都在“成员2_提交包_v1.1”目录中。README.md列出D2.1—D2.8对应位置。
+
+78项框架检查全部通过。原数据68份文件哈希保持不变，34题都可解析。CODESYS实测34题声明骨架：33题编译并生成目标代码，P18因VARIANT不兼容失败。6个诊断探针符合预期；完整双通道在并发2时，正确例33.828秒、错误例32.235秒，均在90秒上限内。骨架RETURN只是占位，不能作为题目实现或功能通过率。
+
+## 在这台电脑使用
+
+打开交付文件夹，在其中打开终端。本机文件夹已有local/codesys.local.yaml，连接了已安装的CODESYS、MATIEC和包内模板，包含VARIANT限制。无需API Key即可重查编译环境：
+
+```powershell
+python tools/check_codesys_compiler.py --config local/codesys.local.yaml --out validation/codesys_recheck --tasks data/tasks
+```
+
+当前全量命令会因P18返回1，保留其余33题通过证据，不是安装失败。无需重复该检查才能阅读已有结果。
+
+不调用模型的框架演示：
+
+```powershell
+python agent/run.py --framework self --model fixture --tasks data/tasks/S01.yaml --out runs/demo --mode fixture
+```
+
+## 交给其他组员
+
+发送v1.1.zip及PDF说明。zip不包含local、密钥、安装程序和编译器二进制；本机展开目录的local只适用于本机。其他机器安装同版CODESYS/设备/库后，按docs/codesys_setup.md重新生成配置，补MATIEC命令和unsupported_types，再检查编译。包内SHA256SUMS.txt用于核对文件完整性。
+
+成员3读取docs/toolchain.md接入模型；真实入口必须追加--config local/codesys.local.yaml。默认core32；all34包含S13/S14扩展，四组必须同题集。成员4提供逐周期测试器、稳定case_id和用例；成员5合并源码、docs/report/ch3.md和答辩材料。公开文本日志的本机路径已重定位，validation/path_rebase.json保存对应原文件哈希；源码和工程字节保持不变。
+
+## 尚需小组提供
+
+1. 在本机设置DMXAPI_API_KEY并确定两个准确模型ID。现有API说明只有调用格式，未提供实际Key和模型名；不要把Key发到聊天、写入源码或打包。
+2. 成员4执行器与功能用例。未接测试器时可编译程序也只记best-effort:tests_missing。
+3. 成员1/4处理P08/P14/P17/P19语义冲突及P18类型约定，重新冻结数据；当前不擅自改原题。
+4. 接通后补至少5题真实Agent完整日志（含失败）、Aider实跑与另一台机器复现。agent/logs全部是fixture，不计入实验通过率；validation只证明编译环境，不是模型实验。

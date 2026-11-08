@@ -1,0 +1,149 @@
+{
+  "task_id": "S06",
+  "title": "烘箱分段升温与超温降载",
+  "difficulty": "medium",
+  "category": "B",
+  "requirement": "烘箱按三段升温曲线工作，超温时必须先降载而不是直接断电。\n\n控制要求：\n1. Segment 取值 0/1/2，分别对应目标温度 SetTemp 的 50%/80%/100%；段号非法时按 0 段处理并置 Status = 16#8601。\n2. 当前温度 TempPV 低于目标值 -5 ℃ 时 HeatOn = TRUE，高于目标值 +5 ℃ 时 HeatOn = FALSE，两者之间保持（死区）。\n3. TempPV 超过目标值 +10 ℃ 时置 OverTempAlarm = TRUE 并置 LoadReduce = TRUE；TempPV 回落到目标值 -3 ℃ 以下才撤销 LoadReduce。\n4. HeatOn = TRUE 期间 FanOn 必须为 TRUE（先开风机后加热，禁止干烧）。\n5. Status：16#0000 正常、16#8601 段号非法、16#8602 超温降载。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）",
+  "io_table": [
+    {
+      "direction": "IN",
+      "name": "TempPV",
+      "data_type": "REAL",
+      "description": "当前温度（℃）"
+    },
+    {
+      "direction": "IN",
+      "name": "SetTemp",
+      "data_type": "REAL",
+      "description": "本段目标温度（℃）"
+    },
+    {
+      "direction": "IN",
+      "name": "Segment",
+      "data_type": "INT",
+      "description": "升温段号 0—2"
+    },
+    {
+      "direction": "IN",
+      "name": "LoadReduceReq",
+      "data_type": "BOOL",
+      "description": "上位机请求降载"
+    },
+    {
+      "direction": "OUT",
+      "name": "HeatOn",
+      "data_type": "BOOL",
+      "description": "加热输出"
+    },
+    {
+      "direction": "OUT",
+      "name": "FanOn",
+      "data_type": "BOOL",
+      "description": "风机输出"
+    },
+    {
+      "direction": "OUT",
+      "name": "OverTempAlarm",
+      "data_type": "BOOL",
+      "description": "超温报警"
+    },
+    {
+      "direction": "OUT",
+      "name": "LoadReduce",
+      "data_type": "BOOL",
+      "description": "降载输出"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "状态码"
+    }
+  ],
+  "initial_state": "HeatOn = FALSE；FanOn = FALSE；OverTempAlarm = FALSE；LoadReduce = FALSE；Status = 16#0000。",
+  "constraints": [
+    "K1 目标温度 = SetTemp × (0.5 / 0.8 / 1.0)，随 Segment 切换。",
+    "K2 加热判据带 ±5 ℃ 死区，避免在目标值附近高频通断。",
+    "K3 超温 +10 ℃ 置降载，回落 -3 ℃ 才撤销（迟滞不小于 13 ℃）。",
+    "K4 HeatOn 为 TRUE 时 FanOn 必须为 TRUE（联锁）。"
+  ],
+  "provenance": "改编自公开题（P10 Temperature Logic Control（课程题库））；改编点：把单段设定值改为三段升温曲线，把「过热保护」改为「降载 + 迟滞恢复」，并补上风机联锁；为什么这样改：原题只考一个设定值比较，工艺性偏弱；分段升温与降载更接近热处理现场，且能同时考死区与联锁两条规约；来源与审核记录见 data/provenance.csv 第 27 行",
+  "spec_ref": "data/specs/S06.ltl",
+  "error_examples": [
+    "错误实现：无死区，TempPV < 目标值就加热。症状——加热器在目标值附近以扫描周期频率通断，接触器寿命骤降。",
+    "错误实现：超温时直接断加热、不断风机。症状——加热器余热无法带走，箱内温度继续上升。"
+  ],
+  "notes": "",
+  "spec_text": "# task: S06\n# meta: medium / B 模拟量与数据处理\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(LoadReduce -> !HeatOn)    -- 降载动作时加热必须关断（保护优先于温控）（K3）\nC2: G(HeatOn -> FanOn)    -- 加热的前提是风机运行（禁止干烧）（K4）\nC4: G(!(HeatOn && LoadReduce))    -- 加热与降载互斥（K3）\nC7: G(OverTempAlarm -> (OverTempAlarm W TempPV <= SetTemp - 3.0))    -- 超温报警保持到温度回落到设定值以下 3 ℃（迟滞）（K3）\nC8: G(Segment < 0 || Segment > 2 -> X(Status == 16#8601))    -- 段号非法时下一周期必须报错误码（K1）\nC10: G[0,1](!HeatOn && !FanOn && !OverTempAlarm && !LoadReduce)    -- 上电首周期全部输出关断（初态）\n",
+  "spec_sha256": "7cd226c215f699c84e017196dbaea7eaf4dc06bbdaf96a2de54a1facb4b1c58b",
+  "task_version": "fcc1d824",
+  "task_sha256": "fcc1d8247a97330293b79e69d5d8cf4d8fe0f9d79337bf9257ee17088abeeb31",
+  "source_path": "data/tasks/S06.yaml",
+  "degraded": false,
+  "missing_fields": [],
+  "warnings": [],
+  "semantic_warnings": [],
+  "interface_io_table": [
+    {
+      "direction": "IN",
+      "name": "TempPV",
+      "data_type": "REAL",
+      "description": "当前温度（℃）"
+    },
+    {
+      "direction": "IN",
+      "name": "SetTemp",
+      "data_type": "REAL",
+      "description": "本段目标温度（℃）"
+    },
+    {
+      "direction": "IN",
+      "name": "Segment",
+      "data_type": "INT",
+      "description": "升温段号 0—2"
+    },
+    {
+      "direction": "IN",
+      "name": "LoadReduceReq",
+      "data_type": "BOOL",
+      "description": "上位机请求降载"
+    },
+    {
+      "direction": "OUT",
+      "name": "HeatOn",
+      "data_type": "BOOL",
+      "description": "加热输出"
+    },
+    {
+      "direction": "OUT",
+      "name": "FanOn",
+      "data_type": "BOOL",
+      "description": "风机输出"
+    },
+    {
+      "direction": "OUT",
+      "name": "OverTempAlarm",
+      "data_type": "BOOL",
+      "description": "超温报警"
+    },
+    {
+      "direction": "OUT",
+      "name": "LoadReduce",
+      "data_type": "BOOL",
+      "description": "降载输出"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "状态码"
+    }
+  ],
+  "type_declarations": "",
+  "type_origins": {},
+  "pou_name": "FB_S06",
+  "pou_kind": "FUNCTION_BLOCK",
+  "dialect_requirements": [],
+  "skeleton_compiled": false,
+  "scan_cycle_ms": 20
+}

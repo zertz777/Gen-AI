@@ -1,0 +1,137 @@
+{
+  "task_id": "S05",
+  "title": "泵站流量累计与班次清零",
+  "difficulty": "hard",
+  "category": "B",
+  "requirement": "泵站出口装有脉冲流量计，每个脉冲代表 0.5 L。需要同时维护累计总量与当班流量。\n\n控制要求：\n1. FlowPulse 的每个上升沿使 PulseCount 加 1，TotalVolume 与 ShiftVolume 各加 0.5 L。\n2. ShiftReset 的上升沿把 ShiftVolume 清 0、PulseCount 清 0，但 TotalVolume 必须保持不变。\n3. TotalVolume 达到 1000000.0 L 时不再增加，置 OverflowFlag = TRUE；清零只能由维护流程完成（本题不提供入口，仅置位）。\n4. FlowPulse 为高频脉冲，同一扫描周期内最多计一个脉冲（20 ms 周期内不允许丢脉冲的假设不成立时，以 Status 报 16#8501）。\n5. 上电时 PulseCount = 0、TotalVolume = 0.0、ShiftVolume = 0.0、OverflowFlag = FALSE。\n6. Status：16#0000 正常、16#8501 脉冲过快、16#8502 总量溢出。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）",
+  "io_table": [
+    {
+      "direction": "IN",
+      "name": "FlowPulse",
+      "data_type": "BOOL",
+      "description": "流量计脉冲"
+    },
+    {
+      "direction": "IN",
+      "name": "ShiftReset",
+      "data_type": "BOOL",
+      "description": "班次清零（上升沿有效）"
+    },
+    {
+      "direction": "IN",
+      "name": "CycleTime",
+      "data_type": "TIME",
+      "description": "扫描周期，用于判断脉冲频率"
+    },
+    {
+      "direction": "OUT",
+      "name": "TotalVolume",
+      "data_type": "LREAL",
+      "description": "累计总量（L）"
+    },
+    {
+      "direction": "OUT",
+      "name": "ShiftVolume",
+      "data_type": "LREAL",
+      "description": "当班流量（L）"
+    },
+    {
+      "direction": "OUT",
+      "name": "PulseCount",
+      "data_type": "UDINT",
+      "description": "当班脉冲数"
+    },
+    {
+      "direction": "OUT",
+      "name": "OverflowFlag",
+      "data_type": "BOOL",
+      "description": "总量溢出标志"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "状态码"
+    }
+  ],
+  "initial_state": "PulseCount = 0；TotalVolume = 0.0；ShiftVolume = 0.0；OverflowFlag = FALSE；Status = 16#0000；FlowPulseLast = FALSE；ShiftResetLast = FALSE。",
+  "constraints": [
+    "K1 只在 FlowPulse 的上升沿累加，不得按电平累加。",
+    "K2 ShiftReset 上升沿清 ShiftVolume 与 PulseCount，TotalVolume 严格不减。",
+    "K3 TotalVolume 达到 1000000.0 后保持不再增长，并置 OverflowFlag。",
+    "K4 单个扫描周期内检测到两次以上脉冲上升沿时置 Status = 16#8501，本周期只计 1 个。"
+  ],
+  "provenance": "改编自公开题（P04 Jam Pump Debouncing and Runtime Maintenance（课程题库））；改编点：把「运行时间累加 + 500 h 维护提示」换成「脉冲流量累计 + 班次清零」，保留累计量与提示量的分离结构；为什么这样改：累计类逻辑（单调、清零范围、溢出）是模拟量题型里最容易写出边界缺陷的一类，且能直接对应 C8 计数单调条款；来源与审核记录见 data/provenance.csv 第 26 行",
+  "spec_ref": "data/specs/S05.ltl",
+  "error_examples": [
+    "错误实现：班次清零时把 TotalVolume 也清 0。症状——交接班后累计总量归零，无法用于结算与能耗分析。",
+    "错误实现：TotalVolume 溢出后回绕（LREAL 不会回绕，但用 UDINT 计数会）。症状——总量从 999999.5 跳到 0.0，报表出现负流量。"
+  ],
+  "notes": "",
+  "spec_text": "# task: S05\n# meta: hard / B 模拟量与数据处理\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(OverflowFlag -> TotalVolume <= 1000000.0)    -- 溢出标志置位后总量不得继续增长（也不得回绕）（K3）\nC2: G(TotalVolume >= 0.0 && ShiftVolume >= 0.0)    -- 两个累计量都不得为负（单向累计）（K1）\nC8: G(TotalVolume >= 1000000.0 -> X(OverflowFlag))    -- 达到上限后下一周期必须置溢出标志（K3）\nC8b: G(OverflowFlag -> X(OverflowFlag))    -- 溢出标志一旦置位就永久保持（不自动清除）（K3）\nC6: G(ShiftVolume <= TotalVolume)    -- 当班流量不得超过累计总量（班次清零不影响总量）（K2）\nC10: G[0,1](TotalVolume == 0.0 && ShiftVolume == 0.0 && !OverflowFlag)    -- 上电首周期两个累计量为 0、无溢出（初态）\n",
+  "spec_sha256": "896f56229dc584c5964b3f246140affc176374b5f516dc0572a3ea2b714e8a7a",
+  "task_version": "fed2da1e",
+  "task_sha256": "fed2da1ef60cd7d988fe081ed25ea7a351b197e8f657557ed26dfb0fe23bf2bd",
+  "source_path": "data/tasks/S05.yaml",
+  "degraded": false,
+  "missing_fields": [],
+  "warnings": [],
+  "semantic_warnings": [],
+  "interface_io_table": [
+    {
+      "direction": "IN",
+      "name": "FlowPulse",
+      "data_type": "BOOL",
+      "description": "流量计脉冲"
+    },
+    {
+      "direction": "IN",
+      "name": "ShiftReset",
+      "data_type": "BOOL",
+      "description": "班次清零（上升沿有效）"
+    },
+    {
+      "direction": "IN",
+      "name": "CycleTime",
+      "data_type": "TIME",
+      "description": "扫描周期，用于判断脉冲频率"
+    },
+    {
+      "direction": "OUT",
+      "name": "TotalVolume",
+      "data_type": "LREAL",
+      "description": "累计总量（L）"
+    },
+    {
+      "direction": "OUT",
+      "name": "ShiftVolume",
+      "data_type": "LREAL",
+      "description": "当班流量（L）"
+    },
+    {
+      "direction": "OUT",
+      "name": "PulseCount",
+      "data_type": "UDINT",
+      "description": "当班脉冲数"
+    },
+    {
+      "direction": "OUT",
+      "name": "OverflowFlag",
+      "data_type": "BOOL",
+      "description": "总量溢出标志"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "状态码"
+    }
+  ],
+  "type_declarations": "",
+  "type_origins": {},
+  "pou_name": "FB_S05",
+  "pou_kind": "FUNCTION_BLOCK",
+  "dialect_requirements": [],
+  "skeleton_compiled": false,
+  "scan_cycle_ms": 20
+}

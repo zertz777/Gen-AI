@@ -1,0 +1,11 @@
+{
+  "case_id": "C00_good",
+  "kind": "known_good",
+  "expected": "pass",
+  "status": "pass",
+  "elapsed_s": 0.172,
+  "source_sha256": "a30363a54ce95bfe964499f0692fe447a0272a4886053b3e2b11240efcf2e343",
+  "errors": [],
+  "evidence_kind": "live_fast_compiler",
+  "functional_tests_run": false
+}

@@ -1,0 +1,9 @@
+{
+  "case_id": "C02_type",
+  "source": ".\\validation\\codesys_release_v1.1\\C02_type\\source.st",
+  "project": ".\\validation\\codesys_release_v1.1\\C02_type\\compile.project",
+  "result": ".\\validation\\codesys_release_v1.1\\C02_type\\result.json",
+  "source_sha256": "e83155bc35aa0dfa829d346499d9faab94a909fc447bc17c9ab31899207e91d6",
+  "application": "Application",
+  "task_card": ".\\validation\\codesys_release_v1.1\\C02_type\\task_card.json"
+}

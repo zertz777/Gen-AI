@@ -1,0 +1,125 @@
+{
+  "task_id": "S11",
+  "title": "传感器断线检测与降级运行",
+  "difficulty": "hard",
+  "category": "D",
+  "requirement": "温度变送器输出 4—20 mA，需要识别断线并降级运行，避免因单点故障停机。\n\n控制要求：\n1. SensorCurrent 在 4—20 mA 内时 SensorValid = TRUE，ControlValue = (SensorCurrent - 4) / 16 × 100（℃）。\n2. SensorCurrent < 3.6 或 > 21 时判为断线：SensorValid = FALSE，持续 2 s 后置 DegradedMode = TRUE，ControlValue 切换为 FallbackValue。\n3. 断线恢复（重新进入 3.8—20.5 mA）后 SensorValid = TRUE，但必须持续 3 s 才允许退出 DegradedMode（防止接线抖动反复切换）。\n4. DegradedMode = TRUE 期间 AlarmLamp = TRUE；SensorValid = FALSE 但尚未满 2 s 时 AlarmLamp 闪烁（1 Hz）。\n5. Status：16#0000 正常、16#8A01 断线、16#8A02 降级运行、16#8A03 恢复确认中。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）",
+  "io_table": [
+    {
+      "direction": "IN",
+      "name": "SensorCurrent",
+      "data_type": "REAL",
+      "description": "变送器电流（mA）"
+    },
+    {
+      "direction": "IN",
+      "name": "FallbackValue",
+      "data_type": "REAL",
+      "description": "降级时的备用控制值（℃）"
+    },
+    {
+      "direction": "OUT",
+      "name": "SensorValid",
+      "data_type": "BOOL",
+      "description": "信号有效"
+    },
+    {
+      "direction": "OUT",
+      "name": "DegradedMode",
+      "data_type": "BOOL",
+      "description": "降级运行中"
+    },
+    {
+      "direction": "OUT",
+      "name": "ControlValue",
+      "data_type": "REAL",
+      "description": "参与控制的温度值（℃）"
+    },
+    {
+      "direction": "OUT",
+      "name": "AlarmLamp",
+      "data_type": "BOOL",
+      "description": "报警灯"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "状态码"
+    }
+  ],
+  "initial_state": "SensorValid = FALSE；DegradedMode = FALSE；ControlValue = 0.0；AlarmLamp = FALSE；Status = 16#0000；断线与恢复计时器均清零。",
+  "constraints": [
+    "K1 断线判据用 3.6 mA 与 21 mA，恢复判据用 3.8 mA 与 20.5 mA（进出阈值不同，构成滞回）。",
+    "K2 断线持续 2 s 才进入降级，避免瞬时干扰导致切换。",
+    "K3 恢复持续 3 s 才退出降级，退出前 ControlValue 继续使用 FallbackValue。",
+    "K4 DegradedMode = TRUE 期间 ControlValue 必须等于 FallbackValue。"
+  ],
+  "provenance": "自拟（NAMUR 推荐性规范 NE 43：用 4—20 mA 信号的电流水平表示变送器故障（<=3.6 mA 断线、>=21 mA 短路））；改编点：按 NE43 的电流区间判据，构造断线检测 + 双向计时 + 降级切换的完整逻辑；为什么这样改：单点故障降级是流程工业的标准做法，且同时包含滞回、双定时器、输出切换三类约束，适合作为难题；来源与审核记录见 data/provenance.csv 第 32 行",
+  "spec_ref": "data/specs/S11.ltl",
+  "error_examples": [
+    "错误实现：断线判据只有 SensorCurrent < 4。症状——变送器输出 3.9 mA（正常低端）也被判断线，机组频繁降级。",
+    "错误实现：断线立即进入降级、恢复立即退出。症状——接线端子松动时 ControlValue 在测量值与备用值之间反复跳变。"
+  ],
+  "notes": "",
+  "spec_text": "# task: S11\n# meta: hard / D 故障与安全\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(!SensorValid -> !DegradedMode || ControlValue == FallbackValue)    -- 信号无效时要么未降级、要么输出已切到备用值（不得停留在失效测量值）（K4）\nC2: G(DegradedMode -> !SensorValid)    -- 降级模式的许可：信号当前无效（K2）\nC9: G(DegradedMode -> G[0,150](DegradedMode))    -- 降级至少保持 3 s（恢复确认窗口）（K3）\nC4: G(!(DegradedMode && SensorValid))    -- 降级与信号有效互斥（K1）\nC10: G[0,1](!DegradedMode && !SensorValid && ControlValue == 0.0)    -- 上电首周期未降级、未标定（初态）\n",
+  "spec_sha256": "80e0a0f01f8fe924e6e57722c39099687b19648d15af78a2773d6f02dc9d94d8",
+  "task_version": "468e0e12",
+  "task_sha256": "468e0e12acae9b5a9238b6462ef053eea01cdea5c49edd43d1ccc8b15099ed34",
+  "source_path": "data/tasks/S11.yaml",
+  "degraded": false,
+  "missing_fields": [],
+  "warnings": [],
+  "semantic_warnings": [],
+  "interface_io_table": [
+    {
+      "direction": "IN",
+      "name": "SensorCurrent",
+      "data_type": "REAL",
+      "description": "变送器电流（mA）"
+    },
+    {
+      "direction": "IN",
+      "name": "FallbackValue",
+      "data_type": "REAL",
+      "description": "降级时的备用控制值（℃）"
+    },
+    {
+      "direction": "OUT",
+      "name": "SensorValid",
+      "data_type": "BOOL",
+      "description": "信号有效"
+    },
+    {
+      "direction": "OUT",
+      "name": "DegradedMode",
+      "data_type": "BOOL",
+      "description": "降级运行中"
+    },
+    {
+      "direction": "OUT",
+      "name": "ControlValue",
+      "data_type": "REAL",
+      "description": "参与控制的温度值（℃）"
+    },
+    {
+      "direction": "OUT",
+      "name": "AlarmLamp",
+      "data_type": "BOOL",
+      "description": "报警灯"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "状态码"
+    }
+  ],
+  "type_declarations": "",
+  "type_origins": {},
+  "pou_name": "FB_S11",
+  "pou_kind": "FUNCTION_BLOCK",
+  "dialect_requirements": [],
+  "skeleton_compiled": false,
+  "scan_cycle_ms": 20
+}

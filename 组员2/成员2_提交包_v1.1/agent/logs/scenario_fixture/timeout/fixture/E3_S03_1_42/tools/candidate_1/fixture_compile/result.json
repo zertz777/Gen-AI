@@ -1,0 +1,42 @@
+{
+  "status": "timeout",
+  "fast": {
+    "status": "timeout",
+    "errors": [
+      {
+        "code": "E_TIMEOUT",
+        "severity": "error",
+        "line": null,
+        "message": "FIXTURE ONLY: simulated timeout",
+        "raw": "FIXTURE ONLY: simulated timeout"
+      }
+    ],
+    "elapsed_s": 0.0,
+    "evidence_kind": "fixture"
+  },
+  "authoritative": {
+    "status": "timeout",
+    "errors": [
+      {
+        "code": "E_TIMEOUT",
+        "severity": "error",
+        "line": null,
+        "message": "FIXTURE ONLY: simulated timeout",
+        "raw": "FIXTURE ONLY: simulated timeout"
+      }
+    ],
+    "elapsed_s": 0.0,
+    "evidence_kind": "fixture"
+  },
+  "errors": [
+    {
+      "code": "E_TIMEOUT",
+      "severity": "error",
+      "line": null,
+      "message": "FIXTURE ONLY: simulated timeout",
+      "raw": "FIXTURE ONLY: simulated timeout"
+    }
+  ],
+  "authoritative_available": false,
+  "evidence_kind": "fixture"
+}

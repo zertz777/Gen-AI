@@ -1,0 +1,19 @@
+{
+  "case_id": "C02_type",
+  "kind": "type",
+  "expected": "fail",
+  "status": "fail",
+  "elapsed_s": 0.156,
+  "source_sha256": "e83155bc35aa0dfa829d346499d9faab94a909fc447bc17c9ab31899207e91d6",
+  "errors": [
+    {
+      "code": "E_TYPE",
+      "severity": "error",
+      "line": 5,
+      "message": ".\\validation\\matiec_live_r2\\C02_type\\source.st:5-1..5-17: error: Incompatible data types for ':=' operation.",
+      "raw": ".\\validation\\matiec_live_r2\\C02_type\\source.st:5-1..5-17: error: Incompatible data types for ':=' operation."
+    }
+  ],
+  "evidence_kind": "live_fast_compiler",
+  "functional_tests_run": false
+}

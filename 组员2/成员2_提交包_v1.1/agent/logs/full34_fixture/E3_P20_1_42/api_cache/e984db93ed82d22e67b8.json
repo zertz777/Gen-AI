@@ -1,0 +1,14 @@
+{
+  "choices": [
+    {
+      "message": {
+        "content": "FUNCTION_BLOCK FB_P20\nVAR_INPUT\n    Mode : BOOL;\n    ForwardButton : BOOL;\n    ReverseButton : BOOL;\n    SensorFeed : BOOL;\n    SensorWash : BOOL;\n    SensorWeight : BOOL;\n    SensorFiring : BOOL;\n    SensorOutput : BOOL;\n    washComplete : BOOL;\n    weightComplete : BOOL;\n    weight : REAL;\n    firingComplete : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MotorForward : BOOL;\n    MotorReverse : BOOL;\n    kick : BOOL;\n    CompletionLight : BOOL;\n    firingTemp : REAL;\nEND_VAR\n(* Add a VAR block for internal state/timers before the implementation, if needed. *)\n(* SKELETON ONLY: replace this RETURN with scan logic and required initial state. *)\nRETURN;\nEND_FUNCTION_BLOCK\n\n(* FIXTURE_COMPILE_FAIL *)\n"
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0
+  },
+  "fixture": true
+}

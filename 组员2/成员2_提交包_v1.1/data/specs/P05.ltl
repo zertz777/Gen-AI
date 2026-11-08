@@ -1,0 +1,10 @@
+# task: P05
+# meta: easy / A 开关量联锁
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(!Weld_E_Stop_NC -> !Operator_Alert)    -- 急停当周期必须清报警（急停优先于抑制期与监视）（K4）
+C2: G(Operator_Alert -> Weld_E_Stop_NC)    -- 报警的前提是急停正常（不得在急停状态下报警）（K4）
+C6: G(Operator_Alert -> (Operator_Alert W !Gap_Exceeded))    -- 间隙恢复后报警才允许撤销（报警保持）（K3）
+C9: G(Operator_Alert -> G[0,25](Operator_Alert))    -- 报警一旦置位至少保持 500 ms（去抖后的最小脉宽）（K2）
+C10: G[0,1](!Operator_Alert && Weld_Soft_Start_Active)    -- 上电首周期处于抑制期：不报警、软启动有效（K1）

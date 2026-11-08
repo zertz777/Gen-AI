@@ -1,0 +1,25 @@
+{
+  "execution_mode": "fixture",
+  "eligible_for_experiments": false,
+  "status": "completed",
+  "failure_reason": null,
+  "first_compile_status": "fail",
+  "selected_candidate": "repair_1",
+  "semantic_warnings": [
+    {
+      "code": "DATA_P19_ESTOP_POLARITY_CONFLICT",
+      "message": "I/O说明EmergencyStop=FALSE表示急停；K4与LTL C1/C2按TRUE急停解释。安全相关极性不能由生成器猜测。",
+      "evidence": [
+        "io_table EmergencyStop.description",
+        "constraints K4",
+        "spec C1/C2"
+      ]
+    }
+  ],
+  "degraded": true,
+  "environment_blockers": [],
+  "fingerprint": "c56a842b76b80d3242ac628d309e0452fea0bc96da2f4468237176557a451774",
+  "seed_sent_to_api": false,
+  "tokens_estimate_upper_bound": 53450,
+  "tool_verify_status": "skipped"
+}

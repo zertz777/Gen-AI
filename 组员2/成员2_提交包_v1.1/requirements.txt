@@ -1,0 +1,2 @@
+# 核心框架只依赖Python 3.10+标准库；题面读取复用成员1的受控YAML读取器。
+# 可选：普通YAML配置安装PyYAML；Aider基线请在独立环境安装aider-chat。

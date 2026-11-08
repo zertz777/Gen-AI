@@ -1,0 +1,65 @@
+{
+  "config": {
+    "config_version": "1.0",
+    "candidates": 3,
+    "temperatures": [
+      0.2,
+      0.6,
+      0.9
+    ],
+    "max_repairs": 5,
+    "stagnation_rounds": 2,
+    "task_timeout_s": 900,
+    "context_budget": 6000,
+    "total_token_budget": 100000,
+    "concurrency": 2,
+    "fixture_scenario": "repair",
+    "provider": {
+      "base_url": "https://www.dmxapi.cn/v1",
+      "key_env": "DMXAPI_API_KEY",
+      "request_timeout_s": 120,
+      "send_temperature": false,
+      "send_seed": false,
+      "max_output_tokens": null
+    },
+    "tools": {
+      "fast": {
+        "command": [],
+        "timeout_s": 3,
+        "kind": "matiec"
+      },
+      "authoritative": {
+        "command": [],
+        "timeout_s": 90
+      },
+      "test": {
+        "command": [],
+        "timeout_s": 90,
+        "cases_dir": "tests/cases"
+      },
+      "verify": {
+        "command": [],
+        "timeout_s": 90
+      }
+    },
+    "baseline": {
+      "kind": "aider",
+      "command": [],
+      "timeout_s": 900
+    }
+  },
+  "model": "fixture",
+  "mode": "fixture",
+  "task": ".\\data\\tasks\\P05.yaml",
+  "framework": "self",
+  "seed": 42,
+  "repeat_idx": 1,
+  "setting_id": "E3",
+  "run_id": "E3_P05_1_42",
+  "directory": ".\\runs\\fresh_demo\\fixture\\E3_P05_1_42",
+  "artifact_path": "fixture/E3_P05_1_42",
+  "fingerprint": "55fe0db46d9cbaef94a10a93e41a212e21dd3478e08bc01cb790fed4635dc4b6",
+  "start_ts": "2026-10-31T08:26:08.208041+00:00",
+  "allow_degraded": false,
+  "retry_uncertain": false
+}

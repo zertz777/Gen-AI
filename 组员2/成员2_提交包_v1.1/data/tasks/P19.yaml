@@ -1,0 +1,140 @@
+task_id: P19
+title: Mechanical Arm Control
+difficulty: hard
+category: C
+requirement: |-
+  Design a PLC program to control an automated mechanical arm that performs handling tasks on the production line. The mechanical arm has six basic actions: down, up, left, right, grip, and release. The operating modes of the mechanical arm include four types: manual, single step, single cycle, and continuous.
+  Control requirements:
+  1. Manual mode: Allows the operator to control each action of the mechanical arm individually through the control panel, provided it is not yet in position. For example, pressing the down button (DownButton=1), if not at the down position (DownLimitSwitch=0), then move down (MoveDown=1); if at the down position (DownLimitSwitch=1), stop moving down. Releasing the down button also stops the movement down.
+  2. Single step mode: The mechanical arm automatically executes one action according to the preset program, and the operator needs to confirm after each action is completed to execute the next action.
+  The initial position of the mechanical arm is at the top left.
+  When the start button is pressed once, the mechanical arm executes the down command MoveDown, and stops after reaching the down position.
+  When the start button is pressed again, the mechanical arm executes the grip command ActivateGrip, and stops after gripping.
+  When the start button is pressed again, the mechanical arm executes the up command MoveUp, and stops after reaching the up position.
+  When the start button is pressed, the mechanical arm executes the right command MoveRight, and stops after reaching the right position.
+  When the start button is pressed, the mechanical arm executes the down command MoveDown, and stops after reaching the down position.
+  When the start button is pressed, the mechanical arm executes the release command ActivateRelease, and stops after releasing.
+  When the start button is pressed again, the mechanical arm executes the up command MoveUp, and stops after reaching the up position.
+  When the start button is pressed again, the mechanical arm executes the left command MoveLeft, and stops after reaching the left position.
+  Then starts the cycle again from the beginning
+  3. Single cycle mode: The mechanical arm automatically completes a full handling cycle, including all preset actions, and stops at the end of the cycle waiting for the operator's instruction.
+  The initial position of the mechanical arm is at the top left, when the start button is pressed:
+  The mechanical arm first moves down, then grips after reaching the down position, moves up after gripping, moves right after reaching the up position, moves down after reaching the right position, releases after reaching the down position, moves up after releasing, moves left after reaching the up position, and stops after reaching the left position.
+  4. Continuous mode: The initial position of the mechanical arm is at the top left, when the start button is pressed, the mechanical arm continuously executes the handling cycle of the single cycle mode.
+  5. The emergency stop function can stop all actions of the mechanical arm at any time.
+
+  Use GripLimitSwitch and ReleaseLimitSwitch as the completion feedback for gripping and releasing respectively. The caller keeps the four mode-selection inputs mutually exclusive.
+
+  中文摘要：机械臂六动作四模式控制：手动逐动作按限位停、单步逐步确认、单周期走一遍、连续循环，急停停止一切动作。
+
+  扫描周期：20 ms（全组统一，见 docs/tasks_note.md）
+io_table:
+  - direction: IN
+    name: ManualMode
+    data_type: BOOL
+    description: Manual mode
+  - direction: IN
+    name: SingleStepMode
+    data_type: BOOL
+    description: Single step mode
+  - direction: IN
+    name: SingleCycleMode
+    data_type: BOOL
+    description: Single cycle mode
+  - direction: IN
+    name: ContinuousMode
+    data_type: BOOL
+    description: Continuous mode
+  - direction: IN
+    name: EmergencyStop
+    data_type: BOOL
+    description: "Emergency stop signal<br>FALSE: Emergency stop triggered<br>TRUE: No emergency stop triggered"
+  - direction: IN
+    name: Start
+    data_type: BOOL
+    description: Start operation
+  - direction: IN
+    name: DownButton
+    data_type: BOOL
+    description: Down button
+  - direction: IN
+    name: UpButton
+    data_type: BOOL
+    description: Up button
+  - direction: IN
+    name: LeftButton
+    data_type: BOOL
+    description: Left button
+  - direction: IN
+    name: RightButton
+    data_type: BOOL
+    description: Right button
+  - direction: IN
+    name: GripButton
+    data_type: BOOL
+    description: Grip button
+  - direction: IN
+    name: ReleaseButton
+    data_type: BOOL
+    description: Release button
+  - direction: IN
+    name: DownLimitSwitch
+    data_type: BOOL
+    description: Down position limit switch
+  - direction: IN
+    name: UpLimitSwitch
+    data_type: BOOL
+    description: Up position limit switch
+  - direction: IN
+    name: LeftLimitSwitch
+    data_type: BOOL
+    description: Left position limit switch
+  - direction: IN
+    name: RightLimitSwitch
+    data_type: BOOL
+    description: Right position limit switch
+  - direction: IN
+    name: GripLimitSwitch
+    data_type: BOOL
+    description: Grip position limit switch
+  - direction: IN
+    name: ReleaseLimitSwitch
+    data_type: BOOL
+    description: Release position limit switch
+  - direction: OUT
+    name: MoveDown
+    data_type: BOOL
+    description: Down command
+  - direction: OUT
+    name: MoveUp
+    data_type: BOOL
+    description: Up command
+  - direction: OUT
+    name: MoveLeft
+    data_type: BOOL
+    description: Left command
+  - direction: OUT
+    name: MoveRight
+    data_type: BOOL
+    description: Right command
+  - direction: OUT
+    name: ActivateGrip
+    data_type: BOOL
+    description: Grip command
+  - direction: OUT
+    name: ActivateRelease
+    data_type: BOOL
+    description: Release command
+initial_state: 初始位置在左上：UpLimitSwitch = TRUE、LeftLimitSwitch = TRUE；六路动作输出全为 FALSE；模式为手动。
+constraints:
+  - K1 手动模式下只有「按下了该方向按钮且尚未到达该方向限位」时才输出该动作；松开按钮或到达限位立即停止该动作。
+  - K2 四种模式（Manual/SingleStep/SingleCycle/Continuous）互斥，同一时刻只有一种模式的动作生效。
+  - K3 单步模式每完成一个动作必须等待操作员确认后才执行下一个动作。
+  - K4 EmergencyStop = TRUE 时六路动作输出全部为 FALSE，且不允许任何模式继续推进。
+  - K5 抓取/释放动作必须以 GripLimitSwitch/ReleaseLimitSwitch 为到位判据，到位后不得持续输出。
+provenance: 课程公共题库 P19（Mechanical Arm Control）；原文导入、变量名与需求未做任何改动；来源与审核记录见 data/provenance.csv 第 20 行
+spec_ref: data/specs/P19.ltl
+error_examples:
+  - 错误实现：手动模式到位后不停止。症状——机械臂顶住下限位继续输出 MoveDown，电机堵转。
+  - 错误实现：模式判断用 if/elsif 但缺少互斥。症状——同时按下两个模式按钮时两种模式的动作叠加。
+notes: 24 个 I/O，按课程要求只取 6 条最高价值规约（见 data/specs/P19.ltl）；K2/K5 与 C4/C9 的不适配说明见 data/specs/PROPOSITIONS.md。

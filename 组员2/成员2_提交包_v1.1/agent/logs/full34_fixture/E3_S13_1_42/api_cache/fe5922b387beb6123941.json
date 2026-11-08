@@ -1,0 +1,14 @@
+{
+  "choices": [
+    {
+      "message": {
+        "content": "FUNCTION_BLOCK FB_S13\nVAR_INPUT\n    LineRun : BOOL;\n    PartAtMerge : BOOL;\n    PartOnMain : BOOL;\n    JamSensor : BOOL;\n    ResetBtn : BOOL;\n    ModeAuto : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MainMotor : BOOL;\n    MergeMotor : BOOL;\n    SpeedHigh : BOOL;\n    JamAlarm : BOOL;\n    Status : WORD;\nEND_VAR\n(* Add a VAR block for internal state/timers before the implementation, if needed. *)\n(* SKELETON ONLY: replace this RETURN with scan logic and required initial state. *)\nRETURN;\nEND_FUNCTION_BLOCK\n\n(* FIXTURE_COMPILE_FAIL *)\n"
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0
+  },
+  "fixture": true
+}

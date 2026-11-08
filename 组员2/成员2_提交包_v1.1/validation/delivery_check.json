@@ -1,0 +1,461 @@
+{
+  "scope": "data/fixture/compiler-evidence consistency; no model-quality or functional-test claim",
+  "source_hash_files": 68,
+  "source_hashes_passed": 68,
+  "parsed_tasks": 34,
+  "skeletons_generated": 34,
+  "degraded_task_ids": [
+    "P08",
+    "P14",
+    "P17",
+    "P19"
+  ],
+  "max_context_estimate": 4329,
+  "mandatory_context_overflows": 0,
+  "log_groups": 40,
+  "log_schema_passed": 40,
+  "real_model_calls_performed": false,
+  "real_authoritative_compile_performed": true,
+  "authoritative_cases_with_matching_source_hash": 40,
+  "authoritative_skeletons_passed": 33,
+  "authoritative_skeletons_failed": [
+    "task_P18_skeleton"
+  ],
+  "real_member4_tests_performed": false,
+  "hash_details": [
+    {
+      "path": "tasks/P01.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/P02.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/P03.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/P04.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/P05.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/P06.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/P07.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/P08.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/P09.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/P10.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/P11.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/P12.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/P13.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/P14.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/P15.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/P16.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/P17.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/P18.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/P19.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/P20.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/S01.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/S02.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/S03.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/S04.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/S05.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/S06.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/S07.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/S08.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/S09.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/S10.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/S11.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/S12.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/S13.yaml",
+      "ok": true
+    },
+    {
+      "path": "tasks/S14.yaml",
+      "ok": true
+    },
+    {
+      "path": "specs/P01.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/P02.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/P03.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/P04.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/P05.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/P06.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/P07.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/P08.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/P09.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/P10.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/P11.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/P12.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/P13.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/P14.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/P15.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/P16.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/P17.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/P18.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/P19.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/P20.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/S01.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/S02.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/S03.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/S04.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/S05.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/S06.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/S07.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/S08.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/S09.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/S10.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/S11.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/S12.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/S13.ltl",
+      "ok": true
+    },
+    {
+      "path": "specs/S14.ltl",
+      "ok": true
+    }
+  ],
+  "log_details": [
+    {
+      "path": "agent/logs/full34_fixture/E3_P01_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_P02_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_P03_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_P04_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_P05_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_P06_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_P07_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_P08_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_P09_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_P10_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_P11_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_P12_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_P13_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_P14_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_P15_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_P16_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_P17_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_P18_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_P19_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_P20_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_S01_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_S02_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_S03_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_S04_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_S05_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_S06_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_S07_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_S08_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_S09_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_S10_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_S11_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_S12_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_S13_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/full34_fixture/E3_S14_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/scenario_fixture/abandoned/fixture/E3_P03_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/scenario_fixture/baseline/fixture/E1_S04_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/scenario_fixture/best-effort/fixture/E3_S02_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/scenario_fixture/repair/fixture/E3_S01_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/scenario_fixture/timeout/fixture/E3_S03_1_42/run.jsonl",
+      "ok": true
+    },
+    {
+      "path": "agent/logs/scenario_fixture/tool-error/fixture/E3_P04_1_42/run.jsonl",
+      "ok": true
+    }
+  ]
+}

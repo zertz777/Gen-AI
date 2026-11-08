@@ -1,0 +1,10 @@
+# task: S11
+# meta: hard / D 故障与安全
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(!SensorValid -> !DegradedMode || ControlValue == FallbackValue)    -- 信号无效时要么未降级、要么输出已切到备用值（不得停留在失效测量值）（K4）
+C2: G(DegradedMode -> !SensorValid)    -- 降级模式的许可：信号当前无效（K2）
+C9: G(DegradedMode -> G[0,150](DegradedMode))    -- 降级至少保持 3 s（恢复确认窗口）（K3）
+C4: G(!(DegradedMode && SensorValid))    -- 降级与信号有效互斥（K1）
+C10: G[0,1](!DegradedMode && !SensorValid && ControlValue == 0.0)    -- 上电首周期未降级、未标定（初态）

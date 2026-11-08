@@ -1,0 +1,1 @@
+.\validation\matiec_live_r2\task_P12_skeleton\source.st:12-32..12-36: error: invalid specification in variable declaration.

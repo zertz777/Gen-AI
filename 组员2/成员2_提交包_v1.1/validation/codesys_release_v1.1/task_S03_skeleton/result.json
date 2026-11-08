@@ -1,0 +1,353 @@
+{
+  "elapsed_s": 2.4250259399414063, 
+  "evidence_kind": "live", 
+  "messages": [
+    {
+      "stage": "build", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "------ 开始编译应用程序 PLCWinNT.Application -------"
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "代码典型化..."
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "编译完成 -- 0错误,0警告"
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "SA", 
+      "severity": "text", 
+      "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+      "position_text": "", 
+      "raw": "其他代码检查..."
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "SA", 
+      "severity": "text", 
+      "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+      "position_text": "", 
+      "raw": "其他代码检查完成-0 个错误"
+    }, 
+    {
+      "stage": "generate", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "------ 开始编译应用程序 PLCWinNT.Application -------"
+    }, 
+    {
+      "stage": "generate", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "此应用程序是最新的"
+    }, 
+    {
+      "stage": "generate", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "生成代码..."
+    }, 
+    {
+      "stage": "generate", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "生成全局初始化..."
+    }, 
+    {
+      "stage": "generate", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "生成代码初始化..."
+    }, 
+    {
+      "stage": "generate", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "生成重定位..."
+    }, 
+    {
+      "stage": "generate", 
+      "native_prefix": "C", 
+      "severity": "information", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "生成的代码大小:76306 字节"
+    }, 
+    {
+      "stage": "generate", 
+      "native_prefix": "C", 
+      "severity": "information", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "全局数据大小:12365 字节"
+    }, 
+    {
+      "stage": "generate", 
+      "native_prefix": "C", 
+      "severity": "information", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "代码和数据总分配的内存容量:103520字节"
+    }, 
+    {
+      "stage": "generate", 
+      "native_prefix": "C", 
+      "severity": "information", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "内存区域0包含 数据, 输入, 输出, 内存 和 不安全行为：大小：1048576字节，最高使用的地址：27016，最大连续存储器间距：1021560字节（97％）"
+    }, 
+    {
+      "stage": "generate", 
+      "native_prefix": "C", 
+      "severity": "information", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "内存区域3包含 代码：大小：1048576字节，最高使用的地址：76504，最大连续存储器间距：972072字节（92％）"
+    }, 
+    {
+      "stage": "generate", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "编译完整--0错误,0警告：准备下载"
+    }, 
+    {
+      "stage": "generate", 
+      "native_prefix": "SA", 
+      "severity": "text", 
+      "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+      "position_text": "", 
+      "raw": "其他代码检查..."
+    }, 
+    {
+      "stage": "generate", 
+      "native_prefix": "SA", 
+      "severity": "text", 
+      "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+      "position_text": "", 
+      "raw": "其他代码检查完成-0 个错误"
+    }
+  ], 
+  "errors": [], 
+  "code_generated": true, 
+  "stages": {
+    "build": {
+      "status": "pass", 
+      "elapsed_s": 0.83364105224609375, 
+      "errors": [], 
+      "messages": [
+        {
+          "stage": "build", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "------ 开始编译应用程序 PLCWinNT.Application -------"
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "代码典型化..."
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "编译完成 -- 0错误,0警告"
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "SA", 
+          "severity": "text", 
+          "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+          "position_text": "", 
+          "raw": "其他代码检查..."
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "SA", 
+          "severity": "text", 
+          "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+          "position_text": "", 
+          "raw": "其他代码检查完成-0 个错误"
+        }
+      ]
+    }, 
+    "generate": {
+      "status": "pass", 
+      "elapsed_s": 0.2265777587890625, 
+      "errors": [], 
+      "messages": [
+        {
+          "stage": "generate", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "------ 开始编译应用程序 PLCWinNT.Application -------"
+        }, 
+        {
+          "stage": "generate", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "此应用程序是最新的"
+        }, 
+        {
+          "stage": "generate", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "生成代码..."
+        }, 
+        {
+          "stage": "generate", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "生成全局初始化..."
+        }, 
+        {
+          "stage": "generate", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "生成代码初始化..."
+        }, 
+        {
+          "stage": "generate", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "生成重定位..."
+        }, 
+        {
+          "stage": "generate", 
+          "native_prefix": "C", 
+          "severity": "information", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "生成的代码大小:76306 字节"
+        }, 
+        {
+          "stage": "generate", 
+          "native_prefix": "C", 
+          "severity": "information", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "全局数据大小:12365 字节"
+        }, 
+        {
+          "stage": "generate", 
+          "native_prefix": "C", 
+          "severity": "information", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "代码和数据总分配的内存容量:103520字节"
+        }, 
+        {
+          "stage": "generate", 
+          "native_prefix": "C", 
+          "severity": "information", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "内存区域0包含 数据, 输入, 输出, 内存 和 不安全行为：大小：1048576字节，最高使用的地址：27016，最大连续存储器间距：1021560字节（97％）"
+        }, 
+        {
+          "stage": "generate", 
+          "native_prefix": "C", 
+          "severity": "information", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "内存区域3包含 代码：大小：1048576字节，最高使用的地址：76504，最大连续存储器间距：972072字节（92％）"
+        }, 
+        {
+          "stage": "generate", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "编译完整--0错误,0警告：准备下载"
+        }, 
+        {
+          "stage": "generate", 
+          "native_prefix": "SA", 
+          "severity": "text", 
+          "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+          "position_text": "", 
+          "raw": "其他代码检查..."
+        }, 
+        {
+          "stage": "generate", 
+          "native_prefix": "SA", 
+          "severity": "text", 
+          "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+          "position_text": "", 
+          "raw": "其他代码检查完成-0 个错误"
+        }
+      ]
+    }
+  }, 
+  "linked_pou": "FB_S03", 
+  "status": "pass", 
+  "compiler": "CODESYS", 
+  "case_id": "task_S03_skeleton", 
+  "source_line_mapping": {
+    "status": "known_object_partitions_calibrated", 
+    "imported_text_spans": [
+      {
+        "object_name": "FB_S03", 
+        "imported_prefix_lines": 1, 
+        "part": "declaration", 
+        "source_start_line": 1, 
+        "source_end_line": 14
+      }, 
+      {
+        "object_name": "FB_S03", 
+        "imported_prefix_lines": 0, 
+        "part": "implementation", 
+        "source_start_line": 15, 
+        "source_end_line": 17
+      }
+    ], 
+    "note": "Decl/Impl line mapping calibrated with native diagnostics; unknown objects/positions remain null"
+  }, 
+  "source_sha256": "f2d9d9b06109df3ec555c2ada7315fe52e548bd019efd1ee84dcc458b77bd802"
+}
