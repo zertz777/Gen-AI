@@ -114,7 +114,7 @@ v1.7 已按成员4 的 `tests/ambiguities.md` 修订 6 处判据，并补齐 S13
 
 - 自研框架入口 [`agent/run.py`](agent/run.py)，Aider 适配入口 [`baseline/run_baseline.py`](baseline/run_baseline.py)。
 - [框架说明](docs/framework.md)、[环境配置](docs/codesys_setup.md)、[报告第3章](docs/report/ch3.md)和[答辩问答](docs/qa/member2.md)。
-- [v1.1 原始交付快照](组员2/成员2_提交包_v1.1)保留 v1.6 题集、演示日志、编译证据与框架单测。仓库根目录的入口使用 `data/` 下的 v1.7 题集。
+- 仓库根目录的入口使用 `data/` 下的 v1.7 题集。v1.6 题集、演示日志、编译证据、框架单测和交接材料收在 [v1.1 原始交付快照](release/member2-v1.1)。
 
 ## 目录约定（最终形态，见任务书 §7.2）
 
@@ -122,16 +122,15 @@ v1.7 已按成员4 的 `tests/ambiguities.md` 修订 6 处判据，并补齐 S13
 data/        题面 YAML、LTL 规约、来源表、多样性矩阵
 tools/       题库导入、LTL/schema 校验、元数据与文档生成脚本
 refs/        课程原始题库 JSON（用于重放）
-agent/       自研框架：src/ 七模块、run.py、prompts/、configs/
+agent/       自研框架：src/ 七模块、run.py、prompts/、configs/、logs/
 baseline/    现成框架适配层与调用脚本
 tests/       用例、逐周期执行器、缺陷单、测试报告
 verify/      变异测试与 PLCVerif 结果
 experiments/ 四组配置、运行记录、summary.csv
 figures/     4 图 2 表（PNG + 源文件）
 docs/        报告、PPT、讲稿、问答、环境说明
-release/     v1.0 快照与 sha256
+release/     版本快照、SHA256 校验清单与交接材料
 final/       A1—A7 提交包
-组员2/       成员2 v1.1 原始交付快照与交接材料
 ```
 
 ## 常见问题

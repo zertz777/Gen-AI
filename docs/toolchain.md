@@ -106,7 +106,7 @@
 本地工具单测覆盖了五类已知诊断、子进程超时、缺工具、权威返回缺失或矛盾、空测试拒绝、部分通过用例 ID 保留、fixture 标识以及 ST 导入边界。运行：
 
 ```bash
-cd "组员2/成员2_提交包_v1.1"
+cd "release/member2-v1.1/成员2_提交包_v1.1"
 python -m unittest tests_unit.test_tools -v
 ```
 

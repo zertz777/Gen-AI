@@ -1,6 +1,6 @@
 # 成员2答辩问答与证据
 
-文中的 `agent/logs/` 和 `tests_unit/` 随原交付包保存。[演示日志](../../组员2/成员2_提交包_v1.1/agent/logs) · [框架单测](../../组员2/成员2_提交包_v1.1/tests_unit)
+文中的 `agent/logs/` 和 `tests_unit/` 随原交付包保存。[演示日志](../../release/member2-v1.1/成员2_提交包_v1.1/agent/logs) · [框架单测](../../release/member2-v1.1/成员2_提交包_v1.1/tests_unit)
 
 ## 问1：这个Agent体现了哪些能力，为什么不能把编译通过当作正确？
 

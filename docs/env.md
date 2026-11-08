@@ -1,6 +1,6 @@
 # 环境与编译profile登记
 
-2026-10-31 在原交付环境完成 CODESYS 安装、脚本启动、设备与库枚举、模板重建及真实批量编译。[v1.1 编译证据](../组员2/成员2_提交包_v1.1/validation/codesys_release_v1.1)
+2026-10-31 在原交付环境完成 CODESYS 安装、脚本启动、设备与库枚举、模板重建及真实批量编译。[v1.1 编译证据](../release/member2-v1.1/成员2_提交包_v1.1/validation/codesys_release_v1.1)
 
 | 项目 | 已核实内容 |
 |---|---|
