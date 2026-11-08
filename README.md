@@ -3,21 +3,21 @@
 《GenAI 赋能工业编程》期末大作业交付仓库：34 道 PLC 题（P01—P20 公共题 + S01—S14 自编题），
 两组 Agent 框架 × 两个基座模型，四组实验，全部按 **20 ms 扫描周期逐拍**判定。
 
-> **仓库状态（2026-11-05）**：成员4 的测试与验证部分（`tests/`、`examples/`）和成员1 的题集与规约部分（`data/`、`tools/`、`refs/`、相关 `docs/`）已入库。
-> 框架、实验产物、打包尚未合并，见下方「目录与状态」表。README 由成员5 最终定稿。
+> **仓库状态（2026-11-08）**：成员1 的题集与规约、成员2 的 Agent 框架与 Aider 适配层、成员4 的测试与验证已入库。
+> 实验产物和最终打包待合并。README 由成员5 最终定稿。
 
 ## 目录与状态
 
 | 目录 | 内容 | 状态 | 负责人 |
 | --- | --- | --- | --- |
 | `tests/` | 214 条用例、逐周期执行器、缺陷单、测试报告、ST 解释器 | ✅ 已入库 | 成员4 |
-| `docs/` | 成员4：交接说明、判据仲裁、解释器说明、答辩问答；成员1：题集说明、报告第2章、QA、判据修订 | ✅ 已入库 | 成员4、成员1 |
+| `docs/` | 成员1的题集说明与报告第2章、成员2的框架与报告第3章、成员4的判据与解释器说明、答辩问答 | ✅ 已入库 | 成员1、成员2、成员4 |
 | `examples/` | 一个完整 run 的格式样例（`actual` CSV、`task_card`） | ✅ 已入库 | 成员4 |
 | `data/` | 34 份题面 YAML（P01—P20 + S01—S14）+ 34 份 LTL 规约（177 条款）+ 来源表/多样性矩阵/评审记录/SHA256 | ✅ 已入库 | 成员1 |
-| `tools/` | 9 个零依赖脚本：题库导入、LTL/schema 校验、元数据/文档生成 | ✅ 已入库 | 成员1 |
+| `tools/` | 题库导入、LTL/schema 校验、元数据生成、编译环境配置与检查 | ✅ 已入库 | 成员1、成员2 |
 | `refs/` | 课程原始题库 JSON，供 `import_bank.py --check` 重放 | ✅ 已入库 | 成员1 |
-| `agent/` | 自研 harness：七模块、`run.py`、提示词、配置 | ⏳ 待成员2 合并 | 成员2 |
-| `baseline/` | 现成框架（Aider）适配层 | ⏳ 待成员2 合并 | 成员2 |
+| `agent/` | 自研 Agent 七模块、统一入口、提示词、配置与 CODESYS 桥接 | ✅ 已入库 | 成员2 |
+| `baseline/` | 现成框架（Aider）适配层 | ✅ 已入库 | 成员2 |
 | `experiments/` | 136 条正式 run 记录 + summary | ⏳ 待成员3 合并 | 成员3 |
 | `figures/` | 4 图 2 表（PNG + 源文件） | ⏳ 待成员3 合并 | 成员3 |
 | `final/` | A1—A7 提交包 + 检查表 | ⏳ 待成员5 打包 | 成员5 |
@@ -27,7 +27,7 @@
 ### 1）装依赖
 
 ```bash
-pip install -r requirements.txt   # ⏳ requirements.txt 待成员2/5 合并
+python -m pip install -r requirements.txt
 ```
 
 当前测试部分只依赖 Python 3.10+ 标准库（`pytest` 除外）：
@@ -57,14 +57,14 @@ python tests/runner/interp/run.py \
   --out-dir /tmp/P03_actual
 ```
 
-### 3）跑一组实验（待框架合并后可跑）
+### 3）离线演示 Agent 流程
 
 ```bash
-python agent/run.py --framework self --model <model> \
-  --tasks data/tasks --out experiments/runs/E3 --seed 42 --repeat 1
+python agent/run.py --framework self --model fixture --tasks data/tasks/S01.yaml --out experiments/runs/demo --mode fixture
 ```
 
-> 这条依赖 `agent/`；`data/` 已入库，`agent/` 合并后即可执行。当前仍可用第 2 条验证测试链路。
+将 `--tasks data/tasks/S01.yaml` 改为 `--tasks data/tasks --task-set all34` 即可演示全部 34 题。
+演示走模拟编译和测试。正式实验需配置模型凭据、权威编译器及功能测试接口，具体参数见[工具接入说明](docs/toolchain.md)。
 
 ## 测试链路（成员4 部分，全部可跑）
 
@@ -110,13 +110,19 @@ python tools/import_bank.py --check
 v1.7 已按成员4 的 `tests/ambiguities.md` 修订 6 处判据，并补齐 S13、S14；
 修订明细见 `docs/判据修订说明.md`，变更记录见 `data/review.md` 的 R7—R14。
 
+## GenAI大作业成员2内容
+
+- 自研框架入口 [`agent/run.py`](agent/run.py)，Aider 适配入口 [`baseline/run_baseline.py`](baseline/run_baseline.py)。
+- [框架说明](docs/framework.md)、[环境配置](docs/codesys_setup.md)、[报告第3章](docs/report/ch3.md)和[答辩问答](docs/qa/member2.md)。
+- [v1.1 原始交付快照](组员2/成员2_提交包_v1.1)保留 v1.6 题集、演示日志、编译证据与框架单测。仓库根目录的入口使用 `data/` 下的 v1.7 题集。
+
 ## 目录约定（最终形态，见任务书 §7.2）
 
 ```
 data/        题面 YAML、LTL 规约、来源表、多样性矩阵
 tools/       题库导入、LTL/schema 校验、元数据与文档生成脚本
 refs/        课程原始题库 JSON（用于重放）
-agent/       自研框架：src/ 七模块、run.py、prompts/、configs/、logs/
+agent/       自研框架：src/ 七模块、run.py、prompts/、configs/
 baseline/    现成框架适配层与调用脚本
 tests/       用例、逐周期执行器、缺陷单、测试报告
 verify/      变异测试与 PLCVerif 结果
@@ -125,6 +131,7 @@ figures/     4 图 2 表（PNG + 源文件）
 docs/        报告、PPT、讲稿、问答、环境说明
 release/     v1.0 快照与 sha256
 final/       A1—A7 提交包
+组员2/       成员2 v1.1 原始交付快照与交接材料
 ```
 
 ## 常见问题
