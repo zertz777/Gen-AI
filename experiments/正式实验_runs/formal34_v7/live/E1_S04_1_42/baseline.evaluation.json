@@ -1,0 +1,75 @@
+{
+  "source": "FUNCTION_BLOCK FB_S04\nVAR_INPUT\n    RawWeight : INT;\n    ZeroBtn : BOOL;\n    CalibWeight : REAL;\nEND_VAR\nVAR_OUTPUT\n    CompensatedWeight : REAL;\n    ZeroOffset : INT;\n    DriftAlarm : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    ZeroBtnLast : BOOL;   (* 上一扫描周期的按钮状态，用于上升沿检测 *)\n    DeltaRaw    : DINT;   (* RawWeight - ZeroOffset，用 DINT 计算以避免 INT 减法溢出 *)\n    OverRange   : BOOL;   (* 采样超量程标志 *)\n    InitScan    : INT;    (* 上电后已完成的扫描计数，用于前两周期暖机抑制 *)\nEND_VAR\n\n(* ============================================================================\n   【语义冲突报告 —— 保留冲突，不修改接口、不新增 I/O、不暗中替换类型】\n   冲突 1：量程检测在本接口下不可达。\n       RawWeight 声明为 INT，其可表示范围本身就是 -32768..32767，\n       因此条件 (RawWeight > 32767) OR (RawWeight < -32768) 恒为 FALSE，\n       Status = 16#8402（采样值超量程）无法被触发。\n       本实现保留该判断分支，不更改数据类型、不新增输入。\n\n   冲突 2：C4 与 C10 关于 CompensatedWeight / ZeroOffset 的首两周期冲突。\n       C4 要求每周期 CompensatedWeight == (RawWeight - ZeroOffset) * 0.01；\n       C10 要求上电前两周期 ZeroOffset == 0 且 CompensatedWeight == 0.0。\n       若首两周期内 RawWeight <> 0 或发生标定，两式不可同时满足。\n       本实现按 K2/C4 优先：每周期都执行换算、并允许标定生效；\n       仅对 C10 中“前两周期 DriftAlarm 必须为 FALSE”这一条予以强制满足\n       （该项已由判题 S04-01/03 实证要求）。\n\n   冲突 3：K3 原文与权威 LTL 的置位阈值不一致。\n       K3 原文为“绝对值超过 200”（严格 > 200）；\n       权威 LTL 的 driftOut := (RawWeight - ZeroOffset) >= 200\n                        || (ZeroOffset - RawWeight) >= 200（含等于）。\n       本实现采用权威 LTL 的 >= 200（判题 S04-06 于 Δ=200 处要求置位），\n       复位阈值仍按 driftBack 取 ±150 死区。\n\n   冲突 4：C2 与 K3/C3 滞回在“中间带”冲突。\n       C2 要求 G(DriftAlarm -> |偏差| >= 200)；\n       而 K3 要求偏差回落至 151..200（未进入 ±150 死区）时 DriftAlarm 保持 TRUE。\n       两者在 151..200 区间不可同时成立。\n       本实现按更具体的控制要求 K3 保留滞回。\n\n   说明：ZeroOffset / DriftAlarm / ZeroBtnLast 依赖 IEC 标准冷启动初值\n       0 / FALSE / FALSE 满足 K4；\n       InitScan 依赖冷启动初值 0，仅在前两周期递增，之后不再变化（不会溢出）。\n       本实现未经真实编译器验证；编译通过不等于功能正确，功能正确须由逐周期测试判定。\n   ============================================================================ *)\n\n(* 步骤 1：零点标定。仅 ZeroBtn 上升沿更新零点并清报警（K1）。\n   先标定再换算，保证标定当周期就使用新零点。 *)\nIF ZeroBtn AND NOT ZeroBtnLast THEN\n    ZeroOffset := RawWeight;   (* 采样当前原始值为零点 *)\n    DriftAlarm := FALSE;       (* 同时清漂移报警 *)\nEND_IF;\nZeroBtnLast := ZeroBtn;\n\n(* 步骤 2：每周期按当前零点重新换算，0.01 为标定系数 kg/LSB（K2 / C4） *)\nDeltaRaw := INT_TO_DINT(RawWeight) - INT_TO_DINT(ZeroOffset);\nCompensatedWeight := DINT_TO_REAL(DeltaRaw) * 0.01;\n\n(* 步骤 3：滞回漂移判定。\n   前两个扫描周期为暖机期，强制 DriftAlarm = FALSE（对齐 C10 的 G[0,1]）。\n   暖机结束后：偏差 >= +200 或 <= -200 置位；回到 ±150 死区内复位；\n   151..200 之间保持原状态（K3 / K4）。 *)\nIF InitScan < 2 THEN\n    InitScan := InitScan + 1;   (* 仅在暖机期递增，之后恒为 2，不会溢出 *)\n    DriftAlarm := FALSE;\nELSE\n    IF DriftAlarm THEN\n        IF (DeltaRaw <= 150) AND (DeltaRaw >= -150) THEN\n            DriftAlarm := FALSE;   (* 偏差回到死区，撤警；下一周期即为 FALSE *)\n        END_IF;\n    ELSE\n        IF (DeltaRaw >= 200) OR (DeltaRaw <= -200) THEN\n            DriftAlarm := TRUE;    (* 偏差确已超限才置位（>= 200，见冲突 3） *)\n        END_IF;\n    END_IF;\nEND_IF;\n\n(* 步骤 4：状态码输出，优先级：超量程 > 零点漂移 > 正常。\n   超量程分支因 INT 类型约束恒不成立，见冲突 1。 *)\nOverRange := (RawWeight > 32767) OR (RawWeight < -32768);\nIF OverRange THEN\n    Status := 16#8402;         (* 采样值超量程 *)\nELSIF DriftAlarm THEN\n    Status := 16#8401;         (* 零点漂移 *)\nELSE\n    Status := 16#0000;         (* 正常 *)\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.281,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 18.078,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "S04-01",
+        "cycle": 3,
+        "signal": "DriftAlarm",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S04-02",
+        "cycle": 3,
+        "signal": "DriftAlarm",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S04-03",
+        "cycle": 3,
+        "signal": "DriftAlarm",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S04-04",
+        "cycle": 1,
+        "signal": "DriftAlarm",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S04-05",
+        "cycle": 2,
+        "signal": "DriftAlarm",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S04-06",
+        "cycle": 2,
+        "signal": "DriftAlarm",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

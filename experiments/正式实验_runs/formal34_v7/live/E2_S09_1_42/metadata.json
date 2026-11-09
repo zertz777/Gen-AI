@@ -1,0 +1,7 @@
+{
+  "execution_mode": "live",
+  "eligible_for_experiments": false,
+  "status": "timeout",
+  "fingerprint": "16884bd40cefd5f2b8ac37bf9b0da38f0901dd9fad0794b55c3af8efd9fc16b8",
+  "failure_reason": "parent_deadline"
+}

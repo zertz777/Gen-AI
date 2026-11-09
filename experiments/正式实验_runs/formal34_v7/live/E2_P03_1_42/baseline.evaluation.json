@@ -1,0 +1,39 @@
+{
+  "source": "(*\n需要修改：替换占位 RETURN，实现参数检查、错误状态及上下限滞回报警。\n接口名称、方向和类型保持不变，每次调用代表一个 20 ms 扫描周期。\n\n需求原文：\nIn industrial automation systems, monitoring the status of equipment is crucial. When equipment parameters exceed the normal range, the system needs to issue an alarm. To avoid frequent triggering of alarms due to minor fluctuations in parameters, an alarm management system with hysteresis function needs to be implemented.\nWhen Value is greater than hiLevel, trigger high alarm hiAlarm.\nWhen Value is less than hiLevel-hystWindow, exit high alarm hiAlarm.\nWhen Value is less than loLevel, trigger low alarm loAlarm.\nWhen Value is greater than loLevel+hystWindow, exit low alarm loAlarm.\nIf loLevel is greater than or equal to hiLevel, output error error=true, status=16#8001, and exit the program\nIf the hysteresis window value hystWindow is greater than or equal to the deviation range between hiLevel and loLevel, output error error=true, status=16#8002\n\n中文摘要：\n带滞回的上下限报警。超过 hiLevel 置位高报，\n低于 hiLevel-hystWindow 复位高报；\n低于 loLevel 置位低报，高于 loLevel+hystWindow 复位低报。\n\n接口：\nIN  Value      : REAL，输入值。\nIN  hiLevel    : REAL，高限。\nIN  loLevel    : REAL，低限。\nIN  hystWindow : REAL，滞回窗口。\nOUT hiAlarm    : BOOL，高报。\nOUT loAlarm    : BOOL，低报。\nOUT error      : BOOL，执行错误标志。\nOUT status     : WORD，状态码。\n\n初态：\nhiAlarm=FALSE；loAlarm=FALSE；error=FALSE；status=16#0000。\n\n约束：\nK1：loLevel >= hiLevel 时，error=TRUE、status=16#8001，\n    立即退出本次调用，不执行后续正常报警逻辑。\nK2：hystWindow >= hiLevel-loLevel 时，error=TRUE、\n    status=16#8002，同样退出本次调用。\nK3：Value > hiLevel 置位高报；\n    Value < hiLevel-hystWindow 复位高报；否则保持。\nK4：Value < loLevel 置位低报；\n    Value > loLevel+hystWindow 复位低报；否则保持。\n\n原始数据告警：\nsemantic_warnings=[]；warnings=[]；missing_fields=[]。\ndialect_requirements=[]；type_origins={}。\n\n完整形式化规约：\n# task: P03\n# meta: easy / D 故障与安全\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n#\n# 命题映射（I/O 名 -> 派生命题）：\n# alias: paramsValid := loLevel < hiLevel && hystWindow < (hiLevel - loLevel)\n\nC1: G(error -> X(!hiAlarm && !loAlarm))    -- 参数错误时不得输出报警，且下一周期保持关断（错误优先于报警）（K1/K2）\nC2: G(hiAlarm || loAlarm -> paramsValid)    -- 任何报警都要求参数合法（无合法参数不得报警）（K1/K2）\nC4: G(!(hiAlarm && loAlarm))    -- 高报与低报互斥（同一时刻不可能既高又低）（K3/K4）\nC7: G(hiAlarm -> (hiAlarm W Value < hiLevel - hystWindow))    -- 高报只在回落到 hiLevel - hystWindow 以下才允许复位（滞回）（K3）\nC7b: G(loAlarm -> (loAlarm W Value > loLevel + hystWindow))    -- 低报只在回升到 loLevel + hystWindow 以上才允许复位（滞回）（K4）\nC10: G[0,1](!hiAlarm && !loAlarm && !error && status == 16#0000)    -- 上电首周期无报警、无错误、状态码为 0（初态）\n\n语义冲突报告及实现选择：\n1. C10 的闭区间 [0,1] 要求两个时刻均无报警、无错误；\n   若首个扫描输入越限或参数非法，这与 K1-K4 的即时处理冲突。\n   本实现提供声明初态，但从第一次调用即执行 K1-K4，不屏蔽扫描。\n2. C1 要求错误后的下一周期仍关闭报警；\n   若下一周期参数恢复且输入越限，这与 K3/K4 即时置位冲突。\n   本实现错误周期关闭报警，恢复合法后立即恢复正常判定，\n   不额外引入一周期报警屏蔽。\n3. C7/C7b 未给出错误关闭的例外；参数非法时强制关闭报警\n   可能违反其无条件滞回保持要求。本实现选择错误处理优先，\n   关闭两路报警以满足 C2 的安全要求。\n4. 题面未禁止负 hystWindow。负窗口可能使同一路报警的\n   置位条件与复位条件同时成立，无法同时满足两条要求。\n   本实现不新增参数错误码，采用置位优先的 IF/ELSIF。\n5. 正常、合法参数下严格比较；等于边界时，若另一条件\n   未成立则保持报警状态。两个参数错误同时成立时 K1 优先。\n6. 正常周期清除 error，status 恢复为 16#0000。\n   RETURN 仅结束本次功能块调用，不停止外部控制任务。\n\n验证说明：\n当前对话没有可调用的编译器、执行工具或已配置测试命令，\n因此未运行编译或逐周期测试，未声称编译通过或功能验证正确。\n上述冲突保留，不声称本实现同时满足全部原始形式化条款。\n*)\n\nFUNCTION_BLOCK FB_P03\nVAR_INPUT\n    Value : REAL;\n    hiLevel : REAL;\n    loLevel : REAL;\n    hystWindow : REAL;\nEND_VAR\nVAR_OUTPUT\n    hiAlarm : BOOL := FALSE;\n    loAlarm : BOOL := FALSE;\n    error : BOOL := FALSE;\n    status : WORD := WORD#16#0000;\nEND_VAR\n\n(* 参数错误优先；错误分支不进入正常报警逻辑。 *)\nIF loLevel >= hiLevel THEN\n    error := TRUE;\n    status := WORD#16#8001;\n    hiAlarm := FALSE;\n    loAlarm := FALSE;\n    RETURN;\nEND_IF;\n\nIF hystWindow >= (hiLevel - loLevel) THEN\n    error := TRUE;\n    status := WORD#16#8002;\n    hiAlarm := FALSE;\n    loAlarm := FALSE;\n    RETURN;\nEND_IF;\n\nerror := FALSE;\nstatus := WORD#16#0000;\n\n(* 高报：严格越限置位，严格越过复位阈值复位，否则保持。 *)\nIF Value > hiLevel THEN\n    hiAlarm := TRUE;\nELSIF Value < (hiLevel - hystWindow) THEN\n    hiAlarm := FALSE;\nEND_IF;\n\n(* 低报：严格越限置位，严格越过复位阈值复位，否则保持。 *)\nIF Value < loLevel THEN\n    loAlarm := TRUE;\nELSIF Value > (loLevel + hystWindow) THEN\n    loAlarm := FALSE;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.234,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.172,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P03-01",
+      "P03-02",
+      "P03-03",
+      "P03-04",
+      "P03-05",
+      "P03-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

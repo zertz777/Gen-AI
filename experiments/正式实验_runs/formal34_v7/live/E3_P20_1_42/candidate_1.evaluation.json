@@ -1,0 +1,89 @@
+{
+  "source": "(* 冲突报告：原文要求称重不合格时立即启动 kick；形式化 C2 要求 G(kick -> SensorOutput)，\n   即 kick 仅可在成品站 SensorOutput=TRUE 时输出。本实现按 C2 将不合格标志 rejected\n   延迟到成品站 SensorOutput=TRUE 时执行 kick；未新增接口。若需称重站立即剔除，需澄清/修改规约。 *)\n\nTYPE P20_STATE :\n(\n    S_IDLE,\n    S_TO_WASH,\n    S_WAIT_WASH,\n    S_TO_WEIGHT,\n    S_WAIT_WEIGHT,\n    S_TO_FIRING,\n    S_WAIT_FIRING,\n    S_TO_OUTPUT,\n    S_AT_OUTPUT\n);\nEND_TYPE\n\nFUNCTION_BLOCK FB_P20\nVAR_INPUT\n    Mode : BOOL;\n    ForwardButton : BOOL;\n    ReverseButton : BOOL;\n    SensorFeed : BOOL;\n    SensorWash : BOOL;\n    SensorWeight : BOOL;\n    SensorFiring : BOOL;\n    SensorOutput : BOOL;\n    washComplete : BOOL;\n    weightComplete : BOOL;\n    weight : REAL;\n    firingComplete : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MotorForward : BOOL;\n    MotorReverse : BOOL;\n    kick : BOOL;\n    CompletionLight : BOOL;\n    firingTemp : REAL;\nEND_VAR\nVAR\n    state : P20_STATE := S_IDLE;\n    rejected : BOOL := FALSE;\n    kicked : BOOL := FALSE;\n    prevMode : BOOL := FALSE;\n    startupCnt : INT := 0;\nEND_VAR\n\n(* C10: 上电初始阶段无输出，覆盖 G[0,1] 区间。 *)\nIF startupCnt < 2 THEN\n    MotorForward := FALSE;\n    MotorReverse := FALSE;\n    kick := FALSE;\n    CompletionLight := FALSE;\n    firingTemp := 0.0;\n    state := S_IDLE;\n    rejected := FALSE;\n    kicked := FALSE;\n    prevMode := Mode;\n    startupCnt := startupCnt + 1;\nELSE\n    IF Mode THEN\n        (* 自动模式：手动切自动时复位自动流程。 *)\n        IF NOT prevMode THEN\n            state := S_IDLE;\n            rejected := FALSE;\n            kicked := FALSE;\n            CompletionLight := FALSE;\n            kick := FALSE;\n            MotorForward := FALSE;\n            MotorReverse := FALSE;\n            firingTemp := 0.0;\n        END_IF;\n\n        (* 自动模式默认输出。 *)\n        MotorForward := FALSE;\n        MotorReverse := FALSE;\n        kick := FALSE;\n        CompletionLight := FALSE;\n\n        CASE state OF\n            S_IDLE:\n                (* 上料站到位后启动正转去清洗站。 *)\n                IF SensorFeed THEN\n                    MotorForward := TRUE;\n                    state := S_TO_WASH;\n                END_IF;\n\n            S_TO_WASH:\n                IF SensorWash THEN\n                    MotorForward := FALSE;\n                    state := S_WAIT_WASH;\n                ELSE\n                    MotorForward := TRUE;\n                END_IF;\n\n            S_WAIT_WASH:\n                (* K3: 完成信号必须与到位传感器一致。 *)\n                IF SensorWash AND washComplete THEN\n                    MotorForward := TRUE;\n                    state := S_TO_WEIGHT;\n                END_IF;\n\n            S_TO_WEIGHT:\n                IF SensorWeight THEN\n                    MotorForward := FALSE;\n                    state := S_WAIT_WEIGHT;\n                ELSE\n                    MotorForward := TRUE;\n                END_IF;\n\n            S_WAIT_WEIGHT:\n                IF SensorWeight AND weightComplete THEN\n                    IF (weight >= 100.0) AND (weight <= 200.0) THEN\n                        (* 合格：100..200 线性映射到 500..550。 *)\n                        rejected := FALSE;\n                        firingTemp := 500.0 + (weight - 100.0) * 0.5;\n                        MotorForward := TRUE;\n                        state := S_TO_FIRING;\n                    ELSE\n                        (* 不合格：按 C2 延迟到成品站输出 kick。 *)\n                        rejected := TRUE;\n                        firingTemp := 0.0;\n                        MotorForward := TRUE;\n                        state := S_TO_FIRING;\n                    END_IF;\n                END_IF;\n\n            S_TO_FIRING:\n                IF SensorFiring THEN\n                    MotorForward := FALSE;\n                    state := S_WAIT_FIRING;\n                ELSE\n                    MotorForward := TRUE;\n                END_IF;\n\n            S_WAIT_FIRING:\n                IF SensorFiring AND firingComplete THEN\n                    MotorForward := TRUE;\n                    state := S_TO_OUTPUT;\n                END_IF;\n\n            S_TO_OUTPUT:\n                IF SensorOutput THEN\n                    MotorForward := FALSE;\n                    state := S_AT_OUTPUT;\n                    kicked := FALSE;\n                ELSE\n                    MotorForward := TRUE;\n                END_IF;\n\n            S_AT_OUTPUT:\n                IF NOT SensorOutput THEN\n                    (* 产品离开成品站：熄灭完成灯并复位。 *)\n                    CompletionLight := FALSE;\n                    kick := FALSE;\n                    rejected := FALSE;\n                    kicked := FALSE;\n                    firingTemp := 0.0;\n                    state := S_IDLE;\n                ELSE\n                    IF rejected AND NOT kicked THEN\n                        (* C2: kick 仅在 SensorOutput=TRUE 时输出。 *)\n                        kick := TRUE;\n                        CompletionLight := FALSE;\n                        kicked := TRUE;\n                    ELSE\n                        (* K4/C1/C6: 出料动作后点亮并保持到产品离开。 *)\n                        kick := FALSE;\n                        CompletionLight := TRUE;\n                    END_IF;\n                END_IF;\n        END_CASE;\n\n        prevMode := TRUE;\n    ELSE\n        (* 手动模式：正反转互斥。 *)\n        MotorForward := ForwardButton AND NOT ReverseButton;\n        MotorReverse := ReverseButton AND NOT ForwardButton;\n        kick := FALSE;\n        CompletionLight := FALSE;\n        firingTemp := 0.0;\n        state := S_IDLE;\n        rejected := FALSE;\n        kicked := FALSE;\n        prevMode := FALSE;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.266,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.86,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 8,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "P20-01",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P20-02",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P20-03",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P20-04",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P20-05",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P20-06",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P20-07",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P20-08",
+        "cycle": 1,
+        "signal": "kick",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 14598,
+  "tag": "candidate_1"
+}

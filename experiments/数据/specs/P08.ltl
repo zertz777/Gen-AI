@@ -1,0 +1,15 @@
+# task: P08
+# meta: medium / B 模拟量与数据处理
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+#
+# 命题映射（I/O 名 -> 派生命题）：
+# alias: chEn := channels[].enable
+# alias: chOut := channels[].outputValue
+# alias: chRet := channels[].retVal
+#
+# note: 本题为数组批量处理，逐通道结果由 tests/cases/P08.csv 逐周期比对；count 上界取两个数组的实际长度，不设固定 32 路限制。
+
+C1: G(!chEn -> chOut == 0.0)    -- 未使能的通道不得输出非零工程量（安全默认）（K1/K5）
+C6: G((chRet == 16#8001 || chRet == 16#8002) -> chOut == 0.0)    -- 当前通道错误时不输出转换值；后续通道继续处理（K5）
+C10: G[0,0](chOut == 0.0)    -- 上电当拍不输出工程量（初态）

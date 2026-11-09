@@ -1,0 +1,42 @@
+{
+  "expected_frozen_runs": 32,
+  "completed_frozen_runs": 32,
+  "missing_run_ids": [],
+  "groups": {
+    "E1": {
+      "completed": 8,
+      "passed": 6,
+      "statuses": {
+        "passed": 6,
+        "best-effort:test_fail": 2
+      }
+    },
+    "E2": {
+      "completed": 8,
+      "passed": 5,
+      "statuses": {
+        "passed": 5,
+        "abandoned:compile_fail": 1,
+        "best-effort:test_fail": 2
+      }
+    },
+    "E3": {
+      "completed": 8,
+      "passed": 3,
+      "statuses": {
+        "passed": 3,
+        "best-effort:budget": 3,
+        "abandoned:budget": 2
+      }
+    },
+    "E4": {
+      "completed": 8,
+      "passed": 2,
+      "statuses": {
+        "best-effort:test_fail": 5,
+        "passed": 2,
+        "abandoned:compile_fail": 1
+      }
+    }
+  }
+}

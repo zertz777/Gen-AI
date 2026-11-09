@@ -1,0 +1,39 @@
+{
+  "source": "FUNCTION_BLOCK FB_P06\nVAR_INPUT\n    DO_LOW : BOOL;\n    AERATION_E_STOP_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    BLOWER_RUN : BOOL;\n    AERATION_BLOWER_CYCLE_COUNT : UINT;\nEND_VAR\nVAR\n    (* Start-delay elapsed time in scans. 5 s / 20 ms = 250 scans.    *)\n    (* IEC default at power-up: UINT -> 0, BOOL -> FALSE (K1, C10).   *)\n    start_delay_scans : UINT;\n    (* Previous BLOWER_RUN value for FALSE->TRUE edge detection (K4). *)\n    prev_blower_run : BOOL;\nEND_VAR\n\n(* Permissive lost (demand gone or emergency stop active): stop now   *)\n(* and reset the start timer so a new demand waits a full 5 s (K3).   *)\nIF (NOT AERATION_E_STOP_NC) OR (NOT DO_LOW) THEN\n    BLOWER_RUN := FALSE;\n    start_delay_scans := 0;\nELSE\n    (* Both permissives hold this scan: advance the start delay.      *)\n    IF start_delay_scans < 250 THEN\n        start_delay_scans := start_delay_scans + 1;\n    ELSE\n        start_delay_scans := 250;\n    END_IF;\n\n    (* Enable the blower only after a full 5 s of sustained demand.   *)\n    IF start_delay_scans >= 250 THEN\n        BLOWER_RUN := TRUE;\n    END_IF;\nEND_IF;\n\n(* Count one start per FALSE->TRUE transition of BLOWER_RUN only (K4). *)\nIF BLOWER_RUN AND (NOT prev_blower_run) THEN\n    AERATION_BLOWER_CYCLE_COUNT := AERATION_BLOWER_CYCLE_COUNT + 1;\nEND_IF;\nprev_blower_run := BLOWER_RUN;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.218,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 16.141,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P06-01",
+      "P06-02",
+      "P06-03",
+      "P06-04",
+      "P06-05",
+      "P06-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

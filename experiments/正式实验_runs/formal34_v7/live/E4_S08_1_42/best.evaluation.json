@@ -1,0 +1,57 @@
+{
+  "source": "FUNCTION_BLOCK FB_S08\nVAR_INPUT\n    RecipeSelect : INT;\n    ChangeoverReq : BOOL;\n    PartHeight : REAL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    ActiveRecipe : INT := 1;\n    SortLeft : BOOL := FALSE;\n    SortRight : BOOL := FALSE;\n    Busy : BOOL := FALSE;\n    Status : WORD := 16#0000;\nEND_VAR\nVAR\n    ChangeoverReqLast : BOOL := FALSE;\n    RequestRise : BOOL;\n    RecipeValid : BOOL;\n    StartupScans : INT := 0;\n    BusyScansRemaining : INT := 0;\n    LeftThreshold : REAL;\n    RightThreshold : REAL;\nEND_VAR\n\n(*\n    待审语义冲突：\n    C9 对每一个 Busy 周期都要求后续 100 周期 Busy，因而一旦\n    Busy 成立便不能有限时间清除，与原文“2 s 后自动清除”冲突。\n    本实现采用原文有限保持：接受请求后经过 100 个 20 ms\n    扫描间隔清除 Busy；不声称满足原式 C9。\n\n    C10 的 [0,1] 按包含端点处理：前两个调用保持初态，\n    此期间不接受切换，并采样请求历史，避免伪造上升沿。\n\n    右阈值等值点未被原文两个分拣区间或“超过”覆盖：\n    本实现严格保留边界，等于右阈值时不动作、不报超规格。\n\n    K4 的“同一产品”未给产品标识或测量稳定性约束；\n    本实现保证每周期互斥，不声称能识别跨周期的同一产品。\n\n    急停仅禁止分拣和接受新切换，不改变已生效配方；\n    已开始的固定保持计时继续。未新增急停状态码。\n    本源码未提供编译或逐周期测试验证证据。\n*)\n\nRequestRise := ChangeoverReq AND NOT ChangeoverReqLast;\nChangeoverReqLast := ChangeoverReq;\nRecipeValid := (RecipeSelect >= 1) AND (RecipeSelect <= 3);\n\nSortLeft := FALSE;\nSortRight := FALSE;\nStatus := 16#0000;\n\nIF StartupScans < 2 THEN\n    ActiveRecipe := 1;\n    Busy := FALSE;\n    BusyScansRemaining := 0;\n    StartupScans := StartupScans + 1;\n\n    IF NOT RecipeValid THEN\n        Status := 16#8801;\n    END_IF;\nELSE\n    (* 先处理已有忙状态；到期扫描不接受重叠请求。 *)\n    IF Busy THEN\n        IF BusyScansRemaining > 0 THEN\n            BusyScansRemaining := BusyScansRemaining - 1;\n        END_IF;\n        IF BusyScansRemaining = 0 THEN\n            Busy := FALSE;\n        END_IF;\n    ELSE\n        IF RequestRise AND RecipeValid AND EStop_NC\n           AND (PartHeight = 0.0) THEN\n            ActiveRecipe := RecipeSelect;\n            Busy := TRUE;\n            BusyScansRemaining := 100;\n        END_IF;\n    END_IF;\n\n    CASE ActiveRecipe OF\n        1:\n            LeftThreshold := 30.0;\n            RightThreshold := 60.0;\n        2:\n            LeftThreshold := 50.0;\n            RightThreshold := 90.0;\n        3:\n            LeftThreshold := 70.0;\n            RightThreshold := 120.0;\n    ELSE\n        (* 内部防御：无有效配方时禁止动作，不新增状态码。 *)\n        LeftThreshold := 0.0;\n        RightThreshold := 0.0;\n    END_CASE;\n\n    IF NOT RecipeValid THEN\n        (* 非法请求优先报告；有效配方和正常分拣仍保留。 *)\n        Status := 16#8801;\n    END_IF;\n\n    IF EStop_NC AND NOT Busy\n       AND (ActiveRecipe >= 1) AND (ActiveRecipe <= 3)\n       AND (PartHeight > 0.0) THEN\n        IF PartHeight < LeftThreshold THEN\n            SortLeft := TRUE;\n        ELSIF PartHeight < RightThreshold THEN\n            SortRight := TRUE;\n        ELSIF PartHeight > RightThreshold THEN\n            IF RecipeValid THEN\n                Status := 16#8802;\n            END_IF;\n        END_IF;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.266,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.516,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 5,
+    "passed": 2,
+    "passed_ids": [
+      "S08-03",
+      "S08-05"
+    ],
+    "failures": [
+      {
+        "case_id": "S08-01",
+        "cycle": 1,
+        "signal": "SortLeft",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S08-02",
+        "cycle": 1,
+        "signal": "Busy",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S08-04",
+        "cycle": 1,
+        "signal": "SortLeft",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 2876,
+  "tag": "candidate_2"
+}

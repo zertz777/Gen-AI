@@ -1,0 +1,11 @@
+# task: S13
+# meta: hard / C 状态机与节拍
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(!LineRun -> !MainMotor && !MergeMotor)    -- 总停时两段电机都必须停（K1）
+C4: G(PartAtMerge -> !MergeMotor)    -- 合流段有料时汇流段不得送料（防撞互锁）（K2）
+C5: G(JamSensor && LineRun -> F[0,100] JamAlarm)    -- 堵料 2 s 内必须报警（100 周期）（K3）
+C6: G(JamAlarm && !(ResetBtn && !JamSensor) -> X(JamAlarm))    -- 报警锁存到复位条件满足（K3/K4）
+C7: G(PartOnMain && MainMotor && !SpeedHigh -> F[0,150] SpeedHigh)    -- 有料 3 s 内切高速（150 周期）（K5）
+C10: G[0,1](!MainMotor && !MergeMotor && !SpeedHigh && !JamAlarm && Status == 16#0000)    -- 上电首周期全部停机、无报警（初态）

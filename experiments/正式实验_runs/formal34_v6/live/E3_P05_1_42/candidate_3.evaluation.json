@@ -1,0 +1,551 @@
+{
+  "source": "FUNCTION_BLOCK FB_P05\nVAR_INPUT\n    Gap_Exceeded : BOOL;\n    Weld_E_Stop_NC : BOOL;\n    DebounceTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    Operator_Alert : BOOL;\n    Weld_Soft_Start_Active : BOOL;\nEND_VAR\nVAR\n    InitTimer : TON;\n    DebounceTimer : TON;\n    MinHoldTimer : TON;\n    SafeDebounceTime : TIME;\n    EStopActive : BOOL;\nEND_VAR\n\n(*\n  Conflict report:\n  K3 asks for immediate Operator_Alert reset when Gap_Exceeded becomes FALSE.\n  C9 asks that Operator_Alert, once set, remain TRUE for at least 500 ms.\n  These cannot both hold if Gap_Exceeded falls within 500 ms after alarm set.\n  The logic below enforces the 500 ms minimum alarm pulse during non-emergency\n  operation. Emergency stop (K4/C1) still overrides and clears the alarm immediately.\n*)\n\n(* 5 s power-up inhibition. Weld_Soft_Start_Active represents only this period. *)\nInitTimer(IN := TRUE, PT := T#5s);\nWeld_Soft_Start_Active := NOT InitTimer.Q;\n\n(* Emergency stop is active when Weld_E_Stop_NC is FALSE. *)\nEStopActive := NOT Weld_E_Stop_NC;\n\n(* Boundary handling: DebounceTime must be positive. Non-positive values are\n   clamped to one scan cycle to avoid undefined TON behavior. *)\nSafeDebounceTime := DebounceTime;\nIF SafeDebounceTime <= T#0s THEN\n    SafeDebounceTime := T#20ms;\nEND_IF;\n\n(* During emergency stop or initialization inhibition, alarm must be FALSE. *)\nIF EStopActive OR NOT InitTimer.Q THEN\n    Operator_Alert := FALSE;\nEND_IF;\n\n(* Debounce accumulation only during normal monitoring, no emergency stop,\n   and while Gap_Exceeded is TRUE. *)\nDebounceTimer(\n    IN := (NOT EStopActive) AND InitTimer.Q AND Gap_Exceeded,\n    PT := SafeDebounceTime\n);\n\n(* Alarm set only after debounce time has elapsed during normal monitoring. *)\nIF (NOT EStopActive) AND InitTimer.Q AND Gap_Exceeded AND DebounceTimer.Q THEN\n    Operator_Alert := TRUE;\nEND_IF;\n\n(* Minimum alarm pulse timer: 500 ms after alarm set. Reset by emergency stop. *)\nMinHoldTimer(\n    IN := Operator_Alert AND (NOT EStopActive),\n    PT := T#500ms\n);\n\n(* Alarm reset after gap clears and minimum pulse has elapsed. Emergency stop\n   and initialization inhibition are handled above with higher priority. *)\nIF (NOT EStopActive) AND InitTimer.Q AND (NOT Gap_Exceeded) AND MinHoldTimer.Q THEN\n    Operator_Alert := FALSE;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "fail",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 12,
+          "message": "未知的类型: 'TON'",
+          "raw": "未知的类型: 'TON'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 13,
+          "message": "未知的类型: 'TON'",
+          "raw": "未知的类型: 'TON'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 14,
+          "message": "未知的类型: 'TON'",
+          "raw": "未知的类型: 'TON'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 29,
+          "message": "需要程序名、函数或功能块实例替代 'InitTimer'",
+          "raw": "需要程序名、函数或功能块实例替代 'InitTimer'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 30,
+          "message": "不能将类型 '未知的类型: 'NOT(InitTimer.Q)'' 转换为类型'BOOL'",
+          "raw": "不能将类型 '未知的类型: 'NOT(InitTimer.Q)'' 转换为类型'BOOL'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 30,
+          "message": "未知的类型: 'InitTimer.Q'",
+          "raw": "未知的类型: 'InitTimer.Q'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 30,
+          "message": "未知的类型: 'TON'",
+          "raw": "未知的类型: 'TON'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 30,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 43,
+          "message": "此处需要有类型 'BOOL'的表达式",
+          "raw": "此处需要有类型 'BOOL'的表达式"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 43,
+          "message": "未知的类型: 'NOT(InitTimer.Q)'",
+          "raw": "未知的类型: 'NOT(InitTimer.Q)'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 43,
+          "message": "未知的类型: 'InitTimer.Q'",
+          "raw": "未知的类型: 'InitTimer.Q'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 43,
+          "message": "未知的类型: 'TON'",
+          "raw": "未知的类型: 'TON'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 43,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 49,
+          "message": "需要程序名、函数或功能块实例替代 'DebounceTimer'",
+          "raw": "需要程序名、函数或功能块实例替代 'DebounceTimer'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 50,
+          "message": "未知的类型: '(NOT(EStopActive) AND InitTimer.Q)'",
+          "raw": "未知的类型: '(NOT(EStopActive) AND InitTimer.Q)'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 50,
+          "message": "未知的类型: 'InitTimer.Q'",
+          "raw": "未知的类型: 'InitTimer.Q'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 50,
+          "message": "未知的类型: 'TON'",
+          "raw": "未知的类型: 'TON'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 50,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 55,
+          "message": "此处需要有类型 'BOOL'的表达式",
+          "raw": "此处需要有类型 'BOOL'的表达式"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 55,
+          "message": "未知的类型: '((NOT(EStopActive) AND InitTimer.Q) AND Gap_Exceeded)'",
+          "raw": "未知的类型: '((NOT(EStopActive) AND InitTimer.Q) AND Gap_Exceeded)'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 55,
+          "message": "未知的类型: '(NOT(EStopActive) AND InitTimer.Q)'",
+          "raw": "未知的类型: '(NOT(EStopActive) AND InitTimer.Q)'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 55,
+          "message": "未知的类型: 'InitTimer.Q'",
+          "raw": "未知的类型: 'InitTimer.Q'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 55,
+          "message": "未知的类型: 'TON'",
+          "raw": "未知的类型: 'TON'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 55,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 55,
+          "message": "未知的类型: 'DebounceTimer.Q'",
+          "raw": "未知的类型: 'DebounceTimer.Q'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 55,
+          "message": "未知的类型: 'TON'",
+          "raw": "未知的类型: 'TON'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 55,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 60,
+          "message": "需要程序名、函数或功能块实例替代 'MinHoldTimer'",
+          "raw": "需要程序名、函数或功能块实例替代 'MinHoldTimer'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 67,
+          "message": "此处需要有类型 'BOOL'的表达式",
+          "raw": "此处需要有类型 'BOOL'的表达式"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 67,
+          "message": "未知的类型: '((NOT(EStopActive) AND InitTimer.Q) AND NOT(Gap_Exceeded))'",
+          "raw": "未知的类型: '((NOT(EStopActive) AND InitTimer.Q) AND NOT(Gap_Exceeded))'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 67,
+          "message": "未知的类型: '(NOT(EStopActive) AND InitTimer.Q)'",
+          "raw": "未知的类型: '(NOT(EStopActive) AND InitTimer.Q)'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 67,
+          "message": "未知的类型: 'InitTimer.Q'",
+          "raw": "未知的类型: 'InitTimer.Q'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 67,
+          "message": "未知的类型: 'TON'",
+          "raw": "未知的类型: 'TON'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 67,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 67,
+          "message": "未知的类型: 'MinHoldTimer.Q'",
+          "raw": "未知的类型: 'MinHoldTimer.Q'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 67,
+          "message": "未知的类型: 'TON'",
+          "raw": "未知的类型: 'TON'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 67,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        }
+      ],
+      "elapsed_s": 21.094,
+      "evidence_kind": "live"
+    },
+    "errors": [
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 12,
+        "message": "未知的类型: 'TON'",
+        "raw": "未知的类型: 'TON'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 13,
+        "message": "未知的类型: 'TON'",
+        "raw": "未知的类型: 'TON'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 14,
+        "message": "未知的类型: 'TON'",
+        "raw": "未知的类型: 'TON'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 29,
+        "message": "需要程序名、函数或功能块实例替代 'InitTimer'",
+        "raw": "需要程序名、函数或功能块实例替代 'InitTimer'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 30,
+        "message": "不能将类型 '未知的类型: 'NOT(InitTimer.Q)'' 转换为类型'BOOL'",
+        "raw": "不能将类型 '未知的类型: 'NOT(InitTimer.Q)'' 转换为类型'BOOL'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 30,
+        "message": "未知的类型: 'InitTimer.Q'",
+        "raw": "未知的类型: 'InitTimer.Q'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 30,
+        "message": "未知的类型: 'TON'",
+        "raw": "未知的类型: 'TON'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 30,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 43,
+        "message": "此处需要有类型 'BOOL'的表达式",
+        "raw": "此处需要有类型 'BOOL'的表达式"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 43,
+        "message": "未知的类型: 'NOT(InitTimer.Q)'",
+        "raw": "未知的类型: 'NOT(InitTimer.Q)'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 43,
+        "message": "未知的类型: 'InitTimer.Q'",
+        "raw": "未知的类型: 'InitTimer.Q'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 43,
+        "message": "未知的类型: 'TON'",
+        "raw": "未知的类型: 'TON'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 43,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 49,
+        "message": "需要程序名、函数或功能块实例替代 'DebounceTimer'",
+        "raw": "需要程序名、函数或功能块实例替代 'DebounceTimer'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 50,
+        "message": "未知的类型: '(NOT(EStopActive) AND InitTimer.Q)'",
+        "raw": "未知的类型: '(NOT(EStopActive) AND InitTimer.Q)'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 50,
+        "message": "未知的类型: 'InitTimer.Q'",
+        "raw": "未知的类型: 'InitTimer.Q'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 50,
+        "message": "未知的类型: 'TON'",
+        "raw": "未知的类型: 'TON'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 50,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 55,
+        "message": "此处需要有类型 'BOOL'的表达式",
+        "raw": "此处需要有类型 'BOOL'的表达式"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 55,
+        "message": "未知的类型: '((NOT(EStopActive) AND InitTimer.Q) AND Gap_Exceeded)'",
+        "raw": "未知的类型: '((NOT(EStopActive) AND InitTimer.Q) AND Gap_Exceeded)'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 55,
+        "message": "未知的类型: '(NOT(EStopActive) AND InitTimer.Q)'",
+        "raw": "未知的类型: '(NOT(EStopActive) AND InitTimer.Q)'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 55,
+        "message": "未知的类型: 'InitTimer.Q'",
+        "raw": "未知的类型: 'InitTimer.Q'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 55,
+        "message": "未知的类型: 'TON'",
+        "raw": "未知的类型: 'TON'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 55,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 55,
+        "message": "未知的类型: 'DebounceTimer.Q'",
+        "raw": "未知的类型: 'DebounceTimer.Q'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 55,
+        "message": "未知的类型: 'TON'",
+        "raw": "未知的类型: 'TON'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 55,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 60,
+        "message": "需要程序名、函数或功能块实例替代 'MinHoldTimer'",
+        "raw": "需要程序名、函数或功能块实例替代 'MinHoldTimer'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 67,
+        "message": "此处需要有类型 'BOOL'的表达式",
+        "raw": "此处需要有类型 'BOOL'的表达式"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 67,
+        "message": "未知的类型: '((NOT(EStopActive) AND InitTimer.Q) AND NOT(Gap_Exceeded))'",
+        "raw": "未知的类型: '((NOT(EStopActive) AND InitTimer.Q) AND NOT(Gap_Exceeded))'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 67,
+        "message": "未知的类型: '(NOT(EStopActive) AND InitTimer.Q)'",
+        "raw": "未知的类型: '(NOT(EStopActive) AND InitTimer.Q)'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 67,
+        "message": "未知的类型: 'InitTimer.Q'",
+        "raw": "未知的类型: 'InitTimer.Q'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 67,
+        "message": "未知的类型: 'TON'",
+        "raw": "未知的类型: 'TON'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 67,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 67,
+        "message": "未知的类型: 'MinHoldTimer.Q'",
+        "raw": "未知的类型: 'MinHoldTimer.Q'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 67,
+        "message": "未知的类型: 'TON'",
+        "raw": "未知的类型: 'TON'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 67,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      }
+    ],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "skipped",
+    "total": 0,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": []
+  },
+  "repair_rounds": 0,
+  "token_count": 16832,
+  "tag": "candidate_3"
+}

@@ -1,0 +1,70 @@
+{
+  "source": "FUNCTION_BLOCK FB_S05\nVAR_INPUT\n    FlowPulse : BOOL;\n    ShiftReset : BOOL;\n    CycleTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    TotalVolume : LREAL;\n    ShiftVolume : LREAL;\n    PulseCount : UDINT;\n    OverflowFlag : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    FlowPulseLast : BOOL := FALSE;\n    ShiftResetLast : BOOL := FALSE;\n    FirstScan : BOOL := TRUE;\n    PulseEdge : BOOL;\n    ResetEdge : BOOL;\nEND_VAR\n\nIF FirstScan THEN\n    TotalVolume := 0.0;\n    ShiftVolume := 0.0;\n    PulseCount := 0;\n    OverflowFlag := FALSE;\n    Status := 16#0000;\n    FlowPulseLast := FlowPulse;\n    ShiftResetLast := ShiftReset;\n    FirstScan := FALSE;\nELSE\n    PulseEdge := FlowPulse AND NOT FlowPulseLast;\n    ResetEdge := ShiftReset AND NOT ShiftResetLast;\n    FlowPulseLast := FlowPulse;\n    ShiftResetLast := ShiftReset;\n\n    (* Keep the overflow invariant even if a retained state was invalid. *)\n    IF TotalVolume > LREAL#1000000.0 THEN\n        TotalVolume := LREAL#1000000.0;\n        OverflowFlag := TRUE;\n    END_IF;\n\n    Status := 16#0000;\n\n    IF PulseEdge THEN\n        (* Count every observed rising edge. *)\n        IF PulseCount < UDINT#4294967295 THEN\n            PulseCount := PulseCount + 1;\n        END_IF;\n\n        (* K3: TotalVolume stops at the 1000000.0 L limit. *)\n        IF TotalVolume < LREAL#1000000.0 THEN\n            TotalVolume := TotalVolume + LREAL#0.5;\n            IF TotalVolume > LREAL#1000000.0 THEN\n                TotalVolume := LREAL#1000000.0;\n            END_IF;\n        END_IF;\n\n        (* C6: ShiftVolume may not exceed TotalVolume.\n           When TotalVolume is capped, pulses cannot raise ShiftVolume\n           beyond TotalVolume. This is the unavoidable tension between\n           K1 (every pulse adds 0.5 L to ShiftVolume) and C6/K3. *)\n        IF ShiftVolume + LREAL#0.5 <= TotalVolume THEN\n            ShiftVolume := ShiftVolume + LREAL#0.5;\n        END_IF;\n\n        IF TotalVolume >= LREAL#1000000.0 THEN\n            OverflowFlag := TRUE;\n        END_IF;\n    END_IF;\n\n    (* ShiftReset has priority over a simultaneous pulse for clearing the\n       shift counters. TotalVolume is never changed by ShiftReset. *)\n    IF ResetEdge THEN\n        ShiftVolume := 0.0;\n        PulseCount := 0;\n    END_IF;\n\n    (* Overflow latches permanently. *)\n    IF TotalVolume >= LREAL#1000000.0 THEN\n        OverflowFlag := TRUE;\n    END_IF;\n\n    IF OverflowFlag THEN\n        Status := 16#8502;\n    ELSE\n        Status := 16#0000;\n    END_IF;\nEND_IF;\n\n(* K4 limitation note:\n   The specified I/O provides only one BOOL sample of FlowPulse per scan.\n   Multiple rising edges within a single 20 ms scan are not observable by\n   this FB. Therefore 16#8501 cannot be generated reliably from the given\n   interface without an additional sub-scan edge counter or high-speed\n   counter input. This source does not fabricate an unobservable detection\n   path; 16#8501 remains the specified code for that unobservable case. *)\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.266,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.312,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 1,
+    "passed_ids": [
+      "S05-03"
+    ],
+    "failures": [
+      {
+        "case_id": "S05-01",
+        "cycle": 1,
+        "signal": "TotalVolume",
+        "expected": 0.5,
+        "actual": 0.0
+      },
+      {
+        "case_id": "S05-02",
+        "cycle": 1,
+        "signal": "TotalVolume",
+        "expected": 0.5,
+        "actual": 0.0
+      },
+      {
+        "case_id": "S05-04",
+        "cycle": 1,
+        "signal": "TotalVolume",
+        "expected": 0.5,
+        "actual": 0.0
+      },
+      {
+        "case_id": "S05-05",
+        "cycle": 1,
+        "signal": "TotalVolume",
+        "expected": 0.5,
+        "actual": 0.0
+      },
+      {
+        "case_id": "S05-06",
+        "cycle": 1,
+        "signal": "TotalVolume",
+        "expected": 0.5,
+        "actual": 0.0
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 18869,
+  "tag": "candidate_1"
+}

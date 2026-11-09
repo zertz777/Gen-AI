@@ -1,0 +1,102 @@
+task_id: P20
+title: Production Control
+difficulty: hard
+category: C
+requirement: |-
+  An automated production line consists of 5 workstations: material loading station, cleaning station, weighing station, firing station, and finished product station. The production line has a motor responsible for moving products from one workstation to the next, the sequence of the line is from the material loading station, cleaning station, weighing station, firing station, to the finished product station. Each workstation has a sensor (used to detect if the product has arrived).
+  Control requirements:
+  1. Mode Switching: The mode switch (Mode) is used to switch between manual and automatic modes of the production line. 0 = manual mode, 1 = automatic mode.
+  2. Manual Mode: In manual mode, the forward rotation button (ForwardButton) controls the forward rotation of the motor, and the reverse rotation button (ReverseButton) controls the reverse rotation of the motor. Forward and reverse rotation operations need to be interlocked and cannot be performed simultaneously.
+  3. Automatic Mode:
+     - When the material arrives at the material loading station, the SensorFeed detects the material, the motor starts forward rotation, and moves the material to the cleaning station.
+     - When the material arrives at the cleaning station, the SensorWash detects the material, the motor stops, and upon receiving the signal washComplete after cleaning is finished, the motor starts forward rotation, moving the material to the weighing station.
+     - When the material arrives at the weighing station, the SensorWeight detects the material, the motor stops, and upon receiving weightComplete after weighing is complete, the material is judged to be qualified based on the weight value. If the weight value is greater than or equal to 100 and less than or equal to 200, it is qualified, otherwise not.
+       If the material is unqualified, the rejection command kick is initiated.
+       If the material is qualified, the firing temperature is calculated based on the weight value. The calculation rule is that the weight value from 100 to 200 linearly corresponds to the temperature value from 500 to 550. The firing temperature firingTemp is output. At the same time, the motor starts forward rotation, moving the material to the firing station.
+     - When the product arrives at the firing station, the SensorFiring detects the material, the motor stops, and upon receiving the signal firingComplete after firing is finished, the motor starts forward rotation, moving the product to the finished product station.
+     - When the product arrives at the finished product station, the SensorOutput detects the product, the motor stops, and the completion light (CompletionLight) turns on, indicating that the product processing is complete. When the product is taken away, i.e., the SensorOutput does not detect the product, the completion light (CompletionLight) turns off.
+
+  中文摘要：五工位生产线：手动正反转互斥，自动按上料→清洗→称重→烧成→成品顺序推进，各工位完成信号触发推进，成品站执行 kick 动作。
+
+  扫描周期：20 ms（全组统一，见 docs/tasks_note.md）
+io_table:
+  - direction: IN
+    name: Mode
+    data_type: BOOL
+    description: Used to switch the production line between manual and automatic modes, 0 = manual mode, 1 = automatic mode
+  - direction: IN
+    name: ForwardButton
+    data_type: BOOL
+    description: Forward rotation button
+  - direction: IN
+    name: ReverseButton
+    data_type: BOOL
+    description: Reverse rotation button
+  - direction: IN
+    name: SensorFeed
+    data_type: BOOL
+    description: Sensor at the material loading station detecting the arrival of materials
+  - direction: IN
+    name: SensorWash
+    data_type: BOOL
+    description: Sensor at the cleaning station detecting the arrival of materials
+  - direction: IN
+    name: SensorWeight
+    data_type: BOOL
+    description: Sensor at the weighing station detecting the arrival of materials
+  - direction: IN
+    name: SensorFiring
+    data_type: BOOL
+    description: Sensor at the firing station detecting the arrival of materials
+  - direction: IN
+    name: SensorOutput
+    data_type: BOOL
+    description: Sensor at the finished product station detecting the arrival of products
+  - direction: IN
+    name: washComplete
+    data_type: BOOL
+    description: Signal indicating completion of cleaning
+  - direction: IN
+    name: weightComplete
+    data_type: BOOL
+    description: Signal indicating completion of weighing
+  - direction: IN
+    name: weight
+    data_type: REAL
+    description: Weight value
+  - direction: IN
+    name: firingComplete
+    data_type: BOOL
+    description: Signal indicating completion of firing
+  - direction: OUT
+    name: MotorForward
+    data_type: BOOL
+    description: Output for motor forward rotation
+  - direction: OUT
+    name: MotorReverse
+    data_type: BOOL
+    description: Output for motor reverse rotation
+  - direction: OUT
+    name: kick
+    data_type: BOOL
+    description: Rejection output
+  - direction: OUT
+    name: CompletionLight
+    data_type: BOOL
+    description: Indicator light for product processing completion
+  - direction: OUT
+    name: firingTemp
+    data_type: REAL
+    description: Firing temperature
+initial_state: MotorForward = FALSE；MotorReverse = FALSE；kick = FALSE；CompletionLight = FALSE；工位状态 = IDLE。
+constraints:
+  - K1 手动模式下 MotorForward 与 MotorReverse 互斥。
+  - K2 自动模式下产品依次经过上料、清洗、称重、烧成、成品 5 个工位，不得跳站。
+  - K3 每个工位的完成信号（washComplete/weightComplete/firingComplete）是推进的必要条件，且必须与对应到位传感器一致。
+  - K4 成品站完成出料动作（kick）后点亮 CompletionLight。
+provenance: 课程公共题库 P20（Production Control）；原文导入、变量名与需求未做任何改动；来源与审核记录见 data/provenance.csv 第 21 行
+spec_ref: data/specs/P20.ltl
+error_examples:
+  - 错误实现：只看完成信号不看到位传感器。症状——产品还在清洗站，称重完成信号一到就推进。
+  - 错误实现：kick 与输送电机同时输出。症状——出料瞬间产品被推回输送线，卡在成品站入口。
+notes: 17 个 I/O，按课程要求只取 6 条最高价值规约（见 data/specs/P20.ltl）。

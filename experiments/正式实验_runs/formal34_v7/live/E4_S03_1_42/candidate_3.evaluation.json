@@ -1,0 +1,61 @@
+{
+  "source": "FUNCTION_BLOCK FB_S03\nVAR_INPUT\n    DoorSwitch : BOOL;\n    ZoneAOccupied : BOOL;\n    ZoneBOccupied : BOOL;\n    ResetBtn : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    DriveA_Run : BOOL := FALSE;\n    DriveB_Run : BOOL := FALSE;\n    AlarmLamp : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    FirstScan : BOOL := TRUE;\n    PreviousDoor : BOOL := FALSE;\n    PreviousReset : BOOL := FALSE;\n    DoorRise : BOOL;\n    ResetRise : BOOL;\n    ResetConfirmed : BOOL := TRUE;\n    BStopPending : BOOL := FALSE;\n    BDelayScans : UINT := UINT#0;\nEND_VAR\n\n(*\n    待审问题，保留而不补造接口或需求：\n    1. 需求包含“启动按钮”和“B 区动作完成”，接口均未提供。\n       ResetBtn 仅用于确认，不作为启动按钮。\n       ZoneAOccupied、ZoneBOccupied 未定义控制语义，不作为动作完成信号。\n       本实现不自行启动驱动；B 区仅实现已有运行状态的限时保持。\n       因此，完整启动和动作完成提前停止功能待接口澄清。\n    2. C10 要求上电首周期无报警，与上电时门开或急停必须报警冲突。\n       输出声明保留给定初值；执行扫描时安全报警优先。\n    3. C1b 允许 [0,1] 周期，原文/K1 要求同周期；采用同周期停止。\n    4. 待复位状态与门开、急停状态重叠时，采用：\n       急停 > 门开 > 待复位 > 正常。\n    每次调用为 20 ms。开门检测周期计数为零；\n    随后的第 25 次调用达到 500 ms。\n    未声称经过编译或逐周期功能验证。\n*)\n\nResetRise := ResetBtn AND NOT PreviousReset;\nDoorRise := DoorSwitch AND NOT PreviousDoor;\n\nIF FirstScan THEN\n    DriveA_Run := FALSE;\n    DriveB_Run := FALSE;\n    BStopPending := FALSE;\n    BDelayScans := UINT#0;\n    ResetConfirmed := TRUE;\n    FirstScan := FALSE;\nEND_IF;\n\nIF NOT EStop_NC THEN\n    (* 急停无条件覆盖分级停机、复位和保持。 *)\n    DriveA_Run := FALSE;\n    DriveB_Run := FALSE;\n    ResetConfirmed := FALSE;\n    BStopPending := FALSE;\n    BDelayScans := UINT#0;\n\nELSE\n    IF DoorSwitch THEN\n        DriveA_Run := FALSE;\n        ResetConfirmed := FALSE;\n    END_IF;\n\n    IF DoorRise THEN\n        (* 只能保持开门前已经运行的 B 区，不能因开门启动。 *)\n        BStopPending := DriveB_Run;\n        BDelayScans := UINT#0;\n    ELSIF BStopPending THEN\n        IF BDelayScans < UINT#25 THEN\n            BDelayScans := BDelayScans + UINT#1;\n        END_IF;\n    END_IF;\n\n    (* 门关闭不能自行撤销已经触发的限时停止。 *)\n    IF BStopPending THEN\n        IF BDelayScans >= UINT#25 THEN\n            DriveB_Run := FALSE;\n            BStopPending := FALSE;\n        END_IF;\n    END_IF;\n\n    IF DoorSwitch AND NOT BStopPending THEN\n        DriveB_Run := FALSE;\n    END_IF;\n\n    (* 仅在门已关闭且急停正常时接收复位上升沿。 *)\n    IF NOT DoorSwitch AND ResetRise THEN\n        ResetConfirmed := TRUE;\n\n        (* 确认不产生启动；终止可能尚未结束的停机保持。 *)\n        DriveA_Run := FALSE;\n        DriveB_Run := FALSE;\n        BStopPending := FALSE;\n        BDelayScans := UINT#0;\n    END_IF;\n\n    IF NOT ResetConfirmed THEN\n        DriveA_Run := FALSE;\n        IF NOT BStopPending THEN\n            DriveB_Run := FALSE;\n        END_IF;\n    END_IF;\nEND_IF;\n\n(* 最终安全覆盖：任何路径均不能保留 A 区危险运行。 *)\nIF DoorSwitch OR NOT EStop_NC THEN\n    DriveA_Run := FALSE;\nEND_IF;\n\nAlarmLamp := DoorSwitch OR NOT EStop_NC;\n\nIF NOT EStop_NC THEN\n    Status := WORD#16#8303;\nELSIF DoorSwitch THEN\n    Status := WORD#16#8302;\nELSIF NOT ResetConfirmed THEN\n    Status := WORD#16#8301;\nELSE\n    Status := WORD#16#0000;\nEND_IF;\n\n(* 无条件更新边沿历史，避免危险期间按住复位在恢复时被当作新沿。 *)\nPreviousDoor := DoorSwitch;\nPreviousReset := ResetBtn;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.235,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 25.25,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 4,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "S03-01",
+        "cycle": 1,
+        "signal": "DriveA_Run",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S03-02",
+        "cycle": 1,
+        "signal": "DriveA_Run",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S03-03",
+        "cycle": 1,
+        "signal": "DriveA_Run",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S03-04",
+        "cycle": 1,
+        "signal": "DriveA_Run",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3321,
+  "tag": "candidate_3"
+}

@@ -1,0 +1,221 @@
+{
+  "source": "FUNCTION_BLOCK FB_P04\nVAR_INPUT\n    VISCOSITY_OK : BOOL;\n    PASTE_E_STOP_NC : BOOL;\n    DebounceTime : TIME;\n    CycleTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    VFD_RUN : BOOL := FALSE;\n    PUMP_MAINT_DUE : BOOL := FALSE;\n    PUMP_RUNTIME_ACC : LTIME := LTIME#0ns;\nEND_VAR\nVAR\n    StartupScans : USINT := 0;\n    PreviousViscosityOK : BOOL := FALSE;\n    DebounceElapsed : LTIME := LTIME#0ns;\n    DebounceTarget : LTIME := LTIME#0ns;\n    InvocationElapsed : LTIME := LTIME#0ns;\n    ViscosityValid : BOOL := FALSE;\n    TimingInputsValid : BOOL := FALSE;\nEND_VAR\nVAR CONSTANT\n    MaintenanceThreshold : LTIME := LTIME#500h;\n    RuntimeMaximum : LTIME := LTIME#9223372036854775807ns;\nEND_VAR\n\n(*\n    编译前提：profile 必须支持 LTIME、TIME_TO_LTIME、\n    LTIME 字面量及长时间算术；本源码未声称经过编译或逐周期验证。\n\n    待审语义差异：\n    1. C10 的闭区间 [0,1] 要求前两个扫描输出关闭，\n       原文仅明确上电首周期。本实现按形式化规约关闭前两个扫描。\n    2. C7 要求原始粘度为 FALSE 后的下一扫描仍关闭输出。\n       当 DebounceTime <= CycleTime 时，这比立即作废并重新去抖\n       更严格。本实现保留 C7 的一扫描重启限制。\n    3. CycleTime、DebounceTime 的正值约束不满足时采用停泵处理。\n    4. 累计值达到 LTIME 表示上限后饱和，避免溢出回绕。\n*)\n\nTimingInputsValid :=\n    (DebounceTime > T#0ms) AND (CycleTime > T#0ms);\n\nVFD_RUN := FALSE;\n\nIF NOT PASTE_E_STOP_NC\n   OR NOT VISCOSITY_OK\n   OR NOT TimingInputsValid THEN\n    DebounceElapsed := LTIME#0ns;\n    ViscosityValid := FALSE;\nELSE\n    InvocationElapsed := TIME_TO_LTIME(CycleTime);\n    DebounceTarget := TIME_TO_LTIME(DebounceTime);\n\n    (* 按本次调用代表的实际间隔计时，并在目标处饱和。 *)\n    IF DebounceElapsed >= DebounceTarget THEN\n        DebounceElapsed := DebounceTarget;\n    ELSIF InvocationElapsed >= (DebounceTarget - DebounceElapsed) THEN\n        DebounceElapsed := DebounceTarget;\n    ELSE\n        DebounceElapsed := DebounceElapsed + InvocationElapsed;\n    END_IF;\n\n    ViscosityValid := DebounceElapsed >= DebounceTarget;\n\n    IF (StartupScans >= 2)\n       AND PreviousViscosityOK\n       AND ViscosityValid THEN\n        VFD_RUN := TRUE;\n    END_IF;\nEND_IF;\n\n(* 仅以当前扫描最终运行输出为依据累计；停泵期间保持。 *)\nIF VFD_RUN THEN\n    IF PUMP_RUNTIME_ACC >= RuntimeMaximum THEN\n        PUMP_RUNTIME_ACC := RuntimeMaximum;\n    ELSIF InvocationElapsed >= (RuntimeMaximum - PUMP_RUNTIME_ACC) THEN\n        PUMP_RUNTIME_ACC := RuntimeMaximum;\n    ELSE\n        PUMP_RUNTIME_ACC := PUMP_RUNTIME_ACC + InvocationElapsed;\n    END_IF;\nEND_IF;\n\n(* 信息提示锁存，不参与任何运行许可计算。 *)\nIF PUMP_RUNTIME_ACC >= MaintenanceThreshold THEN\n    PUMP_MAINT_DUE := TRUE;\nEND_IF;\n\nPreviousViscosityOK := VISCOSITY_OK;\n\nIF StartupScans < 2 THEN\n    StartupScans := StartupScans + 1;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 11,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:11-24..11-28: error: invalid specification in variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:11-24..11-28: error: invalid specification in variable declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 11,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:11-28..11-30: error: ';' missing at end of variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:11-28..11-30: error: ';' missing at end of variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 11,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:11-30..11-41: error: invalid variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:11-30..11-41: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 16,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:16-23..16-27: error: invalid specification in variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:16-23..16-27: error: invalid specification in variable declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 16,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:16-27..16-29: error: ';' missing at end of variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:16-27..16-29: error: ';' missing at end of variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 16,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:16-29..16-40: error: invalid variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:16-29..16-40: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 17,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:17-22..17-26: error: invalid specification in variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:17-22..17-26: error: invalid specification in variable declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 17,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:17-26..17-28: error: ';' missing at end of variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:17-26..17-28: error: ';' missing at end of variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 17,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:17-28..17-39: error: invalid variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:17-28..17-39: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 18,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:18-25..18-29: error: invalid specification in variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:18-25..18-29: error: invalid specification in variable declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 18,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:18-29..18-31: error: ';' missing at end of variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:18-29..18-31: error: ';' missing at end of variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 18,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:18-31..18-42: error: invalid variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:18-31..18-42: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 23,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:23-28..23-32: error: invalid specification in variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:23-28..23-32: error: invalid specification in variable declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 23,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:23-34..23-47: error: invalid located variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:23-34..23-47: error: invalid located variable declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 24,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:24-5..24-57: error: invalid located variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:24-5..24-57: error: invalid located variable declaration."
+        },
+        {
+          "code": "E_SYNTAX",
+          "severity": "error",
+          "line": 23,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:23-5..23-35: error: unexpected token after 'CONSTANT' in constant located variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:23-5..23-35: error: unexpected token after 'CONSTANT' in constant located variable(s) declaration."
+        },
+        {
+          "code": "E_SYNTAX",
+          "severity": "error",
+          "line": 22,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:22-1..25-7: error: unexpected located variable(s) declaration in function block declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:22-1..25-7: error: unexpected located variable(s) declaration in function block declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 49,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:49-28..49-29: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:49-28..49-29: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 49,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:49-29..49-32: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:49-29..49-32: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 52,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:52-38..52-39: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:52-38..52-39: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 52,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:52-39..52-49: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:52-39..52-49: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 53,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:53-35..53-36: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:53-35..53-36: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 53,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:53-36..53-49: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P04_1_42\\tools\\candidate_1\\fast\\source.st:53-36..53-49: error: invalid statement in ST statement."
+        }
+      ],
+      "elapsed_s": 0.156,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.407,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 7,
+    "passed": 4,
+    "passed_ids": [
+      "P04-01",
+      "P04-02",
+      "P04-03",
+      "P04-06"
+    ],
+    "failures": [
+      {
+        "case_id": "P04-04",
+        "cycle": 1,
+        "signal": "VFD_RUN",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P04-05",
+        "cycle": 1,
+        "signal": "VFD_RUN",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P04-07",
+        "cycle": 1,
+        "signal": "VFD_RUN",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 2912,
+  "tag": "candidate_1"
+}

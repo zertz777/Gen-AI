@@ -1,0 +1,141 @@
+{
+  "source": "FUNCTION_BLOCK FB_S07\nVAR_INPUT\n    BottleIn : BOOL;\n    FillDone : BOOL;\n    CapDone : BOOL;\n    PackDone : BOOL;\n    StartBtn : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    Conveyor : BOOL;\n    FillValve : BOOL;\n    CapMotor : BOOL;\n    PackCyl : BOOL;\n    CycleCount : UINT;\n    Status : WORD;\nEND_VAR\nVAR\n    FirstScan : BOOL := TRUE;\n    StartBtnLast : BOOL := FALSE;\n    StartRising : BOOL := FALSE;\n    Running : BOOL := FALSE;\n    TimeoutLatched : BOOL := FALSE;\n    Step : INT := 0;\n    StepTime : UINT := 0;\nEND_VAR\n\n(* CONFLICT NOTICE:\n   K3 requires timeout to disable the current step output before a completion signal.\n   C6 would require FillValve to remain TRUE until FillDone.\n   This implementation applies the specified safety/timeout priority and C2 BottleIn interlock.\n   No external interface is added or changed.\n*)\n\nIF FirstScan THEN\n    Conveyor := FALSE;\n    FillValve := FALSE;\n    CapMotor := FALSE;\n    PackCyl := FALSE;\n    CycleCount := 0;\n    Status := 16#0000;\n    Step := 0;\n    Running := FALSE;\n    TimeoutLatched := FALSE;\n    StepTime := 0;\n    StartBtnLast := FALSE;\n    StartRising := FALSE;\n    FirstScan := FALSE;\nELSE\n    StartRising := StartBtn AND NOT StartBtnLast;\n    StartBtnLast := StartBtn;\n\n    IF NOT EStop_NC THEN\n        (* K5 / C1: emergency stop has highest priority *)\n        Conveyor := FALSE;\n        FillValve := FALSE;\n        CapMotor := FALSE;\n        PackCyl := FALSE;\n        Step := 0;\n        Running := FALSE;\n        TimeoutLatched := FALSE;\n        StepTime := 0;\n        Status := 16#8702;\n    ELSIF TimeoutLatched THEN\n        (* K3: hold current step, disable outputs, wait for manual handling *)\n        Conveyor := FALSE;\n        FillValve := FALSE;\n        CapMotor := FALSE;\n        PackCyl := FALSE;\n        Status := 16#8701;\n    ELSE\n        IF StartRising THEN\n            Running := TRUE;\n            Step := 0;\n            StepTime := 0;\n            TimeoutLatched := FALSE;\n            Status := 16#0000;\n        ELSIF Running THEN\n            StepTime := StepTime + 1;\n\n            CASE Step OF\n                0:\n                    IF BottleIn THEN\n                        Step := 1;\n                        StepTime := 0;\n                    END_IF;\n                1:\n                    (* C9: FillValve minimum 5 scan cycles = 100 ms;\n                       C6: keep FillValve until FillDone is present *)\n                    IF FillDone AND (StepTime >= 5) THEN\n                        Step := 2;\n                        StepTime := 0;\n                    END_IF;\n                2:\n                    IF CapDone THEN\n                        Step := 3;\n                        StepTime := 0;\n                    END_IF;\n                3:\n                    IF PackDone THEN\n                        IF CycleCount < UINT#65535 THEN\n                            CycleCount := CycleCount + 1;\n                        END_IF;\n                        Step := 0;\n                        StepTime := 0;\n                    END_IF;\n            END_CASE;\n\n            IF StepTime >= 250 THEN\n                TimeoutLatched := TRUE;\n                Status := 16#8701;\n            ELSE\n                Status := 16#0000;\n            END_IF;\n        ELSE\n            StepTime := 0;\n            Status := 16#0000;\n        END_IF;\n    END_IF;\n\n    (* K4: at most one actuator output is TRUE at any time *)\n    Conveyor := FALSE;\n    FillValve := FALSE;\n    CapMotor := FALSE;\n    PackCyl := FALSE;\n\n    IF EStop_NC AND Running AND NOT TimeoutLatched THEN\n        CASE Step OF\n            0:\n                Conveyor := TRUE;\n            1:\n                (* C2: FillValve requires BottleIn *)\n                IF BottleIn THEN\n                    FillValve := TRUE;\n                END_IF;\n            2:\n                CapMotor := TRUE;\n            3:\n                PackCyl := TRUE;\n        END_CASE;\n    END_IF;\nEND_IF;\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 24,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_S07_1_42\\tools\\candidate_2\\fast\\source.st:24-5..24-19: error: invalid variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_S07_1_42\\tools\\candidate_2\\fast\\source.st:24-5..24-19: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 42,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_S07_1_42\\tools\\candidate_2\\fast\\source.st:42-5..42-8: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_S07_1_42\\tools\\candidate_2\\fast\\source.st:42-5..42-8: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 59,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_S07_1_42\\tools\\candidate_2\\fast\\source.st:59-9..59-12: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_S07_1_42\\tools\\candidate_2\\fast\\source.st:59-9..59-12: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 74,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_S07_1_42\\tools\\candidate_2\\fast\\source.st:74-13..74-16: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_S07_1_42\\tools\\candidate_2\\fast\\source.st:74-13..74-16: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 84,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_S07_1_42\\tools\\candidate_2\\fast\\source.st:84-25..84-28: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_S07_1_42\\tools\\candidate_2\\fast\\source.st:84-25..84-28: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 91,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_S07_1_42\\tools\\candidate_2\\fast\\source.st:91-25..91-28: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_S07_1_42\\tools\\candidate_2\\fast\\source.st:91-25..91-28: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 96,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_S07_1_42\\tools\\candidate_2\\fast\\source.st:96-25..96-28: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_S07_1_42\\tools\\candidate_2\\fast\\source.st:96-25..96-28: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 104,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_S07_1_42\\tools\\candidate_2\\fast\\source.st:104-25..104-28: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_S07_1_42\\tools\\candidate_2\\fast\\source.st:104-25..104-28: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 81,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_S07_1_42\\tools\\candidate_2\\fast\\source.st:81-18..81-21: error: invalid test expression defined for ST 'CASE' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_S07_1_42\\tools\\candidate_2\\fast\\source.st:81-18..81-21: error: invalid test expression defined for ST 'CASE' statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 128,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_S07_1_42\\tools\\candidate_2\\fast\\source.st:128-14..128-17: error: invalid test expression defined for ST 'CASE' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_S07_1_42\\tools\\candidate_2\\fast\\source.st:128-14..128-17: error: invalid test expression defined for ST 'CASE' statement."
+        }
+      ],
+      "elapsed_s": 0.172,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 22.984,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 1,
+    "passed_ids": [
+      "S07-05"
+    ],
+    "failures": [
+      {
+        "case_id": "S07-01",
+        "cycle": 1,
+        "signal": "Conveyor",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S07-02",
+        "cycle": 1,
+        "signal": "Conveyor",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S07-03",
+        "cycle": 1,
+        "signal": "Conveyor",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S07-04",
+        "cycle": 1,
+        "signal": "Conveyor",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S07-06",
+        "cycle": 1,
+        "signal": "Conveyor",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 20122,
+  "tag": "candidate_2"
+}

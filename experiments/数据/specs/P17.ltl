@@ -1,0 +1,10 @@
+# task: P17
+# meta: hard / C 状态机与节拍
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(error -> !(recipeAdded || recipeDeleted || recipeModified))    -- 出错时不得同时报成功（失败不掩盖）（K2/K3/K4/K5/K6）
+C2: G(recipeAdded -> status == 16#0000)    -- 新增成功的唯一状态码是 16#0000（K2）
+C4: G(!(recipeAdded && recipeDeleted))    -- 同一周期不可能既新增又删除（K1）
+C6: G(error -> (error W (addRecipe || deleteRecipe || modifyRecipe || queryRecipe)))    -- 错误标志保持到下一次请求为止（不得自动消失）（K2/K3/K4）
+C10: G[0,0](!error && !recipeAdded && !recipeDeleted && !recipeModified)    -- 上电当拍无错误、无成功标志（初态）

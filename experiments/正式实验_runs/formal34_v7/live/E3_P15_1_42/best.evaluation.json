@@ -1,0 +1,82 @@
+{
+  "source": "FUNCTION_BLOCK FB_P15\nVAR_INPUT\n    estop : BOOL;\n    opeMode : BOOL;\n    valveAStart : BOOL;\n    valveBStart : BOOL;\n    valveCStart : BOOL;\n    valveDStart : BOOL;\n    mixMotorStart : BOOL;\n    autoStart : BOOL;\n    processMode : BOOL;\n    levelSensor : INT;\n    mixMotorComplete : BOOL;\nEND_VAR\nVAR_OUTPUT\n    valveARun : BOOL;\n    valveBRun : BOOL;\n    valveCRun : BOOL;\n    valveDRun : BOOL;\n    mixMotorRun : BOOL;\nEND_VAR\nVAR\n    initCnt : INT := 0;\n    prevOpeMode : BOOL := FALSE;\n    prevValveAStart : BOOL := FALSE;\n    prevValveBStart : BOOL := FALSE;\n    prevValveCStart : BOOL := FALSE;\n    prevValveDStart : BOOL := FALSE;\n    prevMixMotorStart : BOOL := FALSE;\n    prevAutoStart : BOOL := FALSE;\n\n    riseValveA : BOOL;\n    riseValveB : BOOL;\n    riseValveC : BOOL;\n    riseValveD : BOOL;\n    riseMixMotor : BOOL;\n    riseAutoStart : BOOL;\n\n    manValveA : BOOL := FALSE;\n    manValveB : BOOL := FALSE;\n    manValveC : BOOL := FALSE;\n    manValveD : BOOL := FALSE;\n    manMixMotor : BOOL := FALSE;\n\n    autoStep : INT := 0;\n    modeLatchedProcess : BOOL := FALSE;\nEND_VAR\n\nriseValveA := valveAStart AND NOT prevValveAStart;\nriseValveB := valveBStart AND NOT prevValveBStart;\nriseValveC := valveCStart AND NOT prevValveCStart;\nriseValveD := valveDStart AND NOT prevValveDStart;\nriseMixMotor := mixMotorStart AND NOT prevMixMotorStart;\nriseAutoStart := autoStart AND NOT prevAutoStart;\n\nIF initCnt < 2 THEN\n    valveARun := FALSE;\n    valveBRun := FALSE;\n    valveCRun := FALSE;\n    valveDRun := FALSE;\n    mixMotorRun := FALSE;\n\n    manValveA := FALSE;\n    manValveB := FALSE;\n    manValveC := FALSE;\n    manValveD := FALSE;\n    manMixMotor := FALSE;\n\n    autoStep := 0;\n    modeLatchedProcess := FALSE;\n    initCnt := initCnt + 1;\n\nELSIF NOT estop THEN\n    valveARun := FALSE;\n    valveBRun := FALSE;\n    valveCRun := FALSE;\n    valveDRun := FALSE;\n    mixMotorRun := FALSE;\n\n    manValveA := FALSE;\n    manValveB := FALSE;\n    manValveC := FALSE;\n    manValveD := FALSE;\n    manMixMotor := FALSE;\n\n    autoStep := 0;\n    modeLatchedProcess := FALSE;\n\nELSE\n    IF opeMode <> prevOpeMode THEN\n        manValveA := FALSE;\n        manValveB := FALSE;\n        manValveC := FALSE;\n        manValveD := FALSE;\n        manMixMotor := FALSE;\n\n        autoStep := 0;\n        modeLatchedProcess := FALSE;\n\n        valveARun := FALSE;\n        valveBRun := FALSE;\n        valveCRun := FALSE;\n        valveDRun := FALSE;\n        mixMotorRun := FALSE;\n    END_IF;\n\n    IF NOT opeMode THEN\n        autoStep := 0;\n\n        IF riseValveA THEN\n            manValveA := NOT manValveA;\n            IF manValveA THEN\n                manValveD := FALSE;\n            END_IF;\n        END_IF;\n\n        IF riseValveB THEN\n            manValveB := NOT manValveB;\n            IF manValveB THEN\n                manValveD := FALSE;\n            END_IF;\n        END_IF;\n\n        IF riseValveC THEN\n            manValveC := NOT manValveC;\n            IF manValveC THEN\n                manValveD := FALSE;\n            END_IF;\n        END_IF;\n\n        IF riseValveD THEN\n            manValveD := NOT manValveD;\n            IF manValveD THEN\n                manValveA := FALSE;\n                manValveB := FALSE;\n                manValveC := FALSE;\n            END_IF;\n        END_IF;\n\n        IF riseMixMotor THEN\n            IF manMixMotor THEN\n                IF mixMotorComplete THEN\n                    manMixMotor := FALSE;\n                END_IF;\n            ELSE\n                manMixMotor := TRUE;\n            END_IF;\n        END_IF;\n\n        valveARun := manValveA;\n        valveBRun := manValveB;\n        valveCRun := manValveC;\n        valveDRun := manValveD;\n        mixMotorRun := manMixMotor;\n\n        IF manValveD THEN\n            manValveA := FALSE;\n            manValveB := FALSE;\n            manValveC := FALSE;\n            valveARun := FALSE;\n            valveBRun := FALSE;\n            valveCRun := FALSE;\n            valveDRun := TRUE;\n        ELSE\n            valveDRun := FALSE;\n        END_IF;\n\n    ELSE\n        manValveA := FALSE;\n        manValveB := FALSE;\n        manValveC := FALSE;\n        manValveD := FALSE;\n        manMixMotor := FALSE;\n\n        IF riseAutoStart AND ((autoStep = 0) OR (autoStep = 60)) THEN\n            autoStep := 10;\n            modeLatchedProcess := processMode;\n        END_IF;\n\n        valveARun := FALSE;\n        valveBRun := FALSE;\n        valveCRun := FALSE;\n        valveDRun := FALSE;\n        mixMotorRun := FALSE;\n\n        CASE autoStep OF\n            0:\n                autoStep := 0;\n\n            10:\n                valveARun := TRUE;\n                IF levelSensor >= 50 THEN\n                    valveARun := FALSE;\n                    valveBRun := TRUE;\n                    autoStep := 20;\n                END_IF;\n\n            20:\n                valveBRun := TRUE;\n                IF levelSensor >= 80 THEN\n                    valveBRun := FALSE;\n                    IF modeLatchedProcess THEN\n                        valveCRun := TRUE;\n                        autoStep := 30;\n                    ELSE\n                        mixMotorRun := TRUE;\n                        autoStep := 50;\n                    END_IF;\n                END_IF;\n\n            30:\n                valveCRun := TRUE;\n                IF levelSensor >= 100 THEN\n                    valveCRun := FALSE;\n                    mixMotorRun := TRUE;\n                    autoStep := 50;\n                END_IF;\n\n            50:\n                mixMotorRun := TRUE;\n                IF mixMotorComplete THEN\n                    mixMotorRun := FALSE;\n                    valveDRun := TRUE;\n                    autoStep := 60;\n                END_IF;\n\n            60:\n                valveDRun := TRUE;\n\n            ELSE\n                autoStep := 0;\n        END_CASE;\n    END_IF;\nEND_IF;\n\nprevValveAStart := valveAStart;\nprevValveBStart := valveBStart;\nprevValveCStart := valveCStart;\nprevValveDStart := valveDStart;\nprevMixMotorStart := mixMotorStart;\nprevAutoStart := autoStart;\nprevOpeMode := opeMode;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.218,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.266,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 7,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "P15-01",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P15-02",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P15-03",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P15-04",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P15-05",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P15-06",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P15-07",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 22503,
+  "tag": "candidate_1"
+}

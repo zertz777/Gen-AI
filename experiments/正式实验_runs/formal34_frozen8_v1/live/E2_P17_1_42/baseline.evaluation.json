@@ -1,0 +1,49 @@
+{
+  "source": "(*\n修改说明：\n保留原声明接口，以逐扫描逻辑实现配方管理。\n每次调用代表 20 ms；无需定时器。\n根据权威编译器错误，将 END_STRUCT 后的分号移除。\n快速编译器此前要求该分号，而权威编译器拒绝该分号；\n两个编译 profile 的类型声明语法要求存在冲突。\n本版本采用此前权威编译通过的无分号形式，\n不声称同时通过快速编译器和权威编译器。\nrecipe 为调用方管理的 IN_OUT 数据库，不在功能块中主动初始化。\n从首次调用开始处理请求，保留调用方预置配方。\n成功标志每扫描清零；error/status 保持到下一次处理请求。\n输出初值通过声明设置，不增加初始化专用扫描。\n此处无法访问本地编译器、已配置测试命令或执行环境；\n未重新运行编译或逐周期测试，不声称已验证正确。\n\n【必留：需求原文】\nA factory's production line needs to produce a variety of products based on different recipes. The control center of the production line requires a recipe management system that allows operators to add, delete, modify, and query recipe data.\nControl requirements:\nRecipe data should include recipe number, raw material type, raw material ratio, and production temperature.\nThe system should allow input of new recipe data and store it in the recipe database.\nThe system should allow deletion or modification of existing recipe data by recipe number.\nThe system should allow querying recipe details by recipe number and output the recipe.\nNotes:\n1. Recipes are constructed using the ST_Recipe data type, which includes recipe number (recipeID), raw material type (ingredientType), raw material ratio (ingredientRatio), and production temperature (productionTemperature). The recipe database can store up to 10 recipes, constructed with ARRAY[1..10] OF ST_Recipe, where recipe numbers must not be duplicated, and a recipe number of 0 indicates an empty slot.\n2. When a query recipe request signal (queryRecipe) is triggered, the system first compares the recipe number (recipeID) from the input recipe (recipeIn) with all recipes in the recipe database recipe. If the number does not exist, an error status (error=true) and error code (status=16#8001) are output. If the number exists, the recipe is output to the recipe query result (recipeQueryResult).\n3. When an add recipe request signal (addRecipe) is triggered, the system first compares the recipe number (recipeID) from the input recipe (recipeIn) with all recipes in the recipe database (recipe). If a duplicate number exists, an error status (error=true) and error code (status=16#8002) are output. If there is no empty slot in the recipe database (recipe), an error status (error=true) and error code (status=16#8003) are output. If there are no errors, the input recipe (recipeIn) is stored in the recipe database (recipe), prioritizing the empty slot with the smallest array index.\n4. When a delete recipe request signal (deleteRecipe) is triggered, the system first compares the recipe number (recipeID) from the input recipe (recipeIn) with all recipes in the recipe database (recipe). If the number does not exist, an error status (error=true) and error code (status=16#8004) are output. If the number exists, the recipe is deleted, i.e., the recipe number (recipeID) in the recipe database (recipe) is set to 0.\n5. When a modify recipe request signal (modifyRecipe) is triggered, the system first compares the recipe number (recipeID) from the input recipe (recipeIn) with all recipes in the recipe database (recipe). If the number does not exist, an error status (error=true) and error code (status=16#8005) are output. If the number exists, the recipe is replaced with the input recipe (recipeIn).\n\n中文摘要：配方管理：配方库最多 10 条（编号 0 表示空位），支持增删改查；\n查询不存在报 16#8001，重复新增报 16#8002，满库报 16#8003，\n删除不存在报 16#8004，修改不存在报 16#8005。\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）\n\n【接口、初态、约束与数据告警】\ntask_id: P17\ntitle: Recipe Management System\n接口名称、方向及类型保留为下方 TYPE 和 FUNCTION_BLOCK 声明。\n需求初态：全部 recipeID = 0；error = FALSE；status = 16#0000；\nrecipeAdded、recipeDeleted、recipeModified = FALSE。\n数据库初态由调用方提供，本功能块不清空 IN_OUT 数据库。\nK1 配方库容量 10 条，recipeID = 0 表示空位；写入时只能落到空位。\nK2 新增时若库中已存在相同 recipeID，拒绝写入并置 status = 16#8002。\nK3 查询时若 recipeID 不存在，置 status = 16#8001；库内容保持不变。\nK5 删除时若 recipeID 不存在，置 status = 16#8004；库内容保持不变。\nK6 修改时若 recipeID 不存在，置 status = 16#8005；库内容保持不变。\nK4 新增时若库已满，置 status = 16#8003。\n所给 semantic_warnings、warnings、missing_fields、dialect_requirements 均为空。\nST_Recipe 字段来源：需求中的结构说明及 io_table 字段类型。\n\n【完整形式化规约；有界时序以扫描周期计】\n# task: P17\n# meta: hard / C 状态机与节拍\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\nC1: G(error -> !(recipeAdded || recipeDeleted || recipeModified))\n    -- 出错时不得同时报成功（失败不掩盖）（K2/K3/K4/K5/K6）\nC2: G(recipeAdded -> status == 16#0000)\n    -- 新增成功的唯一状态码是 16#0000（K2）\nC4: G(!(recipeAdded && recipeDeleted))\n    -- 同一周期不可能既新增又删除（K1）\nC6: G(error -> (error W (addRecipe || deleteRecipe || modifyRecipe || queryRecipe)))\n    -- 错误标志保持到下一次请求为止（不得自动消失）（K2/K3/K4）\nC10: G[0,0](!error && !recipeAdded && !recipeDeleted && !recipeModified)\n    -- 上电当拍无错误、无成功标志（初态）\n\n【语义冲突报告及边界选择】\n1. io_table 额外列出 recipeID、ingredientType、ingredientRatio、\n   productionTemperature 四个独立 IN，但提供的声明仅将其作为\n   ST_Recipe 字段。本实现保留声明接口，通过 recipeIn 访问字段，\n   不新增四个独立输入；该接口数据冲突仍然存在。\n2. K1 若按所有写入理解，与修改已有配方的要求冲突。\n   本实现仅对新增执行空位限制，修改替换已有配方；\n   不声称同时满足 K1 的字面广义解释。\n3. 同时请求未规定仲裁，而 C4 禁止同拍新增与删除均成功。\n   本实现每拍最多处理一个请求，优先级：\n   addRecipe > deleteRecipe > modifyRecipe > queryRecipe。\n   未选中的请求不排队。\n4. 触发方式未规定边沿。本实现采用电平请求：\n   每拍均处理当前最高优先级有效请求。\n5. 编号 0 为保留空位标记，不视为可查询、删除或修改的配方。\n   新增编号 0 拒绝，沿用 16#8002；原题未给专用非法编号错误码。\n6. 用户提供的逐周期测试在 cycle 1 要求处理请求并输出成功或错误，\n   且查询用例要求使用调用方预置数据库。\n   本实现因此不清库、不跳过首次调用。\n   C10 按首次调用前的初始化状态解释，由输出声明初值体现；\n   若 C10 的时间 0 指首次调用结束后的采样，则与上述测试要求冲突。\n   保留该冲突，不声称同时满足两种时间解释。\n   需求的空库初态与测试中的预置非空库也存在场景差异；\n   数据库初态由调用方或测试夹具建立。\n7. 查询失败或无查询时保留上次查询结果，以 error/status 判定结果。\n8. 删除仅清除 recipeID，其余字段保留，符合删除原文定义。\n9. 运行期间调用方应保持数据库非零编号唯一；\n   若外部破坏该不变量，查询、删除和修改选择最小匹配下标，\n   新增仍拒绝已有编号。本实现不静默修复外部数据库。\n*)\n\nTYPE ST_Recipe :\nSTRUCT\n    recipeID : INT;\n    ingredientType : INT;\n    ingredientRatio : REAL;\n    productionTemperature : REAL;\nEND_STRUCT\nEND_TYPE\n\nFUNCTION_BLOCK FB_P17\nVAR_INPUT\n    addRecipe : BOOL;\n    deleteRecipe : BOOL;\n    modifyRecipe : BOOL;\n    queryRecipe : BOOL;\n    recipeIn : ST_Recipe;\nEND_VAR\nVAR_OUTPUT\n    recipeAdded : BOOL := FALSE;\n    recipeDeleted : BOOL := FALSE;\n    recipeModified : BOOL := FALSE;\n    recipeQueryResult : ST_Recipe;\n    error : BOOL := FALSE;\n    status : WORD := WORD#16#0000;\nEND_VAR\nVAR_IN_OUT\n    recipe : ARRAY[1..10] OF ST_Recipe;\nEND_VAR\nVAR\n    i : INT;\n    matchIndex : INT;\n    emptyIndex : INT;\nEND_VAR\n\nrecipeAdded := FALSE;\nrecipeDeleted := FALSE;\nrecipeModified := FALSE;\n\nIF addRecipe OR deleteRecipe OR modifyRecipe OR queryRecipe THEN\n    error := FALSE;\n    status := WORD#16#0000;\n    matchIndex := 0;\n    emptyIndex := 0;\n\n    FOR i := 1 TO 10 DO\n        IF recipe[i].recipeID = 0 THEN\n            IF emptyIndex = 0 THEN\n                emptyIndex := i;\n            END_IF;\n        ELSE\n            IF recipe[i].recipeID = recipeIn.recipeID THEN\n                IF matchIndex = 0 THEN\n                    matchIndex := i;\n                END_IF;\n            END_IF;\n        END_IF;\n    END_FOR;\n\n    IF addRecipe THEN\n        IF (recipeIn.recipeID = 0) OR (matchIndex <> 0) THEN\n            error := TRUE;\n            status := WORD#16#8002;\n        ELSIF emptyIndex = 0 THEN\n            error := TRUE;\n            status := WORD#16#8003;\n        ELSE\n            recipe[emptyIndex] := recipeIn;\n            recipeAdded := TRUE;\n        END_IF;\n\n    ELSIF deleteRecipe THEN\n        IF matchIndex = 0 THEN\n            error := TRUE;\n            status := WORD#16#8004;\n        ELSE\n            recipe[matchIndex].recipeID := 0;\n            recipeDeleted := TRUE;\n        END_IF;\n\n    ELSIF modifyRecipe THEN\n        IF matchIndex = 0 THEN\n            error := TRUE;\n            status := WORD#16#8005;\n        ELSE\n            recipe[matchIndex] := recipeIn;\n            recipeModified := TRUE;\n        END_IF;\n\n    ELSIF queryRecipe THEN\n        IF matchIndex = 0 THEN\n            error := TRUE;\n            status := WORD#16#8001;\n        ELSE\n            recipeQueryResult := recipe[matchIndex];\n        END_IF;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 105,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E2_P17_1_42\\tools\\baseline\\fast\\source.st:105-10..106-1: error: ';' missing at end of data type declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E2_P17_1_42\\tools\\baseline\\fast\\source.st:105-10..106-1: error: ';' missing at end of data type declaration."
+        }
+      ],
+      "elapsed_s": 0.328,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 39.093,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 8,
+    "passed": 8,
+    "passed_ids": [
+      "P17-01",
+      "P17-02",
+      "P17-03",
+      "P17-04",
+      "P17-05",
+      "P17-06",
+      "P17-07",
+      "P17-08"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

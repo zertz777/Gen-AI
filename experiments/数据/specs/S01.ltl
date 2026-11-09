@@ -1,0 +1,10 @@
+# task: S01
+# meta: easy / A 开关量联锁
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(!EStop_NC -> (!ClampLeft && !ClampRight))    -- 急停当周期两侧夹具必须松开（K4）
+C2: G(ClampLeft -> LeftPartPresent)    -- 夹紧的前提是对应工位有零件（左侧）（K2）
+C2b: G(ClampRight -> RightPartPresent)    -- 夹紧的前提是对应工位有零件（右侧）（K2）
+C4: G(!(ClampLeft && ClampRight))    -- 两侧夹具互斥（共用一路气源）（K1）
+C10: G[0,1](!ClampLeft && !ClampRight && !Busy)    -- 上电首周期两侧不夹紧、不忙（初态）

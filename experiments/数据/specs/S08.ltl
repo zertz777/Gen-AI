@@ -1,0 +1,10 @@
+# task: S08
+# meta: hard / C 状态机与节拍
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(Busy -> (!SortLeft && !SortRight))    -- 切换配方期间禁止分拣（切换优先于分拣）（K1）
+C2: G(SortLeft -> PartHeight > 0.0)    -- 分拣的前提是线上有料（K4）
+C4: G(!(SortLeft && SortRight))    -- 左右分拣互斥（K4）
+C9: G(Busy -> G[0,100](Busy))    -- 切换状态至少保持 2 s（防止请求抖动造成反复切换）（K2）
+C10: G[0,1](!SortLeft && !SortRight && !Busy && ActiveRecipe == 1)    -- 上电首周期默认配方 1、不分拣（初态）

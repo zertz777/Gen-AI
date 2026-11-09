@@ -1,0 +1,171 @@
+{
+  "source": "FUNCTION_BLOCK FB_P19\nVAR_INPUT\n    ManualMode : BOOL;\n    SingleStepMode : BOOL;\n    SingleCycleMode : BOOL;\n    ContinuousMode : BOOL;\n    EmergencyStop : BOOL;\n    Start : BOOL;\n    DownButton : BOOL;\n    UpButton : BOOL;\n    LeftButton : BOOL;\n    RightButton : BOOL;\n    GripButton : BOOL;\n    ReleaseButton : BOOL;\n    DownLimitSwitch : BOOL;\n    UpLimitSwitch : BOOL;\n    LeftLimitSwitch : BOOL;\n    RightLimitSwitch : BOOL;\n    GripLimitSwitch : BOOL;\n    ReleaseLimitSwitch : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MoveDown : BOOL;\n    MoveUp : BOOL;\n    MoveLeft : BOOL;\n    MoveRight : BOOL;\n    ActivateGrip : BOOL;\n    ActivateRelease : BOOL;\nEND_VAR\nVAR\n    Initialized : BOOL := FALSE;\n    PreviousStart : BOOL := FALSE;\n    StartEdge : BOOL := FALSE;\n    Mode : USINT := 0;\n    PreviousMode : USINT := 0;\n    ModeCount : USINT := 0;\n    Step : USINT := 1;\n    Running : BOOL := FALSE;\n    StepComplete : BOOL := FALSE;\nEND_VAR\n\n(*\n    每次调用为一个20 ms扫描；动作完成仅使用对应限位反馈。\n\n    待审语义冲突（不声明本实现已通过编译或逐周期验证）：\n    1. C6无条件要求抓取保持至GripLimitSwitch，与K1手动松键停止、\n       K4急停立即清零冲突；模式切换时停止也可能违反C6。\n       本实现优先急停、手动松键及模式隔离；自动抓取在同一模式中\n       保持至反馈到位。\n    2. 手动相反按钮同时按下且均未到位时，逐按钮动作要求与C4冲突。\n       本实现将该对动作同时抑制；此时C2的无条件下行要求不能满足。\n    3. 若首拍手动下行条件成立，C10与C2冲突。\n       本实现首拍六路输出全FALSE，优先C10。\n    模式改变清除自动进度；自动启动采用Start上升沿。\n    急停期间Start不能预置启动，恢复后需先释放再重新按下。\n    单步完成拍不接受下一步确认，须完成后再次产生Start上升沿。\n*)\n\nMoveDown := FALSE;\nMoveUp := FALSE;\nMoveLeft := FALSE;\nMoveRight := FALSE;\nActivateGrip := FALSE;\nActivateRelease := FALSE;\n\nModeCount := 0;\nMode := 0;\n\nIF ManualMode THEN\n    ModeCount := ModeCount + 1;\n    Mode := 1;\nEND_IF;\nIF SingleStepMode THEN\n    ModeCount := ModeCount + 1;\n    Mode := 2;\nEND_IF;\nIF SingleCycleMode THEN\n    ModeCount := ModeCount + 1;\n    Mode := 3;\nEND_IF;\nIF ContinuousMode THEN\n    ModeCount := ModeCount + 1;\n    Mode := 4;\nEND_IF;\n\nIF ModeCount <> 1 THEN\n    Mode := 0;\nEND_IF;\n\nStartEdge := Start AND NOT PreviousStart;\nPreviousStart := Start;\nStepComplete := FALSE;\n\nIF NOT Initialized THEN\n    Initialized := TRUE;\n    Step := 1;\n    Running := FALSE;\n    PreviousMode := Mode;\n    StartEdge := FALSE;\n    IF NOT EmergencyStop THEN\n        PreviousStart := TRUE;\n    END_IF;\n\nELSIF NOT EmergencyStop THEN\n    (* 当拍输出已清零；丢弃全部自动进度及急停期间启动请求。 *)\n    Step := 1;\n    Running := FALSE;\n    PreviousMode := Mode;\n    PreviousStart := TRUE;\n    StartEdge := FALSE;\n\nELSE\n    IF Mode <> PreviousMode THEN\n        Step := 1;\n        Running := FALSE;\n    END_IF;\n    PreviousMode := Mode;\n\n    CASE Mode OF\n        0:\n            (* 无选择或非法多选：保持全部动作关闭。 *)\n            Step := 1;\n            Running := FALSE;\n\n        1:\n            Step := 1;\n            Running := FALSE;\n\n            MoveDown := DownButton\n                        AND NOT UpButton\n                        AND NOT DownLimitSwitch;\n            MoveUp := UpButton\n                      AND NOT DownButton\n                      AND NOT UpLimitSwitch;\n            MoveLeft := LeftButton\n                        AND NOT RightButton\n                        AND NOT LeftLimitSwitch;\n            MoveRight := RightButton\n                         AND NOT LeftButton\n                         AND NOT RightLimitSwitch;\n            ActivateGrip := GripButton\n                            AND NOT ReleaseButton\n                            AND NOT GripLimitSwitch;\n            ActivateRelease := ReleaseButton\n                               AND NOT GripButton\n                               AND NOT ReleaseLimitSwitch;\n\n        2, 3, 4:\n            IF (Step < 1) OR (Step > 8) THEN\n                Step := 1;\n                Running := FALSE;\n            END_IF;\n\n            IF NOT Running AND StartEdge THEN\n                Running := TRUE;\n            END_IF;\n\n            IF Running THEN\n                (* 每拍最多完成一个步骤；到位当拍关闭对应动作。 *)\n                CASE Step OF\n                    1:\n                        MoveDown := NOT DownLimitSwitch;\n                        StepComplete := DownLimitSwitch;\n                    2:\n                        ActivateGrip := NOT GripLimitSwitch;\n                        StepComplete := GripLimitSwitch;\n                    3:\n                        MoveUp := NOT UpLimitSwitch;\n                        StepComplete := UpLimitSwitch;\n                    4:\n                        MoveRight := NOT RightLimitSwitch;\n                        StepComplete := RightLimitSwitch;\n                    5:\n                        MoveDown := NOT DownLimitSwitch;\n                        StepComplete := DownLimitSwitch;\n                    6:\n                        ActivateRelease := NOT ReleaseLimitSwitch;\n                        StepComplete := ReleaseLimitSwitch;\n                    7:\n                        MoveUp := NOT UpLimitSwitch;\n                        StepComplete := UpLimitSwitch;\n                    8:\n                        MoveLeft := NOT LeftLimitSwitch;\n                        StepComplete := LeftLimitSwitch;\n                END_CASE;\n\n                IF StepComplete THEN\n                    IF Step = 8 THEN\n                        Step := 1;\n                        IF Mode = 4 THEN\n                            Running := TRUE;\n                        ELSE\n                            Running := FALSE;\n                        END_IF;\n                    ELSE\n                        Step := Step + 1;\n                        IF Mode = 2 THEN\n                            Running := FALSE;\n                        END_IF;\n                    END_IF;\n                END_IF;\n            END_IF;\n    END_CASE;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 37,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:37-5..37-21: error: invalid variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:37-5..37-21: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 96,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:96-5..96-8: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:96-5..96-8: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 106,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:106-5..106-8: error: invalid statement list in 'ELSEIF' statement of ST 'IF' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:106-5..106-8: error: invalid statement list in 'ELSEIF' statement of ST 'IF' statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 102,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:102-11..106-8: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:102-11..106-8: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 114,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:114-9..114-12: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:114-9..114-12: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 122,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:122-13..122-16: error: invalid statement in case element of ST 'CASE' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:122-13..122-16: error: invalid statement in case element of ST 'CASE' statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 120,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:120-9..184-56: error: invalid case element(s) defined after 'OF' in ST 'CASE' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:120-9..184-56: error: invalid case element(s) defined after 'OF' in ST 'CASE' statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 189,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:189-25..189-28: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:189-25..189-28: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 196,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:196-25..198-35: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:196-25..198-35: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 188,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:188-24..188-31: error: invalid test expression defined for ST 'IF' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:188-24..188-31: error: invalid test expression defined for ST 'IF' statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 202,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:202-13..202-18: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:202-13..202-18: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 203,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:203-5..203-12: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:203-5..203-12: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 204,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:204-1..204-6: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_3\\fast\\source.st:204-1..204-6: error: invalid statement in ST statement."
+        }
+      ],
+      "elapsed_s": 0.219,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 25.282,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 9,
+    "passed": 3,
+    "passed_ids": [
+      "P19-06",
+      "P19-07",
+      "P19-08"
+    ],
+    "failures": [
+      {
+        "case_id": "P19-01",
+        "cycle": 1,
+        "signal": "MoveDown",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P19-02",
+        "cycle": 1,
+        "signal": "MoveDown",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P19-03",
+        "cycle": 1,
+        "signal": "MoveDown",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P19-04",
+        "cycle": 1,
+        "signal": "MoveDown",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P19-05",
+        "cycle": 1,
+        "signal": "MoveDown",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P19-09",
+        "cycle": 1,
+        "signal": "MoveDown",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 4499,
+  "tag": "candidate_3"
+}

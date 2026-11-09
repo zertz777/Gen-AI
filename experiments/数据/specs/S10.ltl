@@ -1,0 +1,10 @@
+# task: S10
+# meta: easy / D 故障与安全
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(VFDRun && VFDFaultCode != 16#0000 && VFDFaultCode != 16#0001 -> TripOutput)    -- 运行中出现重故障码（除 16#0001 轻故障外）必须当周期跳闸（K4）
+C2: G(TripOutput -> !VFDRun)    -- 跳闸的许可形式：跳闸时不得处于运行状态（K2）
+C6: G(TripOutput -> (TripOutput W ResetBtn))    -- 跳闸保持到复位按钮（不能随故障码消失自动复位）（K3）
+C7: G(VFDFaultCode == 16#0001 && VFDRun -> X(VFDRun))    -- 轻故障只报警不跳闸，运行状态不得因轻故障改变（K1）
+C10: G[0,1](!TripOutput && !AlarmLamp && Status == 16#0000)    -- 上电首周期不跳闸、不报警（初态）

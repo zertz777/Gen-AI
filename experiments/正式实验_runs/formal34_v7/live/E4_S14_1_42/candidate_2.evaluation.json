@@ -1,0 +1,64 @@
+{
+  "source": "FUNCTION_BLOCK FB_S14\nVAR_INPUT\n    Pressure : REAL;\n    PumpEnable : BOOL;\n    ResetBtn : BOOL;\nEND_VAR\nVAR_OUTPUT\n    LowPump : BOOL := FALSE;\n    HighPump : BOOL := FALSE;\n    ReliefValve : BOOL := FALSE;\n    AlarmLamp : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    ResetBtnLast : BOOL := FALSE;\n    HighPumpLatched : BOOL := FALSE;\n    FaultLatched : BOOL := FALSE;\n    FirstScan : BOOL := TRUE;\n    ResetRise : BOOL := FALSE;\n    SensorFault : BOOL := FALSE;\nEND_VAR\n\n(*\n    S14；每次调用为一个20 ms扫描周期。\n\n    需求冲突，保留并报告，待审：\n    1. C10要求启动阶段输出全为初态；若启动时压力>160或传感器\n       越界，则与同周期卸荷及立即保护冲突。\n       本实现启动首扫描禁止加载，但不屏蔽卸荷和故障保护。\n       因此不能声称对所有启动输入满足C10。\n    2. C7未排除禁止加载、故障和卸荷；这些条件下保持HighPump\n       输出可能违反停泵要求。安全联锁强制停泵，内部滞回记忆保留。\n    3. C2未排除传感器越界；在低端越界的首次扫描，\n       若其AlarmLamp指前一扫描输出，则无条件加载与故障停泵冲突。\n    4. LTL的X与“当周期”文字存在时序解释差异；\n       本实现按本次输入计算本次输出，不额外延迟保护。\n    以上冲突不能由单一实现无条件同时满足。\n    源码未经过编译profile验证，也未经过逐周期功能测试。\n*)\n\n(* 所有扫描均采样按钮，故障期间的边沿不延后使用。 *)\nResetRise := ResetBtn AND NOT ResetBtnLast;\nResetBtnLast := ResetBtn;\n\nSensorFault := (Pressure < REAL#0.5) OR (Pressure > REAL#250.0);\n\n(* 当前故障优先于复位；故障消失后必须出现新的复位上升沿。 *)\nIF SensorFault THEN\n    FaultLatched := TRUE;\nELSIF FaultLatched AND ResetRise THEN\n    FaultLatched := FALSE;\nEND_IF;\n\nAlarmLamp := FaultLatched;\n\nIF SensorFault THEN\n    Status := WORD#16#8D01;\nELSIF FaultLatched THEN\n    Status := WORD#16#8D02;\nELSE\n    Status := WORD#16#0000;\nEND_IF;\n\n(* 卸荷独立于允许加载及报警，严格保留160/150边界。 *)\nIF Pressure > REAL#160.0 THEN\n    ReliefValve := TRUE;\nELSIF Pressure < REAL#150.0 THEN\n    ReliefValve := FALSE;\nEND_IF;\n\n(* 高压泵的内部投入记忆仅在压力低于100时撤销。\n   禁止加载、报警或卸荷只禁止实际泵输出。 *)\nIF Pressure < REAL#100.0 THEN\n    HighPumpLatched := FALSE;\nEND_IF;\n\n(* 默认停泵；只有全部允许条件成立才加载。 *)\nLowPump := FALSE;\nHighPump := FALSE;\n\nIF NOT FirstScan\n   AND PumpEnable\n   AND NOT AlarmLamp\n   AND NOT ReliefValve THEN\n\n    IF Pressure >= REAL#140.0 THEN\n        HighPumpLatched := TRUE;\n    END_IF;\n\n    LowPump := Pressure < REAL#120.0;\n    HighPump := HighPumpLatched;\nEND_IF;\n\n(* 显式最终安全联锁，确保卸荷阀与两泵互斥。 *)\nIF SensorFault OR AlarmLamp OR ReliefValve OR NOT PumpEnable THEN\n    LowPump := FALSE;\n    HighPump := FALSE;\nEND_IF;\n\nFirstScan := FALSE;\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.234,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 15.078,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 2,
+    "passed_ids": [
+      "S14-01",
+      "S14-04"
+    ],
+    "failures": [
+      {
+        "case_id": "S14-02",
+        "cycle": 1,
+        "signal": "HighPump",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S14-03",
+        "cycle": 1,
+        "signal": "HighPump",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S14-05",
+        "cycle": 1,
+        "signal": "ReliefValve",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S14-06",
+        "cycle": 1,
+        "signal": "LowPump",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3037,
+  "tag": "candidate_2"
+}

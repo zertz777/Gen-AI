@@ -1,0 +1,314 @@
+{
+  "source": "TYPE E_P11_State :\n(\n    P11_IDLE := 0,\n    P11_MOVE_A_B,\n    P11_WAIT_B,\n    P11_MOVE_B_C,\n    P11_WAIT_C,\n    P11_DONE\n);\nEND_TYPE\n\nFUNCTION_BLOCK FB_P11\nVAR_INPUT\n    Mode : BOOL;\n    ForwardButton : BOOL;\n    ReverseButton : BOOL;\n    SensorA : BOOL;\n    SensorB : BOOL;\n    SensorC : BOOL;\n    ButtonA : BOOL;\n    ButtonB : BOOL;\n    ButtonC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MotorForward : BOOL;\n    MotorReverse : BOOL;\n    CompletionLight : BOOL;\nEND_VAR\nVAR\n    FirstScan : BOOL := TRUE;\n    State : E_P11_State := P11_IDLE;\n    ButtonA_R : R_TRIG;\n    ButtonB_R : R_TRIG;\n    ButtonC_R : R_TRIG;\nEND_VAR\n\nButtonA_R(CLK := ButtonA);\nButtonB_R(CLK := ButtonB);\nButtonC_R(CLK := ButtonC);\n\nIF FirstScan THEN\n    MotorForward := FALSE;\n    MotorReverse := FALSE;\n    CompletionLight := FALSE;\n    State := P11_IDLE;\n    FirstScan := FALSE;\nELSE\n    IF Mode THEN\n        (* 自动模式：A -> B -> C 顺序推进 *)\n        MotorForward := FALSE;\n        MotorReverse := FALSE;\n\n        CASE State OF\n            P11_IDLE:\n                IF SensorA AND ButtonA_R.Q THEN\n                    State := P11_MOVE_A_B;\n                    MotorForward := TRUE;\n                END_IF;\n\n            P11_MOVE_A_B:\n                MotorForward := TRUE;\n                IF SensorB THEN\n                    MotorForward := FALSE;\n                    State := P11_WAIT_B;\n                END_IF;\n\n            P11_WAIT_B:\n                MotorForward := FALSE;\n                IF SensorB AND ButtonB_R.Q THEN\n                    State := P11_MOVE_B_C;\n                    MotorForward := TRUE;\n                END_IF;\n\n            P11_MOVE_B_C:\n                MotorForward := TRUE;\n                IF SensorC THEN\n                    MotorForward := FALSE;\n                    State := P11_WAIT_C;\n                END_IF;\n\n            P11_WAIT_C:\n                MotorForward := FALSE;\n                IF SensorC AND ButtonC_R.Q THEN\n                    CompletionLight := TRUE;\n                    State := P11_DONE;\n                END_IF;\n\n            P11_DONE:\n                MotorForward := FALSE;\n                IF NOT SensorC THEN\n                    CompletionLight := FALSE;\n                    State := P11_IDLE;\n                END_IF;\n        END_CASE;\n    ELSE\n        (* 手动模式：正反转按钮控制，并互锁 *)\n        MotorForward := ForwardButton AND NOT ReverseButton;\n        MotorReverse := ReverseButton AND NOT ForwardButton;\n\n        IF NOT SensorC THEN\n            CompletionLight := FALSE;\n        END_IF;\n    END_IF;\n\n    (* 完成灯约束：灯亮必须在 C 站到位；离开 C 站后熄灭 *)\n    IF NOT SensorC THEN\n        CompletionLight := FALSE;\n        IF (State = P11_DONE) OR (State = P11_WAIT_C) THEN\n            State := P11_IDLE;\n        END_IF;\n    END_IF;\n\n    (* 硬互锁：正转与反转不得同时输出 *)\n    IF MotorForward AND MotorReverse THEN\n        MotorForward := FALSE;\n        MotorReverse := FALSE;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "fail",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 3,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_P11_1_42\\tools\\candidate_2\\fast\\source.st:3-12..3-14: error: ')' missing at the end of enumerated specification.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_P11_1_42\\tools\\candidate_2\\fast\\source.st:3-12..3-14: error: ')' missing at the end of enumerated specification."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 2,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_P11_1_42\\tools\\candidate_2\\fast\\source.st:2-1..3-17: error: invalid specification in data type declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_P11_1_42\\tools\\candidate_2\\fast\\source.st:2-1..3-17: error: invalid specification in data type declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 3,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_P11_1_42\\tools\\candidate_2\\fast\\source.st:3-17..3-18: error: ';' missing at end of data type declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_P11_1_42\\tools\\candidate_2\\fast\\source.st:3-17..3-18: error: ';' missing at end of data type declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 3,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_P11_1_42\\tools\\candidate_2\\fast\\source.st:3-18..9-1: error: invalid data type declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_P11_1_42\\tools\\candidate_2\\fast\\source.st:3-18..9-1: error: invalid data type declaration."
+        }
+      ],
+      "elapsed_s": 0.156,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 32,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 33,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 34,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 37,
+          "message": "需要程序名、函数或功能块实例替代 'ButtonA_R'",
+          "raw": "需要程序名、函数或功能块实例替代 'ButtonA_R'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 38,
+          "message": "需要程序名、函数或功能块实例替代 'ButtonB_R'",
+          "raw": "需要程序名、函数或功能块实例替代 'ButtonB_R'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 39,
+          "message": "需要程序名、函数或功能块实例替代 'ButtonC_R'",
+          "raw": "需要程序名、函数或功能块实例替代 'ButtonC_R'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 55,
+          "message": "此处需要有类型 'BOOL'的表达式",
+          "raw": "此处需要有类型 'BOOL'的表达式"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 55,
+          "message": "未知的类型: 'ButtonA_R.Q'",
+          "raw": "未知的类型: 'ButtonA_R.Q'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 55,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 55,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 69,
+          "message": "此处需要有类型 'BOOL'的表达式",
+          "raw": "此处需要有类型 'BOOL'的表达式"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 69,
+          "message": "未知的类型: 'ButtonB_R.Q'",
+          "raw": "未知的类型: 'ButtonB_R.Q'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 69,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 69,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 83,
+          "message": "此处需要有类型 'BOOL'的表达式",
+          "raw": "此处需要有类型 'BOOL'的表达式"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 83,
+          "message": "未知的类型: 'ButtonC_R.Q'",
+          "raw": "未知的类型: 'ButtonC_R.Q'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 83,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 83,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        }
+      ],
+      "elapsed_s": 23.125,
+      "evidence_kind": "live"
+    },
+    "errors": [
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 32,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 33,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 34,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 37,
+        "message": "需要程序名、函数或功能块实例替代 'ButtonA_R'",
+        "raw": "需要程序名、函数或功能块实例替代 'ButtonA_R'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 38,
+        "message": "需要程序名、函数或功能块实例替代 'ButtonB_R'",
+        "raw": "需要程序名、函数或功能块实例替代 'ButtonB_R'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 39,
+        "message": "需要程序名、函数或功能块实例替代 'ButtonC_R'",
+        "raw": "需要程序名、函数或功能块实例替代 'ButtonC_R'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 55,
+        "message": "此处需要有类型 'BOOL'的表达式",
+        "raw": "此处需要有类型 'BOOL'的表达式"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 55,
+        "message": "未知的类型: 'ButtonA_R.Q'",
+        "raw": "未知的类型: 'ButtonA_R.Q'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 55,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 55,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 69,
+        "message": "此处需要有类型 'BOOL'的表达式",
+        "raw": "此处需要有类型 'BOOL'的表达式"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 69,
+        "message": "未知的类型: 'ButtonB_R.Q'",
+        "raw": "未知的类型: 'ButtonB_R.Q'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 69,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 69,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 83,
+        "message": "此处需要有类型 'BOOL'的表达式",
+        "raw": "此处需要有类型 'BOOL'的表达式"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 83,
+        "message": "未知的类型: 'ButtonC_R.Q'",
+        "raw": "未知的类型: 'ButtonC_R.Q'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 83,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 83,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      }
+    ],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "skipped",
+    "total": 0,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": []
+  },
+  "repair_rounds": 0,
+  "token_count": 19088,
+  "tag": "candidate_2"
+}

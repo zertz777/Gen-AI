@@ -1,0 +1,67 @@
+{
+  "run_id": "E4_P14_1_42",
+  "setting_id": "E4",
+  "framework": "self",
+  "model": "gpt-6.1-sol",
+  "task_id": "P14",
+  "task_version": "57db5684",
+  "repeat_idx": 1,
+  "seed": 42,
+  "start_ts": "2026-11-01T06:35:09.247708+00:00",
+  "latency_s": 210.75,
+  "candidates": 3,
+  "repair_rounds": 3,
+  "compile_status": "fail",
+  "compile_stage": "after_repair",
+  "compile_errors": [
+    {
+      "code": "E_TYPE",
+      "severity": "error",
+      "line": 29,
+      "message": "不能将类型 '未知的类型: 'LEN(ipText)'' 转换为类型'INT'",
+      "raw": "不能将类型 '未知的类型: 'LEN(ipText)'' 转换为类型'INT'"
+    },
+    {
+      "code": "E_UNDECLARED",
+      "severity": "error",
+      "line": 29,
+      "message": "没有定义标识符'LEN' ",
+      "raw": "没有定义标识符'LEN' "
+    },
+    {
+      "code": "E_COMPILE",
+      "severity": "error",
+      "line": 29,
+      "message": "需要程序名、函数或功能块实例替代 'LEN'",
+      "raw": "需要程序名、函数或功能块实例替代 'LEN'"
+    },
+    {
+      "code": "E_TYPE",
+      "severity": "error",
+      "line": 43,
+      "message": "不能将类型 '未知的类型: 'MID(ipText, 1, index)'' 转换为类型'STRING(1)'",
+      "raw": "不能将类型 '未知的类型: 'MID(ipText, 1, index)'' 转换为类型'STRING(1)'"
+    },
+    {
+      "code": "E_UNDECLARED",
+      "severity": "error",
+      "line": 43,
+      "message": "没有定义标识符'MID' ",
+      "raw": "没有定义标识符'MID' "
+    },
+    {
+      "code": "E_COMPILE",
+      "severity": "error",
+      "line": 43,
+      "message": "需要程序名、函数或功能块实例替代 'MID'",
+      "raw": "需要程序名、函数或功能块实例替代 'MID'"
+    }
+  ],
+  "test_total": 0,
+  "test_passed": 0,
+  "verify_status": "skipped",
+  "final_status": "abandoned:compile_fail",
+  "artifact_path": "live/E4_P14_1_42",
+  "tokens_in": 7904,
+  "tokens_out": 3137
+}

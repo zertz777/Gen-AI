@@ -1,0 +1,89 @@
+{
+  "source": "(*\n【需求原文】\nAn automated production line consists of 5 workstations: material loading\nstation, cleaning station, weighing station, firing station, and finished\nproduct station. The production line has a motor responsible for moving\nproducts from one workstation to the next, the sequence of the line is\nfrom the material loading station, cleaning station, weighing station,\nfiring station, to the finished product station. Each workstation has a\nsensor (used to detect if the product has arrived).\nControl requirements:\n1. Mode Switching: The mode switch (Mode) is used to switch between manual\nand automatic modes of the production line. 0 = manual mode, 1 = automatic mode.\n2. Manual Mode: In manual mode, the forward rotation button (ForwardButton)\ncontrols the forward rotation of the motor, and the reverse rotation button\n(ReverseButton) controls the reverse rotation of the motor. Forward and\nreverse rotation operations need to be interlocked and cannot be performed\nsimultaneously.\n3. Automatic Mode:\n   - When the material arrives at the material loading station, the SensorFeed\ndetects the material, the motor starts forward rotation, and moves the material\nto the cleaning station.\n   - When the material arrives at the cleaning station, the SensorWash detects\nthe material, the motor stops, and upon receiving the signal washComplete after\ncleaning is finished, the motor starts forward rotation, moving the material\nto the weighing station.\n   - When the material arrives at the weighing station, the SensorWeight detects\nthe material, the motor stops, and upon receiving weightComplete after weighing\nis complete, the material is judged to be qualified based on the weight value.\nIf the weight value is greater than or equal to 100 and less than or equal to\n200, it is qualified, otherwise not.\n     If the material is unqualified, the rejection command kick is initiated.\n     If the material is qualified, the firing temperature is calculated based\non the weight value. The calculation rule is that the weight value from 100\nto 200 linearly corresponds to the temperature value from 500 to 550.\nThe firing temperature firingTemp is output. At the same time, the motor\nstarts forward rotation, moving the material to the firing station.\n   - When the product arrives at the firing station, the SensorFiring detects\nthe material, the motor stops, and upon receiving the signal firingComplete\nafter firing is finished, the motor starts forward rotation, moving the product\nto the finished product station.\n   - When the product arrives at the finished product station, the SensorOutput\ndetects the product, the motor stops, and the completion light (CompletionLight)\nturns on, indicating that the product processing is complete. When the product\nis taken away, i.e., the SensorOutput does not detect the product, the completion\nlight (CompletionLight) turns off.\n\n中文摘要：五工位生产线：手动正反转互斥，自动按上料→清洗→称重→烧成→成品\n顺序推进，各工位完成信号触发推进，成品站执行 kick 动作。\n\n扫描周期：20 ms。\n初态：MotorForward=FALSE，MotorReverse=FALSE，kick=FALSE，\nCompletionLight=FALSE，工位状态=IDLE。\n\nK1 手动模式下 MotorForward 与 MotorReverse 互斥。\nK2 自动模式下产品依次经过五个工位，不得跳站。\nK3 完成信号是推进的必要条件，且必须与对应到位传感器一致。\nK4 成品站完成出料动作 kick 后点亮 CompletionLight。\n\nC4: G(!(MotorForward && MotorReverse))\nC2: G(kick -> SensorOutput)\nC1: G(CompletionLight -> X(!kick))\nC6: G(CompletionLight -> (CompletionLight W !SensorOutput))\nC10: G[0,1](!MotorForward && !MotorReverse && !kick && !CompletionLight)\n\n【数据冲突报告：待审】\n输入 semantic_warnings 和 warnings 虽为空，但英文原文要求称重不合格时\n发出 kick；K4、中文摘要及 C2 将 kick 约束为成品站到位时的出料动作。\nSensorWeight 与 SensorOutput 没有必然同时为真的条件，因此这两类要求\n不能在所有输入轨迹上同时满足。以下逻辑保留该冲突：不合格进入内部\n待审保持状态，停止自动输送，不擅自增加不合格品输送或出料流程。\n该分支不宣称已实现英文原文的立即剔除要求。\n\n英文原文要求成品到位点灯，K4 要求出料后点灯。本实现采用两个扫描阶段：\n成品到位时停止并输出一周期 kick，下一扫描仍到位才点灯。\n此时序差异仍须需求审定。\n\nC10 的 [0,1] 按前两个调用均禁止布尔输出解释。\n完成信号按电平确认；只在对应等待状态且对应传感器为 TRUE 时接受。\n模式切换清除自动工序状态，但已点亮的完成灯保持至 SensorOutput 为 FALSE。\n无独立复位输入；待审状态通过进入手动模式退出，重新进入自动模式从 IDLE 开始。\n未经过真实编译器或逐周期测试验证。\n*)\n\nFUNCTION_BLOCK FB_P20\nVAR_INPUT\n    Mode : BOOL;\n    ForwardButton : BOOL;\n    ReverseButton : BOOL;\n    SensorFeed : BOOL;\n    SensorWash : BOOL;\n    SensorWeight : BOOL;\n    SensorFiring : BOOL;\n    SensorOutput : BOOL;\n    washComplete : BOOL;\n    weightComplete : BOOL;\n    weight : REAL;\n    firingComplete : BOOL;\nEND_VAR\n\nVAR_OUTPUT\n    MotorForward : BOOL := FALSE;\n    MotorReverse : BOOL := FALSE;\n    kick : BOOL := FALSE;\n    CompletionLight : BOOL := FALSE;\n    firingTemp : REAL := 0.0;\nEND_VAR\n\nVAR\n    (* 0=IDLE, 10=向清洗输送, 20=等待清洗完成,\n       30=向称重输送, 40=等待称重完成,\n       50=向烧成输送, 60=等待烧成完成,\n       70=向成品输送, 80=出料后的点灯阶段,\n       90=等待成品移走, 100=不合格需求冲突待审。 *)\n    stationState : INT := 0;\n    startupScans : USINT := 0;\n    previousMode : BOOL := FALSE;\n    previousLight : BOOL := FALSE;\n    modeChanged : BOOL := FALSE;\nEND_VAR\n\n(* 每次扫描重新计算瞬时命令；温度与完成灯另行保持。 *)\nMotorForward := FALSE;\nMotorReverse := FALSE;\nkick := FALSE;\n\nIF startupScans < 2 THEN\n    startupScans := startupScans + 1;\n    stationState := 0;\n    CompletionLight := FALSE;\n    firingTemp := 0.0;\n    previousMode := Mode;\n    previousLight := FALSE;\nELSE\n    modeChanged := Mode <> previousMode;\n\n    (* C6：模式切换不清除仍然到位的完成灯。 *)\n    IF NOT SensorOutput THEN\n        CompletionLight := FALSE;\n    END_IF;\n\n    IF modeChanged THEN\n        stationState := 0;\n    END_IF;\n\n    IF NOT Mode THEN\n        stationState := 0;\n\n        (* 两按钮同时按下时两方向均不输出。 *)\n        MotorForward := ForwardButton AND NOT ReverseButton;\n        MotorReverse := ReverseButton AND NOT ForwardButton;\n\n    ELSIF NOT modeChanged THEN\n        CASE stationState OF\n            0:\n                (* 已完成的产品未移走时不开始下一自动周期。 *)\n                IF NOT CompletionLight AND NOT previousLight THEN\n                    IF SensorFeed THEN\n                        firingTemp := 0.0;\n                        stationState := 10;\n\n                        IF SensorWash THEN\n                            stationState := 20;\n                        ELSE\n                            MotorForward := TRUE;\n                        END_IF;\n                    END_IF;\n                END_IF;\n\n            10:\n                IF SensorWash THEN\n                    stationState := 20;\n                ELSE\n                    MotorForward := TRUE;\n                END_IF;\n\n            20:\n                IF SensorWash AND washComplete THEN\n                    stationState := 30;\n\n                    IF SensorWeight THEN\n                        stationState := 40;\n                    ELSE\n                        MotorForward := TRUE;\n                    END_IF;\n                END_IF;\n\n            30:\n                IF SensorWeight THEN\n                    stationState := 40;\n                ELSE\n                    MotorForward := TRUE;\n                END_IF;\n\n            40:\n                IF SensorWeight AND weightComplete THEN\n                    (* 闭区间判断；只有合格值参与温度计算。 *)\n                    IF (weight >= 100.0) AND (weight <= 200.0) THEN\n                        firingTemp := 500.0 + (weight - 100.0) * 0.5;\n\n                        IF firingTemp < 500.0 THEN\n                            firingTemp := 500.0;\n                        ELSIF firingTemp > 550.0 THEN\n                            firingTemp := 550.0;\n                        END_IF;\n\n                        stationState := 50;\n                        IF SensorFiring THEN\n                            stationState := 60;\n                        ELSE\n                            MotorForward := TRUE;\n                        END_IF;\n                    ELSE\n                        (* 原文剔除与 C2 冲突：保持待审，不发 kick。 *)\n                        stationState := 100;\n                    END_IF;\n                END_IF;\n\n            50:\n                IF SensorFiring THEN\n                    stationState := 60;\n                ELSE\n                    MotorForward := TRUE;\n                END_IF;\n\n            60:\n                IF SensorFiring AND firingComplete THEN\n                    stationState := 70;\n\n                    IF SensorOutput THEN\n                        IF NOT CompletionLight AND NOT previousLight THEN\n                            kick := TRUE;\n                            stationState := 80;\n                        END_IF;\n                    ELSE\n                        MotorForward := TRUE;\n                    END_IF;\n                END_IF;\n\n            70:\n                IF SensorOutput THEN\n                    IF NOT CompletionLight AND NOT previousLight THEN\n                        kick := TRUE;\n                        stationState := 80;\n                    END_IF;\n                ELSE\n                    MotorForward := TRUE;\n                END_IF;\n\n            80:\n                (* 前一扫描已执行 kick；本扫描 kick 默认为 FALSE。 *)\n                IF SensorOutput THEN\n                    CompletionLight := TRUE;\n                    stationState := 90;\n                ELSE\n                    stationState := 0;\n                END_IF;\n\n            90:\n                IF NOT SensorOutput THEN\n                    stationState := 0;\n                END_IF;\n\n            100:\n                (* 待审保持：不自动推进，也不将剔除偷换为成品出料。 *)\n                MotorForward := FALSE;\n                MotorReverse := FALSE;\n                kick := FALSE;\n\n        ELSE\n            (* 内部非法状态回到安全停止的 IDLE。 *)\n            stationState := 0;\n        END_CASE;\n    END_IF;\n\n    (* 输出端保护：C2 与 C1；完成灯亮时也禁止重复出料。 *)\n    IF NOT SensorOutput OR previousLight OR CompletionLight THEN\n        kick := FALSE;\n    END_IF;\n\n    (* 双方向命令冲突时安全停机。 *)\n    IF MotorForward AND MotorReverse THEN\n        MotorForward := FALSE;\n        MotorReverse := FALSE;\n    END_IF;\n\n    previousMode := Mode;\n    previousLight := CompletionLight;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.078,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 8,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "P20-01",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P20-02",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P20-03",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P20-04",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P20-05",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P20-06",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P20-07",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P20-08",
+        "cycle": 1,
+        "signal": "kick",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 5185,
+  "tag": "candidate_3"
+}

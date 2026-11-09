@@ -1,0 +1,207 @@
+{
+  "source": "FUNCTION_BLOCK FB_P19\nVAR_INPUT\n    ManualMode : BOOL;\n    SingleStepMode : BOOL;\n    SingleCycleMode : BOOL;\n    ContinuousMode : BOOL;\n    EmergencyStop : BOOL;\n    Start : BOOL;\n    DownButton : BOOL;\n    UpButton : BOOL;\n    LeftButton : BOOL;\n    RightButton : BOOL;\n    GripButton : BOOL;\n    ReleaseButton : BOOL;\n    DownLimitSwitch : BOOL;\n    UpLimitSwitch : BOOL;\n    LeftLimitSwitch : BOOL;\n    RightLimitSwitch : BOOL;\n    GripLimitSwitch : BOOL;\n    ReleaseLimitSwitch : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MoveDown : BOOL;\n    MoveUp : BOOL;\n    MoveLeft : BOOL;\n    MoveRight : BOOL;\n    ActivateGrip : BOOL;\n    ActivateRelease : BOOL;\nEND_VAR\nVAR\n    (* internal state, no timers required (no time-bounded requirement) *)\n    StartPrev : BOOL;    (* Start value of previous scan, for edge detection *)\n    StartEdge : BOOL;    (* Start rising edge in current scan *)\n    AutoRun : BOOL;      (* automatic sequence running (single cycle / continuous) *)\n    Step : INT;          (* 0 = idle, 1..8 = sequence action index *)\nEND_VAR\n\n(*\n    P19 Mechanical Arm Control                            scan cycle = 20 ms\n\n    Retained semantic conflict (not resolved silently):\n      K1  : in manual mode an action is output only while its button is pressed and\n            the corresponding limit is not yet reached; releasing the button stops it.\n      C6  : G(ActivateGrip -> (ActivateGrip W GripLimitSwitch)) requires the grip\n            output to be held until GripLimitSwitch.\n      In automatic and single-step modes the grip is held by the step machine until\n      the limit switch, so C6 holds there. In manual mode the operator may release\n      GripButton before the grip limit is reached, which follows K1 but would violate\n      C6 if the LTL oracle applies C6 to manual mode as well.\n\n    Mode inputs are assumed mutually exclusive by the caller (K2). Priority used here:\n      EmergencyStop > Manual > SingleStep > (SingleCycle = Continuous).\n*)\n\n(* ---- Start push-button rising-edge detection ---- *)\nStartEdge := Start AND NOT StartPrev;\nStartPrev := Start;\n\n(* ---- safe default: all six actions OFF (C10: no output on first scan) ---- *)\nMoveDown := FALSE;\nMoveUp := FALSE;\nMoveLeft := FALSE;\nMoveRight := FALSE;\nActivateGrip := FALSE;\nActivateRelease := FALSE;\n\nIF NOT EmergencyStop THEN\n    (* C1 / K4: emergency stop -> all actions OFF, clear automatic progress *)\n    AutoRun := FALSE;\n    Step := 0;\n\nELSIF ManualMode THEN\n    (* K1 / K2 / C2 / C4: manual jog, at most one action, stop on button release\n       or when the corresponding limit switch is reached *)\n    AutoRun := FALSE;\n    Step := 0;\n    IF DownButton AND NOT DownLimitSwitch THEN\n        MoveDown := TRUE;\n    ELSIF UpButton AND NOT UpLimitSwitch THEN\n        MoveUp := TRUE;\n    ELSIF LeftButton AND NOT LeftLimitSwitch THEN\n        MoveLeft := TRUE;\n    ELSIF RightButton AND NOT RightLimitSwitch THEN\n        MoveRight := TRUE;\n    ELSIF GripButton AND NOT GripLimitSwitch THEN\n        ActivateGrip := TRUE;\n    ELSIF ReleaseButton AND NOT ReleaseLimitSwitch THEN\n        ActivateRelease := TRUE;\n    END_IF;\n\nELSIF SingleStepMode THEN\n    (* K3: each Start press confirms and executes exactly one preset action.\n       C7: the current action is dropped as soon as its limit switch is reached.\n       C6: grip output is held (step stays) until GripLimitSwitch. *)\n    AutoRun := FALSE;\n    IF StartEdge THEN\n        Step := Step + 1;\n        IF Step > 8 THEN\n            Step := 1;   (* sequence finished, restart from the beginning *)\n        END_IF;\n    END_IF;\n    CASE Step OF\n        1:\n            MoveDown := NOT DownLimitSwitch;            (* down *)\n        2:\n            ActivateGrip := NOT GripLimitSwitch;        (* grip *)\n        3:\n            MoveUp := NOT UpLimitSwitch;                (* up *)\n        4:\n            MoveRight := NOT RightLimitSwitch;          (* right *)\n        5:\n            MoveDown := NOT DownLimitSwitch;            (* down *)\n        6:\n            ActivateRelease := NOT ReleaseLimitSwitch;  (* release *)\n        7:\n            MoveUp := NOT UpLimitSwitch;                (* up *)\n        8:\n            MoveLeft := NOT LeftLimitSwitch;            (* left *)\n    END_CASE;\n\nELSIF SingleCycleMode OR ContinuousMode THEN\n    (* automatic handling cycle:\n       down -> grip -> up -> right -> down -> release -> up -> left *)\n    IF StartEdge AND NOT AutoRun THEN\n        AutoRun := TRUE;\n        Step := 1;\n    END_IF;\n\n    IF AutoRun THEN\n        CASE Step OF\n            1:\n                IF DownLimitSwitch THEN\n                    Step := 2;\n                ELSE\n                    MoveDown := TRUE;\n                END_IF;\n            2:\n                IF GripLimitSwitch THEN\n                    Step := 3;\n                ELSE\n                    ActivateGrip := TRUE;\n                END_IF;\n            3:\n                IF UpLimitSwitch THEN\n                    Step := 4;\n                ELSE\n                    MoveUp := TRUE;\n                END_IF;\n            4:\n                IF RightLimitSwitch THEN\n                    Step := 5;\n                ELSE\n                    MoveRight := TRUE;\n                END_IF;\n            5:\n                IF DownLimitSwitch THEN\n                    Step := 6;\n                ELSE\n                    MoveDown := TRUE;\n                END_IF;\n            6:\n                IF ReleaseLimitSwitch THEN\n                    Step := 7;\n                ELSE\n                    ActivateRelease := TRUE;\n                END_IF;\n            7:\n                IF UpLimitSwitch THEN\n                    Step := 8;\n                ELSE\n                    MoveUp := TRUE;\n                END_IF;\n            8:\n                IF LeftLimitSwitch THEN\n                    IF ContinuousMode THEN\n                        Step := 1;            (* continuous: keep cycling *)\n                    ELSE\n                        AutoRun := FALSE;     (* single cycle: stop and wait for Start *)\n                        Step := 0;\n                    END_IF;\n                ELSE\n                    MoveLeft := TRUE;\n                END_IF;\n        END_CASE;\n    END_IF;\n\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 35,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:35-5..35-14: error: invalid variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:35-5..35-14: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 70,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:70-5..70-8: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:70-5..70-8: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 76,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:76-5..76-8: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:76-5..76-8: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 97,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:97-9..99-16: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:97-9..99-16: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 102,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:102-10..102-13: error: invalid test expression defined for ST 'CASE' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:102-10..102-13: error: invalid test expression defined for ST 'CASE' statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 121,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:121-1..125-15: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:121-1..125-15: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 126,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:126-9..126-12: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:126-9..126-12: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 127,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:127-5..127-10: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:127-5..127-10: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 133,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:133-21..133-24: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:133-21..133-24: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 139,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:139-21..139-24: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:139-21..139-24: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 145,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:145-21..145-24: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:145-21..145-24: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 151,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:151-21..151-24: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:151-21..151-24: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 157,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:157-21..157-24: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:157-21..157-24: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 163,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:163-21..163-24: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:163-21..163-24: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 169,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:169-21..169-24: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:169-21..169-24: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 176,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:176-25..176-28: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:176-25..176-28: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 179,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:179-25..179-28: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:179-25..179-28: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 130,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:130-14..130-17: error: invalid test expression defined for ST 'CASE' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:130-14..130-17: error: invalid test expression defined for ST 'CASE' statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 187,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:187-1..187-6: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P19_1_42\\tools\\baseline\\fast\\source.st:187-1..187-6: error: invalid statement in ST statement."
+        }
+      ],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 33.11,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 9,
+    "passed": 4,
+    "passed_ids": [
+      "P19-01",
+      "P19-05",
+      "P19-06",
+      "P19-07"
+    ],
+    "failures": [
+      {
+        "case_id": "P19-02",
+        "cycle": 8,
+        "signal": "MoveUp",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P19-03",
+        "cycle": 6,
+        "signal": "MoveUp",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P19-04",
+        "cycle": 6,
+        "signal": "MoveUp",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P19-08",
+        "cycle": 1,
+        "signal": "MoveDown",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "P19-09",
+        "cycle": 1,
+        "signal": "MoveDown",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

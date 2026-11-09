@@ -1,0 +1,157 @@
+{
+  "source": "(*\n需求原文：\nIn an industrial water supply system, there are 5 pumps, each of which can be controlled independently. The system needs to support both manual and automatic operating modes.\nBased on the value of the mode variable, switch to the corresponding operating mode.\nIn manual mode, control the start and stop of the selected pump based on the value of pumpGroup[1..5].selection.\nIn automatic mode, compare the priority of each pump, and automatically select the 3 pumps with higher priority for water supply according to the method of three in use and two on standby.\n\n扫描周期：20 ms。\n\n接口字段映射：\npriority、selection、RunComd 为 ST_Pump 字段。\n仅写 pumpGroup[1..5].RunComd，不写 priority 或 selection。\n\n形式化规约：\nC1: G(stop -> !RunComd)\nC2: G(RunComd -> !stop)\nC4: G(!(start && stop))\nC6: G(RunComd -> (RunComd W stop))\nC10: G[0,1](!RunComd)\n\n语义冲突报告（待审，不声称全部规约已满足）：\n1. C4 约束只读输入，功能块不能阻止 start 与 stop 同时有效；\n   本实现对这种请求执行 stop 优先。\n2. K2 的无条件自动运行三台与 stop、初态以及 start 启动许可冲突；\n   本实现只在初始化结束、启动许可保持且无 stop 时运行三台。\n3. C6 的逐泵保持要求与手动取消选择、模式切换及自动优先级重选冲突；\n   本实现保持系统启动许可，但每周期按当前模式重新计算逐泵命令。\n   因此，未收到 stop 时也可能因上述输入变化清除某台泵的命令。\n4. C10 按闭区间扫描索引 [0,1] 实现为前两次调用全部停泵。\n   初始化期间不锁存 start；初始化后 start 为 TRUE 即建立启动许可。\n\n自动选择：优先级数值越大越优先；相同优先级按泵号升序。\n没有基于真实编译器或逐周期测试的验证结论。\n*)\n\nTYPE ST_Pump :\nSTRUCT\n    priority : INT;\n    selection : BOOL;\n    RunComd : BOOL;\nEND_STRUCT\nEND_TYPE\n\nFUNCTION_BLOCK FB_P07\nVAR_INPUT\n    mode : BOOL;\n    start : BOOL;\n    stop : BOOL;\nEND_VAR\nVAR_IN_OUT\n    pumpGroup : ARRAY[1..5] OF ST_Pump;\nEND_VAR\nVAR\n    initialScans : INT := 0;\n    enabled : BOOL := FALSE;\n    i : INT;\n    j : INT;\n    higherCount : INT;\nEND_VAR\n\n(* 每周期完整覆盖命令，避免继承调用前的外部命令。 *)\nFOR i := 1 TO 5 DO\n    pumpGroup[i].RunComd := FALSE;\nEND_FOR;\n\nIF initialScans < 2 THEN\n    initialScans := initialScans + 1;\n    enabled := FALSE;\nELSE\n    (* 停止为电平优先，并清除保持的启动许可。 *)\n    IF stop THEN\n        enabled := FALSE;\n    ELSIF start THEN\n        enabled := TRUE;\n    END_IF;\n\n    IF enabled AND NOT stop THEN\n        IF NOT mode THEN\n            (* 手动：仅所选泵获得运行命令。 *)\n            FOR i := 1 TO 5 DO\n                pumpGroup[i].RunComd := pumpGroup[i].selection;\n            END_FOR;\n        ELSE\n            (*\n            自动：计算每台泵之前的泵数。\n            使用直接比较，不对 INT 优先级作减法，避免边界溢出。\n            确定性的全序确保恰有三台排名在前三。\n            *)\n            FOR i := 1 TO 5 DO\n                higherCount := 0;\n\n                FOR j := 1 TO 5 DO\n                    IF pumpGroup[j].priority > pumpGroup[i].priority THEN\n                        higherCount := higherCount + 1;\n                    ELSIF (pumpGroup[j].priority = pumpGroup[i].priority)\n                          AND (j < i) THEN\n                        higherCount := higherCount + 1;\n                    END_IF;\n                END_FOR;\n\n                pumpGroup[i].RunComd := higherCount < 3;\n            END_FOR;\n        END_IF;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 41,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P07_1_42\\tools\\candidate_3\\fast\\source.st:41-10..42-1: error: ';' missing at end of data type declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P07_1_42\\tools\\candidate_3\\fast\\source.st:41-10..42-1: error: ';' missing at end of data type declaration."
+        }
+      ],
+      "elapsed_s": 0.344,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.063,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 7,
+    "passed": 1,
+    "passed_ids": [
+      "P07-02"
+    ],
+    "failures": [
+      {
+        "case_id": "P07-01",
+        "cycle": 2,
+        "signal": "pumpGroup[].RunComd",
+        "expected": [
+          true,
+          false,
+          true,
+          false,
+          false
+        ],
+        "actual": [
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case_id": "P07-03",
+        "cycle": 1,
+        "signal": "pumpGroup[].RunComd",
+        "expected": [
+          true,
+          true,
+          true,
+          false,
+          false
+        ],
+        "actual": [
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case_id": "P07-04",
+        "cycle": 1,
+        "signal": "pumpGroup[].RunComd",
+        "expected": [
+          true,
+          false,
+          false,
+          false,
+          false
+        ],
+        "actual": [
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case_id": "P07-05",
+        "cycle": 1,
+        "signal": "pumpGroup[].RunComd",
+        "expected": [
+          true,
+          false,
+          false,
+          false,
+          false
+        ],
+        "actual": [
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case_id": "P07-06",
+        "cycle": 1,
+        "signal": "pumpGroup[].RunComd",
+        "expected": [
+          false,
+          true,
+          false,
+          true,
+          true
+        ],
+        "actual": [
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case_id": "P07-07",
+        "cycle": 1,
+        "signal": "pumpGroup[].RunComd",
+        "expected": [
+          false,
+          false,
+          true,
+          true,
+          true
+        ],
+        "actual": [
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 2895,
+  "tag": "candidate_3"
+}

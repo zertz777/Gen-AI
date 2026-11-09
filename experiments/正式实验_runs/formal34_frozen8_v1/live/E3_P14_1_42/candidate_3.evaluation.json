@@ -1,0 +1,398 @@
+{
+  "source": "FUNCTION_BLOCK FB_P14\nVAR_INPUT\n    ipText : STRING(254);\nEND_VAR\nVAR_OUTPUT\n    ipValue : UDINT;\nEND_VAR\nVAR\n    i : INT;\n    len : INT;\n    segIndex : INT;\n    segValue : UINT;\n    digitCount : INT;\n    valid : BOOL;\n    ch : STRING(1);\n    digit : UINT;\n    result : UDINT;\nEND_VAR\n\n// 初始化输出和内部状态\nipValue := 0;\nvalid := TRUE;\nsegIndex := 1;\nsegValue := 0;\ndigitCount := 0;\nresult := 0;\nlen := LEN(ipText);\n\nFOR i := 1 TO len DO\n    ch := MID(ipText, 1, i);\n    IF ch = '.' THEN\n        // 段结束\n        IF digitCount = 0 THEN\n            valid := FALSE;\n        END_IF;\n        IF segValue > 255 THEN\n            valid := FALSE;\n        END_IF;\n        IF valid THEN\n            CASE segIndex OF\n                1: result := result OR SHL(UDINT#(segValue), 24);\n                2: result := result OR SHL(UDINT#(segValue), 16);\n                3: result := result OR SHL(UDINT#(segValue), 8);\n                4: valid := FALSE; // 第四段后出现点，段数过多\n            ELSE\n                valid := FALSE; // 超过4段\n            END_CASE;\n        END_IF;\n        segIndex := segIndex + 1;\n        segValue := 0;\n        digitCount := 0;\n    ELSE\n        // 判断数字字符\n        IF ch = '0' THEN\n            digit := 0;\n        ELSIF ch = '1' THEN\n            digit := 1;\n        ELSIF ch = '2' THEN\n            digit := 2;\n        ELSIF ch = '3' THEN\n            digit := 3;\n        ELSIF ch = '4' THEN\n            digit := 4;\n        ELSIF ch = '5' THEN\n            digit := 5;\n        ELSIF ch = '6' THEN\n            digit := 6;\n        ELSIF ch = '7' THEN\n            digit := 7;\n        ELSIF ch = '8' THEN\n            digit := 8;\n        ELSIF ch = '9' THEN\n            digit := 9;\n        ELSE\n            valid := FALSE;\n        END_IF;\n        IF valid THEN\n            segValue := segValue * 10 + digit;\n            digitCount := digitCount + 1;\n            IF segValue > 255 THEN\n                valid := FALSE;\n            END_IF;\n        END_IF;\n    END_IF;\nEND_FOR;\n\n// 处理最后一段（没有以点结尾）\nIF valid THEN\n    IF digitCount = 0 THEN\n        valid := FALSE; // 空段\n    ELSIF segValue > 255 THEN\n        valid := FALSE;\n    ELSIF segIndex = 4 THEN\n        result := result OR UDINT#(segValue);\n    ELSE\n        valid := FALSE; // 段数不是4\n    END_IF;\nEND_IF;\n\nIF valid THEN\n    ipValue := result;\nELSE\n    ipValue := 0;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "fail",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 3,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_3\\fast\\source.st:3-19..3-20: error: ';' missing at end of input variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_3\\fast\\source.st:3-19..3-20: error: ';' missing at end of input variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 3,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_3\\fast\\source.st:3-20..3-24: error: invalid input variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_3\\fast\\source.st:3-20..3-24: error: invalid input variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 10,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_3\\fast\\source.st:10-5..10-13: error: invalid variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_3\\fast\\source.st:10-5..10-13: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 15,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_3\\fast\\source.st:15-15..15-16: error: ';' missing at end of variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_3\\fast\\source.st:15-15..15-16: error: ';' missing at end of variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 15,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_3\\fast\\source.st:15-16..15-18: error: invalid variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_3\\fast\\source.st:15-16..15-18: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_SYNTAX",
+          "severity": "error",
+          "line": null,
+          "message": "Parsing failed because of too many consecutive syntax errors. Bailing out!",
+          "raw": "Parsing failed because of too many consecutive syntax errors. Bailing out!"
+        }
+      ],
+      "elapsed_s": 0.328,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 41,
+          "message": "应该用';' 替换','",
+          "raw": "应该用';' 替换','"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 41,
+          "message": "应该采用',' 或 ')' 代替'UDINT#'",
+          "raw": "应该采用',' 或 ')' 代替'UDINT#'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 41,
+          "message": "'SHL' 需要'2' 个操作数",
+          "raw": "'SHL' 需要'2' 个操作数"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 41,
+          "message": "应该用表达式代替 'UDINT#'",
+          "raw": "应该用表达式代替 'UDINT#'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 41,
+          "message": "发现非预期的记号',' ",
+          "raw": "发现非预期的记号',' "
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 41,
+          "message": "应该用';' 替换'24'",
+          "raw": "应该用';' 替换'24'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 41,
+          "message": "发现非预期的记号'24' ",
+          "raw": "发现非预期的记号'24' "
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 42,
+          "message": "应该用';' 替换','",
+          "raw": "应该用';' 替换','"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 42,
+          "message": "应该采用',' 或 ')' 代替'UDINT#'",
+          "raw": "应该采用',' 或 ')' 代替'UDINT#'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 42,
+          "message": "'SHL' 需要'2' 个操作数",
+          "raw": "'SHL' 需要'2' 个操作数"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 42,
+          "message": "应该用表达式代替 'UDINT#'",
+          "raw": "应该用表达式代替 'UDINT#'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 42,
+          "message": "发现非预期的记号',' ",
+          "raw": "发现非预期的记号',' "
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 42,
+          "message": "应该用';' 替换'16'",
+          "raw": "应该用';' 替换'16'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 42,
+          "message": "发现非预期的记号'16' ",
+          "raw": "发现非预期的记号'16' "
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 43,
+          "message": "应该用';' 替换','",
+          "raw": "应该用';' 替换','"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 43,
+          "message": "应该采用',' 或 ')' 代替'UDINT#'",
+          "raw": "应该采用',' 或 ')' 代替'UDINT#'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 43,
+          "message": "'SHL' 需要'2' 个操作数",
+          "raw": "'SHL' 需要'2' 个操作数"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 43,
+          "message": "应该用表达式代替 'UDINT#'",
+          "raw": "应该用表达式代替 'UDINT#'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 43,
+          "message": "发现非预期的记号',' ",
+          "raw": "发现非预期的记号',' "
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 43,
+          "message": "应该用';' 替换'8'",
+          "raw": "应该用';' 替换'8'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 43,
+          "message": "发现非预期的记号'8' ",
+          "raw": "发现非预期的记号'8' "
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 94,
+          "message": "应该用';' 替换'UDINT#'",
+          "raw": "应该用';' 替换'UDINT#'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 94,
+          "message": "应该用表达式代替 'UDINT#'",
+          "raw": "应该用表达式代替 'UDINT#'"
+        }
+      ],
+      "elapsed_s": 38.859,
+      "evidence_kind": "live"
+    },
+    "errors": [
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 41,
+        "message": "应该用';' 替换','",
+        "raw": "应该用';' 替换','"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 41,
+        "message": "应该采用',' 或 ')' 代替'UDINT#'",
+        "raw": "应该采用',' 或 ')' 代替'UDINT#'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 41,
+        "message": "'SHL' 需要'2' 个操作数",
+        "raw": "'SHL' 需要'2' 个操作数"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 41,
+        "message": "应该用表达式代替 'UDINT#'",
+        "raw": "应该用表达式代替 'UDINT#'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 41,
+        "message": "发现非预期的记号',' ",
+        "raw": "发现非预期的记号',' "
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 41,
+        "message": "应该用';' 替换'24'",
+        "raw": "应该用';' 替换'24'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 41,
+        "message": "发现非预期的记号'24' ",
+        "raw": "发现非预期的记号'24' "
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 42,
+        "message": "应该用';' 替换','",
+        "raw": "应该用';' 替换','"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 42,
+        "message": "应该采用',' 或 ')' 代替'UDINT#'",
+        "raw": "应该采用',' 或 ')' 代替'UDINT#'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 42,
+        "message": "'SHL' 需要'2' 个操作数",
+        "raw": "'SHL' 需要'2' 个操作数"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 42,
+        "message": "应该用表达式代替 'UDINT#'",
+        "raw": "应该用表达式代替 'UDINT#'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 42,
+        "message": "发现非预期的记号',' ",
+        "raw": "发现非预期的记号',' "
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 42,
+        "message": "应该用';' 替换'16'",
+        "raw": "应该用';' 替换'16'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 42,
+        "message": "发现非预期的记号'16' ",
+        "raw": "发现非预期的记号'16' "
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 43,
+        "message": "应该用';' 替换','",
+        "raw": "应该用';' 替换','"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 43,
+        "message": "应该采用',' 或 ')' 代替'UDINT#'",
+        "raw": "应该采用',' 或 ')' 代替'UDINT#'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 43,
+        "message": "'SHL' 需要'2' 个操作数",
+        "raw": "'SHL' 需要'2' 个操作数"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 43,
+        "message": "应该用表达式代替 'UDINT#'",
+        "raw": "应该用表达式代替 'UDINT#'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 43,
+        "message": "发现非预期的记号',' ",
+        "raw": "发现非预期的记号',' "
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 43,
+        "message": "应该用';' 替换'8'",
+        "raw": "应该用';' 替换'8'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 43,
+        "message": "发现非预期的记号'8' ",
+        "raw": "发现非预期的记号'8' "
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 94,
+        "message": "应该用';' 替换'UDINT#'",
+        "raw": "应该用';' 替换'UDINT#'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 94,
+        "message": "应该用表达式代替 'UDINT#'",
+        "raw": "应该用表达式代替 'UDINT#'"
+      }
+    ],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "skipped",
+    "total": 0,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": []
+  },
+  "repair_rounds": 0,
+  "token_count": 16571,
+  "tag": "candidate_3"
+}

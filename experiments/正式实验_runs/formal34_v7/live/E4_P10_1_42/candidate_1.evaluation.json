@@ -1,0 +1,68 @@
+{
+  "source": "FUNCTION_BLOCK FB_P10\nVAR_INPUT\n    TemperatureSensorInput : REAL;\n    SetTemperature : REAL;\nEND_VAR\nVAR_OUTPUT\n    CurrentTemperature : REAL;\n    SetTempDisplay : REAL;\n    HeaterStatus : BOOL := FALSE;\n    OverheatProtection : BOOL := FALSE;\n    HeaterOutput : BOOL := FALSE;\nEND_VAR\nVAR\n    StartupScans : INT := 0;\n    SensorFault : BOOL := FALSE;\n    PreviousSensorFault : BOOL := FALSE;\n    HeatingScans : INT := 0;\n    ProtectionScans : INT := 0;\nEND_VAR\n\n(*\n    Each invocation represents one 20 ms scan.\n\n    REQUIREMENT CONFLICT / REVIEW REQUIRED:\n    Literal C9, G(P -> G[0,150](P)), renews its holding obligation\n    on EVERY protected scan. Once P becomes TRUE, it cannot ever\n    become FALSE. It does not describe a finite three-second hold.\n\n    The implementation below follows the operational finite-cooldown\n    interpretation of K3, not literal C9. Protection remains TRUE\n    through offset 150 from its triggering scan and clears at offset\n    151 (3.02 seconds). Literal C9 remains unresolved and is not\n    claimed to be satisfied.\n\n    C10's explicit [0,1] interval is implemented as two startup scans.\n    Safety and startup inhibition override K1.\n    PreviousSensorFault also inhibits heating to satisfy the explicit\n    next-scan obligations in C7/C7b, even if the input has recovered.\n    At temperature equality, the existing heater state is retained.\n    No compiler or cycle-test verification is claimed.\n*)\n\nCurrentTemperature := TemperatureSensorInput;\nSetTempDisplay := SetTemperature;\n\nSensorFault :=\n    (TemperatureSensorInput < 0.0) OR\n    (TemperatureSensorInput > 100.0);\n\nIF StartupScans < 2 THEN\n    StartupScans := StartupScans + 1;\n    HeaterOutput := FALSE;\n    OverheatProtection := FALSE;\n    HeatingScans := 0;\n    ProtectionScans := 0;\nELSE\n    IF OverheatProtection THEN\n        (* Count completed intervals since protection was asserted. *)\n        IF ProtectionScans < 151 THEN\n            ProtectionScans := ProtectionScans + 1;\n        END_IF;\n\n        HeaterOutput := FALSE;\n        HeatingScans := 0;\n\n        IF ProtectionScans >= 151 THEN\n            OverheatProtection := FALSE;\n            ProtectionScans := 0;\n        END_IF;\n    ELSE\n        (* Previous output represents heating over the elapsed interval. *)\n        IF HeaterOutput THEN\n            IF HeatingScans < 251 THEN\n                HeatingScans := HeatingScans + 1;\n            END_IF;\n        ELSE\n            HeatingScans := 0;\n        END_IF;\n\n        (* Strictly more than 5 s: 251 completed intervals = 5.02 s. *)\n        IF HeatingScans > 250 THEN\n            OverheatProtection := TRUE;\n            ProtectionScans := 0;\n            HeaterOutput := FALSE;\n            HeatingScans := 0;\n        END_IF;\n    END_IF;\n\n    IF OverheatProtection OR SensorFault OR PreviousSensorFault THEN\n        HeaterOutput := FALSE;\n    ELSE\n        IF TemperatureSensorInput < SetTemperature THEN\n            HeaterOutput := TRUE;\n        ELSIF TemperatureSensorInput > SetTemperature THEN\n            HeaterOutput := FALSE;\n        END_IF;\n    END_IF;\n\n    IF NOT HeaterOutput THEN\n        HeatingScans := 0;\n    END_IF;\nEND_IF;\n\nPreviousSensorFault := SensorFault;\nHeaterStatus := HeaterOutput;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.406,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.015,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 5,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "P10-01",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P10-02",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P10-03",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P10-04",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P10-05",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 2950,
+  "tag": "candidate_1"
+}

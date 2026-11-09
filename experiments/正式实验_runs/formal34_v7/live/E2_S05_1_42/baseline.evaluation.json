@@ -1,0 +1,46 @@
+{
+  "source": "(*\n【必留：需求原文】\n泵站出口装有脉冲流量计，每个脉冲代表 0.5 L。需要同时维护累计总量与当班流量。\n\n控制要求：\n1. FlowPulse 的每个上升沿使 PulseCount 加 1，TotalVolume 与 ShiftVolume 各加 0.5 L。\n2. ShiftReset 的上升沿把 ShiftVolume 清 0、PulseCount 清 0，但 TotalVolume 必须保持不变。\n3. TotalVolume 达到 1000000.0 L 时不再增加，置 OverflowFlag = TRUE；清零只能由维护流程完成（本题不提供入口，仅置位）。\n4. FlowPulse 为高频脉冲，同一扫描周期内最多计一个脉冲（20 ms 周期内不允许丢脉冲的假设不成立时，以 Status 报 16#8501）。\n5. 上电时 PulseCount = 0、TotalVolume = 0.0、ShiftVolume = 0.0、OverflowFlag = FALSE。\n6. Status：16#0000 正常、16#8501 脉冲过快、16#8502 总量溢出。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）\n\n【必留：接口、初态、约束与数据告警】\n{\n  \"task_id\": \"S05\",\n  \"title\": \"泵站流量累计与班次清零\",\n  \"io_table\": [\n    {\n      \"direction\": \"IN\",\n      \"name\": \"FlowPulse\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"流量计脉冲\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"ShiftReset\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"班次清零（上升沿有效）\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"CycleTime\",\n      \"data_type\": \"TIME\",\n      \"description\": \"扫描周期，用于判断脉冲频率\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"TotalVolume\",\n      \"data_type\": \"LREAL\",\n      \"description\": \"累计总量（L）\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"ShiftVolume\",\n      \"data_type\": \"LREAL\",\n      \"description\": \"当班流量（L）\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"PulseCount\",\n      \"data_type\": \"UDINT\",\n      \"description\": \"当班脉冲数\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"OverflowFlag\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"总量溢出标志\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"Status\",\n      \"data_type\": \"WORD\",\n      \"description\": \"状态码\"\n    }\n  ],\n  \"initial_state\": \"PulseCount = 0；TotalVolume = 0.0；ShiftVolume = 0.0；OverflowFlag = FALSE；Status = 16#0000；FlowPulseLast = FALSE；ShiftResetLast = FALSE。\",\n  \"constraints\": [\n    \"K1 只在 FlowPulse 的上升沿累加，不得按电平累加。\",\n    \"K2 ShiftReset 上升沿清 ShiftVolume 与 PulseCount，TotalVolume 严格不减。\",\n    \"K3 TotalVolume 达到 1000000.0 后保持不再增长，并置 OverflowFlag。\",\n    \"K4 单个扫描周期内检测到两次以上脉冲上升沿时置 Status = 16#8501，本周期只计 1 个。\"\n  ],\n  \"semantic_warnings\": [],\n  \"warnings\": [],\n  \"missing_fields\": [],\n  \"dialect_requirements\": [],\n  \"type_origins\": {}\n}\n\n【必留：完整形式化规约；有界时序以扫描周期计】\n# task: S05\n# meta: hard / B 模拟量与数据处理\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(OverflowFlag -> TotalVolume <= 1000000.0)    -- 溢出标志置位后总量不得继续增长（也不得回绕）（K3）\nC2: G(TotalVolume >= 0.0 && ShiftVolume >= 0.0)    -- 两个累计量都不得为负（单向累计）（K1）\nC8: G(TotalVolume >= 1000000.0 -> X(OverflowFlag))    -- 达到上限后下一周期必须置溢出标志（K3）\nC8b: G(OverflowFlag -> X(OverflowFlag))    -- 溢出标志一旦置位就永久保持（不自动清除）（K3）\nC6: G(ShiftVolume <= TotalVolume)    -- 当班流量不得超过累计总量（班次清零不影响总量）（K2）\nC10: G[0,1](TotalVolume == 0.0 && ShiftVolume == 0.0 && !OverflowFlag)    -- 上电首周期两个累计量为 0、无溢出（初态）\n*)\n\n(*\n修改说明：\n以显式初值、扫描间保存的输入电平和上升沿逻辑替换占位 RETURN。\n总量限幅，溢出标志锁存；班次清零不修改总量。\n同一扫描同时出现两个上升沿时，总量仍计入该脉冲，\n班次清零最后执行，班次输出为零；这属于边界优先级选择。\n\n保留并报告的冲突与不可实现条件：\n1. 每次调用只能观察 FlowPulse 的一个 BOOL 样本。\n   扫描间发生零次、两次或更多次上升沿可能得到完全相同的样本。\n   CycleTime 仅提供扫描周期，不能提供扫描内脉冲次数。\n   因此现有接口无法实现 K4 的真实多脉冲检测及可靠的 16#8501。\n   本实现不伪造检测结果，不把 CycleTime 偏离 20 ms 等同于脉冲过快；\n   CycleTime 保留原接口，但不参与无法成立的频率判断。\n   窄脉冲和扫描间多脉冲仍可能丢失，不能宣称满足要求 4。\n\n2. 总量封顶后继续按要求 1 增加 ShiftVolume，最终可能违反 C6。\n   若同时停止当班流量累计，则会违反要求 1。\n   本实现保留要求 1 对当班流量的累计行为，并报告 C6 不能普遍成立，\n   不通过暗中限幅 ShiftVolume 掩盖该冲突。\n\n3. 若 C10 的 [0,1] 指前两个调用结束后的输出均为零，\n   则它与这两个调用中任意上升沿立即累计的要求冲突。\n   本实现保证调用前的声明初值，并从第一次调用开始正常计数；\n   不通过忽略启动脉冲宣称满足上述 C10 解读。\n\n4. UDINT 无法无限表示每个上升沿都加 1 的当班脉冲数。\n   达到 UDINT 最大值后采用饱和，避免算术溢出及隐式回绕。\n   此边界不满足无限累计的字面要求；题面没有提供对应状态码。\n   LREAL 的有限精度也不支持无限次严格增加 0.5 L。\n\n验证说明：\n当前对话没有可执行工具、编译 profile 或已配置测试命令的访问入口，\n未运行编译或逐周期测试，不声称已验证编译或功能正确。\n上述冲突意味着无法在给定接口下完整满足全部需求与形式化规约。\n*)\n\nFUNCTION_BLOCK FB_S05\nVAR_INPUT\n    FlowPulse : BOOL;\n    ShiftReset : BOOL;\n    CycleTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    TotalVolume : LREAL := LREAL#0.0;\n    ShiftVolume : LREAL := LREAL#0.0;\n    PulseCount : UDINT := UDINT#0;\n    OverflowFlag : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    FlowPulseLast : BOOL := FALSE;\n    ShiftResetLast : BOOL := FALSE;\n    FlowPulseRise : BOOL := FALSE;\n    ShiftResetRise : BOOL := FALSE;\nEND_VAR\n\n(* 每次调用仅对本次输入样本进行一次上升沿检测。 *)\nFlowPulseRise := FlowPulse AND NOT FlowPulseLast;\nShiftResetRise := ShiftReset AND NOT ShiftResetLast;\n\nIF FlowPulseRise THEN\n    (* 避免 UDINT 达到表示上限后回绕。 *)\n    IF PulseCount < UDINT#4294967295 THEN\n        PulseCount := PulseCount + UDINT#1;\n    END_IF;\n\n    (* 总量达到上限后仍按需求累计当班流量，相关 C6 冲突见上。 *)\n    ShiftVolume := ShiftVolume + LREAL#0.5;\n\n    IF NOT OverflowFlag THEN\n        IF TotalVolume < LREAL#1000000.0 THEN\n            TotalVolume := TotalVolume + LREAL#0.5;\n        END_IF;\n    END_IF;\nEND_IF;\n\n(* 达到上限的同一次调用即置位；本接口没有解除锁存的入口。 *)\nIF TotalVolume >= LREAL#1000000.0 THEN\n    TotalVolume := LREAL#1000000.0;\n    OverflowFlag := TRUE;\nEND_IF;\n\n(* 班次清零优先于同一扫描的班次累计，但不撤销总量累计。 *)\nIF ShiftResetRise THEN\n    ShiftVolume := LREAL#0.0;\n    PulseCount := UDINT#0;\nEND_IF;\n\n(* 16#0000 仅表示没有可报告的总量溢出，不证明物理脉冲未丢失。 *)\nIF OverflowFlag THEN\n    Status := WORD#16#8502;\nELSE\n    Status := WORD#16#0000;\nEND_IF;\n\n(* 每次调用均更新历史电平，包括清零与溢出期间。 *)\nFlowPulseLast := FlowPulse;\nShiftResetLast := ShiftReset;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 26.265,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 5,
+    "passed_ids": [
+      "S05-01",
+      "S05-02",
+      "S05-03",
+      "S05-04",
+      "S05-05"
+    ],
+    "failures": [
+      {
+        "case_id": "S05-06",
+        "cycle": 2,
+        "signal": "TotalVolume",
+        "expected": 1.0,
+        "actual": 0.5
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

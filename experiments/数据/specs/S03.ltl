@@ -1,0 +1,11 @@
+# task: S03
+# meta: medium / A 开关量联锁
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(!EStop_NC -> (!DriveA_Run && !DriveB_Run))    -- 急停当周期两区都停（优先于分级延时）（K3）
+C1b: G(DoorSwitch -> F[0,1](!DriveA_Run))    -- 门打开后 A 区当周期必须停（分级停机的高等级侧）（K1）
+C5: G(DoorSwitch -> F[0,25](!DriveB_Run))    -- 门打开后 B 区 500 ms 内必须停（低等级侧允许走完当前动作）（K2）
+C2: G(DriveA_Run -> (!DoorSwitch && EStop_NC))    -- A 区运行的许可：门关闭且无急停（K3）
+C6: G(AlarmLamp -> (AlarmLamp W !DoorSwitch))    -- 门关闭后报警才允许撤销（不得随门抖动闪烁）（K4）
+C10: G[0,1](!DriveA_Run && !DriveB_Run && !AlarmLamp)    -- 上电首周期两区都不运行、无报警（初态）

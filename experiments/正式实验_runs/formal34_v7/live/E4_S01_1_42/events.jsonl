@@ -1,0 +1,5 @@
+{"ts": "2026-10-31T14:50:50.781013+00:00", "event": "evaluation", "tag": "candidate_1", "compile_status": "pass", "test_status": "fail", "test_passed": 2, "test_total": 6}
+{"ts": "2026-10-31T14:52:11.910416+00:00", "event": "evaluation", "tag": "candidate_2", "compile_status": "pass", "test_status": "fail", "test_passed": 2, "test_total": 6}
+{"ts": "2026-10-31T14:53:41.962128+00:00", "event": "evaluation", "tag": "candidate_3", "compile_status": "pass", "test_status": "fail", "test_passed": 2, "test_total": 6}
+{"ts": "2026-10-31T14:53:45.312952+00:00", "event": "patch_rejected", "round": 1, "message": "Expected nonempty patches list"}
+{"ts": "2026-10-31T14:53:45.324944+00:00", "event": "patch_rejected", "round": 2, "message": "Expected nonempty patches list"}
