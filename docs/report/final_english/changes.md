@@ -1,0 +1,27 @@
+# Changes Relative to report_v3
+
+- Replaced the Chinese chapter-by-chapter draft with an independently written English report rather than a sentence-level translation.
+- Reorganized the material into Abstract, Sections 1-7, References, and Appendix A in the order required by the supplied prompt.
+- Added a title page with `GenAI Group 19`, the course name, and only the four highlighted affiliation/contact placeholders.
+- Added a 197-word English abstract and five semicolon-separated keywords.
+- Added explicit environment coverage for operating-system build, Python, CODESYS, target device, libraries, Aider, model IDs, model access path, scan cycle, timeouts, token thresholds, candidates, repair limits, concurrency, and local seed.
+- Added a resource-limit table that separates the 6000-token context estimate from the 100000-token local stop threshold.
+- Added the dataset count table covering 34 tasks, 316 I/O points, 144 constraints, 177 LTL clauses, difficulty, categories, 214 cases, 22636 CSV rows, and 22422 scan steps.
+- Added the public/adapted/self-built construction process and the six-step self-built-task workflow.
+- Added a representative P03-01 trace table that maps the instructor case-template elements to the repository CSV fields.
+- Added the C1-C10 clause-library explanation and distinguished structural LTL parsing from formal verification.
+- Added a seven-module framework description, an execution description, and two newly generated English diagrams.
+- Added a `4.3 Design Rationale` section with a four-column, ten-row table covering decisions, alternatives, rationale, and cost or evidence.
+- Added a baseline-boundary subsection explaining why the baseline retained its native Aider strategy.
+- Added the frozen 136-run matrix, four-setting full-task and compile comparison, difficulty breakdown, paired outcomes, terminal-status attribution, and resource use.
+- Regenerated the four-setting comparison, difficulty, and token-usage figures from `experiments/per_task.csv` and `experiments/summary.csv`.
+- Numbered Tables 1-10 and Figures 1-5 continuously and cited each object in the body.
+- Added an independent Section 6 covering single-run variance, token-budget accounting, the five mismatched test-case copies, the three disputed tasks, skipped formal verification, and external validity.
+- Stated the required inconvenient facts in the body, including E3 mean repair rounds 0.00, 136/136 skipped verification runs, and the UTF-8-byte token-counting defect.
+- Replaced the draft reference list with seven references actually cited in the report and ordered them by first citation.
+- Applied A4 pages, 2.54 cm margins, Times New Roman with explicit ASCII/hAnsi/eastAsia mappings, 11 pt body text, 1.15 spacing, justified paragraphs, 0.5 cm first-line indentation, and three-level heading styles.
+- Added the required header and centered Arabic page numbers on every page.
+- Applied three-line table borders with no vertical rules and 9 pt table text.
+- Added `numbers.md` with recomputation commands and source paths for every measured value used in the report.
+- Added an automated verification that checks the tables against `numbers.md`, banned phrases, heading order, figure/table citations, design-table size, references, fonts, image bounds, A4 margins, and the 12-18 page limit.
+- Kept the experiment code, raw runs, and reported numbers unchanged; `report_v3(1).docx` was confirmed byte-identical to the repository draft by SHA-256.
