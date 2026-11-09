@@ -1,0 +1,51 @@
+[
+  {
+    "stage": "generate",
+    "candidate": 1,
+    "trace": [
+      {
+        "section": "task_and_spec",
+        "action": "keep",
+        "reason": "题面、I/O、约束、初态、规约不可裁剪"
+      }
+    ]
+  },
+  {
+    "stage": "generate",
+    "candidate": 2,
+    "trace": [
+      {
+        "section": "task_and_spec",
+        "action": "keep",
+        "reason": "题面、I/O、约束、初态、规约不可裁剪"
+      }
+    ]
+  },
+  {
+    "stage": "generate",
+    "candidate": 3,
+    "trace": [
+      {
+        "section": "task_and_spec",
+        "action": "keep",
+        "reason": "题面、I/O、约束、初态、规约不可裁剪"
+      }
+    ]
+  },
+  {
+    "stage": "repair",
+    "round": 1,
+    "trace": [
+      {
+        "section": "task_and_spec",
+        "action": "keep",
+        "reason": "题面、I/O、约束、初态、规约不可裁剪"
+      },
+      {
+        "section": "feedback",
+        "action": "keep",
+        "reason": "仅接收本轮反馈；旧轮反馈由调用方替换"
+      }
+    ]
+  }
+]

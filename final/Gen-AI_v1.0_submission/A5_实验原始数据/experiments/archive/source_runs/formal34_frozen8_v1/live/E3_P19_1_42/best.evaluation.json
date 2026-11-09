@@ -1,0 +1,117 @@
+{
+  "source": "FUNCTION_BLOCK FB_P19\nVAR_INPUT\n    ManualMode : BOOL;\n    SingleStepMode : BOOL;\n    SingleCycleMode : BOOL;\n    ContinuousMode : BOOL;\n    EmergencyStop : BOOL;\n    Start : BOOL;\n    DownButton : BOOL;\n    UpButton : BOOL;\n    LeftButton : BOOL;\n    RightButton : BOOL;\n    GripButton : BOOL;\n    ReleaseButton : BOOL;\n    DownLimitSwitch : BOOL;\n    UpLimitSwitch : BOOL;\n    LeftLimitSwitch : BOOL;\n    RightLimitSwitch : BOOL;\n    GripLimitSwitch : BOOL;\n    ReleaseLimitSwitch : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MoveDown : BOOL;\n    MoveUp : BOOL;\n    MoveLeft : BOOL;\n    MoveRight : BOOL;\n    ActivateGrip : BOOL;\n    ActivateRelease : BOOL;\nEND_VAR\nVAR\n    StartTrig : R_TRIG;\n    FirstScan : BOOL := TRUE;\n    StartBlocked : BOOL := FALSE;\n    StartAccepted : BOOL := FALSE;\n    AutoStep : INT := 1;\n    AutoRunning : BOOL := FALSE;\n    StepActionActive : BOOL := FALSE;\n    ManualGripLatch : BOOL := FALSE;\n    ManualReleaseLatch : BOOL := FALSE;\nEND_VAR\n\n(*\n    Semantic conflict note:\n    - C6/K5 require ActivateGrip/ActivateRelease to be held until the corresponding\n      limit switch is reached.\n    - A general manual-mode reading says releasing a button stops that action.\n    This implementation latches manual grip/release until their limit switches,\n    prioritizing C6/K5. EmergencyStop still clears all outputs immediately per K4/C1.\n*)\n\n(* Safe default: no outputs in the current scan. *)\nMoveDown := FALSE;\nMoveUp := FALSE;\nMoveLeft := FALSE;\nMoveRight := FALSE;\nActivateGrip := FALSE;\nActivateRelease := FALSE;\n\nStartTrig(CLK := Start);\n\nIF FirstScan THEN\n    (* C10: power-up scan produces no motion outputs. *)\n    FirstScan := FALSE;\n    AutoStep := 1;\n    AutoRunning := FALSE;\n    StepActionActive := FALSE;\n    ManualGripLatch := FALSE;\n    ManualReleaseLatch := FALSE;\n    StartBlocked := Start;\nELSE\n    StartAccepted := FALSE;\n\n    IF NOT EmergencyStop THEN\n        (* K4/C1: emergency stop active. Clear all actions and automatic progress. *)\n        AutoStep := 1;\n        AutoRunning := FALSE;\n        StepActionActive := FALSE;\n        ManualGripLatch := FALSE;\n        ManualReleaseLatch := FALSE;\n        IF Start THEN\n            StartBlocked := TRUE;\n        END_IF;\n\n    ELSE\n        (* EmergencyStop = TRUE: normal operation. Require a new Start after E-stop. *)\n        IF StartBlocked AND NOT Start THEN\n            StartBlocked := FALSE;\n        END_IF;\n\n        StartAccepted := StartTrig.Q AND NOT StartBlocked;\n\n        IF ManualMode THEN\n            (* K1/K2: manual mode. Automatic progress is stopped. *)\n            AutoRunning := FALSE;\n            StepActionActive := FALSE;\n\n            MoveDown := DownButton AND NOT DownLimitSwitch;\n            MoveUp := UpButton AND NOT UpLimitSwitch AND NOT MoveDown;\n\n            MoveLeft := LeftButton AND NOT LeftLimitSwitch;\n            MoveRight := RightButton AND NOT RightLimitSwitch AND NOT MoveLeft;\n\n            (* Manual grip/release with C6/K5 latch until limit. *)\n            IF GripButton AND NOT GripLimitSwitch THEN\n                ManualGripLatch := TRUE;\n            END_IF;\n            IF GripLimitSwitch THEN\n                ManualGripLatch := FALSE;\n            END_IF;\n\n            IF ReleaseButton AND NOT ReleaseLimitSwitch THEN\n                ManualReleaseLatch := TRUE;\n            END_IF;\n            IF ReleaseLimitSwitch THEN\n                ManualReleaseLatch := FALSE;\n            END_IF;\n\n            IF ManualGripLatch THEN\n                ActivateGrip := TRUE;\n                ActivateRelease := FALSE;\n                ManualReleaseLatch := FALSE;\n            ELSIF ManualReleaseLatch THEN\n                ActivateRelease := TRUE;\n                ActivateGrip := FALSE;\n            ELSE\n                ActivateGrip := FALSE;\n                ActivateRelease := FALSE;\n            END_IF;\n\n        ELSIF SingleStepMode THEN\n            (* K3: one programmed action per Start edge, then wait for next Start. *)\n            AutoRunning := FALSE;\n            ManualGripLatch := FALSE;\n            ManualReleaseLatch := FALSE;\n\n            IF StartAccepted AND NOT StepActionActive THEN\n                StepActionActive := TRUE;\n            END_IF;\n\n            IF StepActionActive THEN\n                CASE AutoStep OF\n                    1: (* down to down limit *)\n                        IF DownLimitSwitch THEN\n                            StepActionActive := FALSE;\n                            AutoStep := 2;\n                        ELSE\n                            MoveDown := TRUE;\n                        END_IF;\n\n                    2: (* grip until grip limit *)\n                        IF GripLimitSwitch THEN\n                            StepActionActive := FALSE;\n                            AutoStep := 3;\n                        ELSE\n                            ActivateGrip := TRUE;\n                        END_IF;\n\n                    3: (* up to up limit *)\n                        IF UpLimitSwitch THEN\n                            StepActionActive := FALSE;\n                            AutoStep := 4;\n                        ELSE\n                            MoveUp := TRUE;\n                        END_IF;\n\n                    4: (* right to right limit *)\n                        IF RightLimitSwitch THEN\n                            StepActionActive := FALSE;\n                            AutoStep := 5;\n                        ELSE\n                            MoveRight := TRUE;\n                        END_IF;\n\n                    5: (* down to down limit *)\n                        IF DownLimitSwitch THEN\n                            StepActionActive := FALSE;\n                            AutoStep := 6;\n                        ELSE\n                            MoveDown := TRUE;\n                        END_IF;\n\n                    6: (* release until release limit *)\n                        IF ReleaseLimitSwitch THEN\n                            StepActionActive := FALSE;\n                            AutoStep := 7;\n                        ELSE\n                            ActivateRelease := TRUE;\n                        END_IF;\n\n                    7: (* up to up limit *)\n                        IF UpLimitSwitch THEN\n                            StepActionActive := FALSE;\n                            AutoStep := 8;\n                        ELSE\n                            MoveUp := TRUE;\n                        END_IF;\n\n                    8: (* left to left limit *)\n                        IF LeftLimitSwitch THEN\n                            StepActionActive := FALSE;\n                            AutoStep := 1;\n                        ELSE\n                            MoveLeft := TRUE;\n                        END_IF;\n\n                    ELSE\n                        AutoStep := 1;\n                        StepActionActive := FALSE;\n                END_CASE;\n            END_IF;\n\n        ELSIF SingleCycleMode THEN\n            (* Run one complete cycle, then stop and wait for a new Start. *)\n            StepActionActive := FALSE;\n            ManualGripLatch := FALSE;\n            ManualReleaseLatch := FALSE;\n\n            IF StartAccepted AND NOT AutoRunning THEN\n                AutoRunning := TRUE;\n                AutoStep := 1;\n            END_IF;\n\n            IF AutoRunning THEN\n                CASE AutoStep OF\n                    1:\n                        IF DownLimitSwitch THEN\n                            AutoStep := 2;\n                        ELSE\n                            MoveDown := TRUE;\n                        END_IF;\n\n                    2:\n                        IF GripLimitSwitch THEN\n                            AutoStep := 3;\n                        ELSE\n                            ActivateGrip := TRUE;\n                        END_IF;\n\n                    3:\n                        IF UpLimitSwitch THEN\n                            AutoStep := 4;\n                        ELSE\n                            MoveUp := TRUE;\n                        END_IF;\n\n                    4:\n                        IF RightLimitSwitch THEN\n                            AutoStep := 5;\n                        ELSE\n                            MoveRight := TRUE;\n                        END_IF;\n\n                    5:\n                        IF DownLimitSwitch THEN\n                            AutoStep := 6;\n                        ELSE\n                            MoveDown := TRUE;\n                        END_IF;\n\n                    6:\n                        IF ReleaseLimitSwitch THEN\n                            AutoStep := 7;\n                        ELSE\n                            ActivateRelease := TRUE;\n                        END_IF;\n\n                    7:\n                        IF UpLimitSwitch THEN\n                            AutoStep := 8;\n                        ELSE\n                            MoveUp := TRUE;\n                        END_IF;\n\n                    8:\n                        IF LeftLimitSwitch THEN\n                            AutoRunning := FALSE;\n                            AutoStep := 1;\n                        ELSE\n                            MoveLeft := TRUE;\n                        END_IF;\n\n                    ELSE\n                        AutoRunning := FALSE;\n                        AutoStep := 1;\n                END_CASE;\n            END_IF;\n\n        ELSIF ContinuousMode THEN\n            (* Run the single-cycle handling sequence continuously. *)\n            StepActionActive := FALSE;\n            ManualGripLatch := FALSE;\n            ManualReleaseLatch := FALSE;\n\n            IF StartAccepted AND NOT AutoRunning THEN\n                AutoRunning := TRUE;\n                AutoStep := 1;\n            END_IF;\n\n            IF AutoRunning THEN\n                CASE AutoStep OF\n                    1:\n                        IF DownLimitSwitch THEN\n                            AutoStep := 2;\n                        ELSE\n                            MoveDown := TRUE;\n                        END_IF;\n\n                    2:\n                        IF GripLimitSwitch THEN\n                            AutoStep := 3;\n                        ELSE\n                            ActivateGrip := TRUE;\n                        END_IF;\n\n                    3:\n                        IF UpLimitSwitch THEN\n                            AutoStep := 4;\n                        ELSE\n                            MoveUp := TRUE;\n                        END_IF;\n\n                    4:\n                        IF RightLimitSwitch THEN\n                            AutoStep := 5;\n                        ELSE\n                            MoveRight := TRUE;\n                        END_IF;\n\n                    5:\n                        IF DownLimitSwitch THEN\n                            AutoStep := 6;\n                        ELSE\n                            MoveDown := TRUE;\n                        END_IF;\n\n                    6:\n                        IF ReleaseLimitSwitch THEN\n                            AutoStep := 7;\n                        ELSE\n                            ActivateRelease := TRUE;\n                        END_IF;\n\n                    7:\n                        IF UpLimitSwitch THEN\n                            AutoStep := 8;\n                        ELSE\n                            MoveUp := TRUE;\n                        END_IF;\n\n                    8:\n                        IF LeftLimitSwitch THEN\n                            AutoStep := 1;\n                        ELSE\n                            MoveLeft := TRUE;\n                        END_IF;\n\n                    ELSE\n                        AutoStep := 1;\n                END_CASE;\n            END_IF;\n\n        ELSE\n            (* No valid mode selected: hold all outputs false. *)\n            AutoRunning := FALSE;\n            StepActionActive := FALSE;\n            ManualGripLatch := FALSE;\n            ManualReleaseLatch := FALSE;\n        END_IF;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "fail",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.406,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 31,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 59,
+          "message": "需要程序名、函数或功能块实例替代 'StartTrig'",
+          "raw": "需要程序名、函数或功能块实例替代 'StartTrig'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 90,
+          "message": "不能将类型 '未知的类型: '(StartTrig.Q AND NOT(StartBlocked))'' 转换为类型'BOOL'",
+          "raw": "不能将类型 '未知的类型: '(StartTrig.Q AND NOT(StartBlocked))'' 转换为类型'BOOL'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 90,
+          "message": "未知的类型: 'StartTrig.Q'",
+          "raw": "未知的类型: 'StartTrig.Q'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 90,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 90,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        }
+      ],
+      "elapsed_s": 35.609,
+      "evidence_kind": "live"
+    },
+    "errors": [
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 31,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 59,
+        "message": "需要程序名、函数或功能块实例替代 'StartTrig'",
+        "raw": "需要程序名、函数或功能块实例替代 'StartTrig'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 90,
+        "message": "不能将类型 '未知的类型: '(StartTrig.Q AND NOT(StartBlocked))'' 转换为类型'BOOL'",
+        "raw": "不能将类型 '未知的类型: '(StartTrig.Q AND NOT(StartBlocked))'' 转换为类型'BOOL'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 90,
+        "message": "未知的类型: 'StartTrig.Q'",
+        "raw": "未知的类型: 'StartTrig.Q'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 90,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 90,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      }
+    ],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "skipped",
+    "total": 0,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": []
+  },
+  "repair_rounds": 0,
+  "token_count": 23008,
+  "tag": "candidate_1"
+}

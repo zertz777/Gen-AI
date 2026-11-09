@@ -1,0 +1,4 @@
+case_id,cycle,AlarmLamp,TripOutput,Status
+S10-01,1,TRUE,FALSE,16#0001
+S10-01,2,TRUE,FALSE,16#0001
+S10-01,3,FALSE,FALSE,16#0000

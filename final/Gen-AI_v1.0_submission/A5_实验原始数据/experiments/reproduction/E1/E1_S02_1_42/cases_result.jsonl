@@ -1,0 +1,6 @@
+{"task_id": "S02", "case_id": "S02-01", "status": "fail", "mismatch": {"cycle": 3, "variable": "RunLamp", "expected": false, "actual": true}, "latency_s": 0.001}
+{"task_id": "S02", "case_id": "S02-02", "status": "fail", "mismatch": {"cycle": 2, "variable": "MotorRev", "expected": false, "actual": true}, "latency_s": 0.001}
+{"task_id": "S02", "case_id": "S02-03", "status": "pass", "mismatch": null, "latency_s": 0.001}
+{"task_id": "S02", "case_id": "S02-04", "status": "fail", "mismatch": {"cycle": 3, "variable": "MotorFwd", "expected": false, "actual": true}, "latency_s": 0.001}
+{"task_id": "S02", "case_id": "S02-05", "status": "fail", "mismatch": {"cycle": 1, "variable": "RunLamp", "expected": false, "actual": true}, "latency_s": 0.001}
+{"task_id": "S02", "case_id": "S02-06", "status": "fail", "mismatch": {"cycle": 1, "variable": "RunLamp", "expected": true, "actual": false}, "latency_s": 0.001}

@@ -1,0 +1,39 @@
+{
+  "source": "FUNCTION_BLOCK FB_P09\nVAR_INPUT\n    cyclicExecution : BOOL;\n    trigger : BOOL;\n    value : LREAL;\n    windowSize : INT;\n    reset : BOOL;\nEND_VAR\nVAR_OUTPUT\n    average : LREAL := 0.0;\n    windowSizeReached : BOOL := FALSE;\n    error : BOOL := FALSE;\n    status : WORD := 16#0000;\nEND_VAR\nVAR\n    samples : ARRAY[0..99] OF LREAL;\n    writeIndex : INT := 0;\n    sampleCount : INT := 0;\n    previousTrigger : BOOL := FALSE;\n    triggerRise : BOOL;\n    validWindow : BOOL;\n    acquire : BOOL;\n    readIndex : INT;\n    i : INT;\n    divisor : LREAL;\n    meanValue : LREAL;\nEND_VAR\n\n(*\n    待审语义冲突：\n    C10 若约束上电后的实际扫描输出始终为零且无错误，则与首扫描\n    cyclicExecution=TRUE 时 K1 的采样要求，以及非法 windowSize 时\n    K3 的立即报错要求不能同时满足。\n    本实现保留指定的声明初态；实际扫描执行 K1、K3、K4，\n    不通过跳过首扫描来声称满足 C10。\n\n    reset 与非法 windowSize 同时出现时，清空内部窗口并清除满标志，\n    但按 K3 保持 average；这与将 reset 理解为无条件输出零存在冲突，\n    留待需求确认。\n\n    窗口在线变更未给出规则。本实现采用保留已有最新样本的处理：\n    缩小时丢弃超出新长度的最旧样本；扩大时不恢复已丢弃样本。\n    该处理属于待审实现约定，并非新增的外部接口要求。\n    未声称经过编译或逐周期功能验证。\n*)\n\ntriggerRise := trigger AND NOT previousTrigger;\npreviousTrigger := trigger;\n\nvalidWindow := (windowSize >= 1) AND (windowSize <= 100);\nerror := NOT validWindow;\n\nIF validWindow THEN\n    status := 16#0000;\nELSE\n    status := 16#8200;\nEND_IF;\n\nIF reset THEN\n    writeIndex := 0;\n    sampleCount := 0;\n    windowSizeReached := FALSE;\n\n    FOR i := 0 TO 99 DO\n        samples[i] := 0.0;\n    END_FOR;\n\n    IF validWindow THEN\n        average := 0.0;\n    END_IF;\n\nELSIF NOT validWindow THEN\n    (* 非法长度时不采样、不改变 average；保证 C2。 *)\n    windowSizeReached := FALSE;\n\nELSE\n    IF sampleCount > windowSize THEN\n        sampleCount := windowSize;\n    END_IF;\n\n    acquire := cyclicExecution OR\n               ((NOT cyclicExecution) AND triggerRise);\n\n    IF acquire THEN\n        samples[writeIndex] := value;\n\n        writeIndex := writeIndex + 1;\n        IF writeIndex >= 100 THEN\n            writeIndex := 0;\n        END_IF;\n\n        IF sampleCount < windowSize THEN\n            sampleCount := sampleCount + 1;\n        END_IF;\n    END_IF;\n\n    IF sampleCount = 0 THEN\n        average := 0.0;\n    ELSE\n        (* 先除以样本数，避免先累加原始值造成不必要的溢出。 *)\n        divisor := INT_TO_LREAL(sampleCount);\n        meanValue := 0.0;\n        readIndex := writeIndex;\n\n        FOR i := 1 TO sampleCount DO\n            readIndex := readIndex - 1;\n            IF readIndex < 0 THEN\n                readIndex := 99;\n            END_IF;\n            meanValue := meanValue + (samples[readIndex] / divisor);\n        END_FOR;\n\n        average := meanValue;\n    END_IF;\n\n    windowSizeReached := (sampleCount = windowSize);\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.875,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P09-01",
+      "P09-02",
+      "P09-03",
+      "P09-04",
+      "P09-05",
+      "P09-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3070,
+  "tag": "candidate_1"
+}

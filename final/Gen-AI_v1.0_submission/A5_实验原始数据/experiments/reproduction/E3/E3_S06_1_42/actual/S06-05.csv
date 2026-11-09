@@ -1,0 +1,3 @@
+case_id,cycle,HeatOn,FanOn,OverTempAlarm,LoadReduce,Status
+S06-05,1,FALSE,FALSE,FALSE,FALSE,16#0000
+S06-05,2,FALSE,FALSE,FALSE,FALSE,16#0000

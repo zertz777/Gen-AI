@@ -1,0 +1,3 @@
+.\validation\matiec_live_r2\task_P18_skeleton\source.st:12-12..12-19: error: invalid variable(s) declaration.
+.\validation\matiec_live_r2\task_P18_skeleton\source.st:13-5..13-20: error: invalid variable(s) declaration.
+.\validation\matiec_live_r2\task_P18_skeleton\source.st:12-5..12-18: error: unexpected token after 'VAR_IN_OUT' in in_out variable(s) declaration.

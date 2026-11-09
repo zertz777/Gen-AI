@@ -1,0 +1,85 @@
+{
+  "source": "FUNCTION_BLOCK FB_P18\nVAR_INPUT\n    enqueue : BOOL;\n    dequeue : BOOL;\n    reset : BOOL;\nEND_VAR\nVAR_OUTPUT\n    elementCount : DINT := 0;\n    status : WORD := 16#0000;\nEND_VAR\nVAR_IN_OUT\n    item : INT;\n    buffer : ARRAY[*] OF INT;\nEND_VAR\nVAR\n    initialized : BOOL := FALSE;\n    previousEnqueue : BOOL := FALSE;\n    previousDequeue : BOOL := FALSE;\n    enqueueEdge : BOOL;\n    dequeueEdge : BOOL;\n    head : DINT := 0;\n    tail : DINT := 0;\n    lowerIndex : DINT;\n    upperIndex : DINT;\n    capacity : DINT;\nEND_VAR\n\n(*\n    编译profile须支持VAR_IN_OUT开放数组及LOWER_BOUND/UPPER_BOUND。\n    本源码未经过编译或逐周期测试验证。\n\n    待审语义冲突：\n    首次调用若enqueue=TRUE且reset=FALSE，K2要求入队，\n    而C10要求该调用输出elementCount=0；两者不能同时满足。\n    本实现先建立空队列初态，再执行该调用的上升沿操作，\n    因而上述输入下遵循K2，但不满足C10的当拍输出断言。\n    此冲突仍待需求方裁定。\n\n    调用方须提供非空数组，且容量须能由DINT表示；\n    同一队列存续期间须保持绑定的缓冲区及其边界不变。\n    同时请求入队和出队违反调用方前置条件：\n    本实现不执行操作，不新增未定义的状态码。\n*)\n\nlowerIndex := LOWER_BOUND(buffer, 1);\nupperIndex := UPPER_BOUND(buffer, 1);\ncapacity := upperIndex - lowerIndex + 1;\n\nIF NOT initialized THEN\n    head := 0;\n    tail := 0;\n    elementCount := 0;\n    previousEnqueue := FALSE;\n    previousDequeue := FALSE;\n    initialized := TRUE;\nEND_IF;\n\nenqueueEdge := enqueue AND NOT previousEnqueue;\ndequeueEdge := dequeue AND NOT previousDequeue;\n\n(* 复位期间也采样输入，避免持续高电平在复位释放后重复触发。 *)\npreviousEnqueue := enqueue;\npreviousDequeue := dequeue;\n\nstatus := 16#0000;\n\nIF reset THEN\n    head := 0;\n    tail := 0;\n    elementCount := 0;\n\nELSIF enqueue AND dequeue THEN\n    (* 非法的同时请求：保持队列、缓冲区及item。 *)\n\nELSIF enqueueEdge THEN\n    IF elementCount = capacity THEN\n        status := 16#8002;\n    ELSE\n        buffer[lowerIndex + tail] := item;\n        IF tail = capacity - 1 THEN\n            tail := 0;\n        ELSE\n            tail := tail + 1;\n        END_IF;\n        elementCount := elementCount + 1;\n    END_IF;\n\nELSIF dequeueEdge THEN\n    IF elementCount = 0 THEN\n        status := 16#8001;\n    ELSE\n        item := buffer[lowerIndex + head];\n        IF head = capacity - 1 THEN\n            head := 0;\n        ELSE\n            head := head + 1;\n        END_IF;\n        elementCount := elementCount - 1;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 13,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P18_1_42\\tools\\candidate_1\\fast\\source.st:13-20..13-20: error: invalid subrange list defined in array specification.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P18_1_42\\tools\\candidate_1\\fast\\source.st:13-20..13-20: error: invalid subrange list defined in array specification."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 45,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P18_1_42\\tools\\candidate_1\\fast\\source.st:45-26..45-27: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P18_1_42\\tools\\candidate_1\\fast\\source.st:45-26..45-27: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 45,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P18_1_42\\tools\\candidate_1\\fast\\source.st:45-27..45-37: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P18_1_42\\tools\\candidate_1\\fast\\source.st:45-27..45-37: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 46,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P18_1_42\\tools\\candidate_1\\fast\\source.st:46-25..46-26: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P18_1_42\\tools\\candidate_1\\fast\\source.st:46-25..46-26: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 46,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P18_1_42\\tools\\candidate_1\\fast\\source.st:46-26..46-36: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P18_1_42\\tools\\candidate_1\\fast\\source.st:46-26..46-36: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 75,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P18_1_42\\tools\\candidate_1\\fast\\source.st:75-1..75-5: error: invalid statement list in 'ELSEIF' statement of ST 'IF' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P18_1_42\\tools\\candidate_1\\fast\\source.st:75-1..75-5: error: invalid statement list in 'ELSEIF' statement of ST 'IF' statement."
+        }
+      ],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 34.89,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 9,
+    "passed": 9,
+    "passed_ids": [
+      "P18-01",
+      "P18-02",
+      "P18-03",
+      "P18-04",
+      "P18-05",
+      "P18-06",
+      "P18-07",
+      "P18-08",
+      "P18-09"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 2871,
+  "tag": "candidate_1"
+}

@@ -1,0 +1,24 @@
+{
+  "execution_mode": "fixture",
+  "eligible_for_experiments": false,
+  "status": "completed",
+  "failure_reason": null,
+  "first_compile_status": "fail",
+  "selected_candidate": "repair_1",
+  "semantic_warnings": [
+    {
+      "code": "DATA_P17_STATUS_CONFLICT",
+      "message": "英文需求删除/修改不存在编号分别返回16#8004/16#8005；K3统一要求16#8001。请先确认统一判据。",
+      "evidence": [
+        "requirement 第4/5项",
+        "constraints K3"
+      ]
+    }
+  ],
+  "degraded": true,
+  "environment_blockers": [],
+  "fingerprint": "4b5020f835f847611fa3a901783f12623e4030f2563d6daf35595555990323b2",
+  "seed_sent_to_api": false,
+  "tokens_estimate_upper_bound": 45801,
+  "tool_verify_status": "skipped"
+}

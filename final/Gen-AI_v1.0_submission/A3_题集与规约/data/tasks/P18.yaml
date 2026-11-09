@@ -1,0 +1,64 @@
+task_id: P18
+title: FIFO First-In-First-Out Queue
+difficulty: hard
+category: B
+requirement: |-
+  Write a function block FB implementing a First-In-First-Out (FIFO) circular queue. Derive the queue capacity and element type from the caller-supplied buffer.
+
+  1. Each rising edge of enqueue requests one enqueue operation. If the queue is not full, append the current item value to its tail.
+  2. Each rising edge of dequeue requests one dequeue operation. If the queue is not empty, remove its front element and write that value back to item. The caller must not request enqueue and dequeue in the same invocation.
+  3. When reset is TRUE, empty the queue and set elementCount to zero. Reset takes priority over enqueue and dequeue; stored buffer values need not be overwritten.
+  4. Output the current number of valid elements through elementCount. Zero means the queue is empty; a count equal to the actual buffer array length means it is full.
+  5. Reject a dequeue request on an empty queue or an enqueue request on a full queue. Leave the queue and item unchanged and report the reason through status.
+  6. The queue is empty on its first invocation. Define head and tail positions and other internal state within the implementation; do not expose them as interface parameters.
+
+  Status codes:
+
+  - 16#0000: No error in this invocation, including idle, reset and successful operations.
+  - 16#8001: The dequeue request was rejected because the queue is empty.
+  - 16#8002: The enqueue request was rejected because the queue is full.
+
+  中文摘要：FIFO 环形队列：入队/出队按上升沿各触发一次，reset 优先清空，空队出队或满队入队被拒绝并给出状态码。
+
+  扫描周期：20 ms（全组统一，见 docs/tasks_note.md）
+io_table:
+  - direction: IN
+    name: enqueue
+    data_type: BOOL
+    description: Enqueue request; one operation per rising edge.
+  - direction: IN
+    name: dequeue
+    data_type: BOOL
+    description: Dequeue request; one operation per rising edge.
+  - direction: IN
+    name: reset
+    data_type: BOOL
+    description: TRUE resets the queue to empty; takes priority over enqueue and dequeue.
+  - direction: OUT
+    name: elementCount
+    data_type: DINT
+    description: Current number of valid elements, from zero through the queue capacity.
+  - direction: OUT
+    name: status
+    data_type: WORD
+    description: "Invocation status: 16#0000 no error, 16#8001 dequeue from an empty queue, 16#8002 enqueue into a full queue."
+  - direction: INOUT
+    name: item
+    data_type: VARIANT
+    description: "Mutable scalar reference: read its value when enqueuing; write the removed front value on successful dequeue. Its concrete type must match the array element type."
+  - direction: INOUT
+    name: buffer
+    data_type: VARIANT
+    description: Reference to a nonempty one-dimensional array with a single concrete element type, used as queue storage. Capacity is the actual array length.
+initial_state: "队列为空：head = tail = 0；elementCount = 0；status = 16#0000；首次调用视为空队列。"
+constraints:
+  - K1 reset = TRUE 时清空队列并把 elementCount 置 0，其优先级高于同一周期的入队与出队请求。
+  - K2 enqueue 的每个上升沿在队列未满时把 item 追加到队尾；dequeue 的每个上升沿在队列非空时取出队首并写回 item。
+  - K3 队列满时入队被拒绝、队列空时出队被拒绝，队列内容与 item 均保持不变，并通过 status 报告原因。
+  - K4 elementCount 必须等于当前有效元素数：0 表示空，等于缓冲区长度表示满。
+provenance: 课程公共题库 P18（FIFO First-In-First-Out Queue）；原文导入、变量名与需求未做任何改动；来源与审核记录见 data/provenance.csv 第 19 行
+spec_ref: data/specs/P18.ltl
+error_examples:
+  - 错误实现：满队时仍写入并前移尾指针。症状——队首元素被悄悄覆盖，出队顺序错乱。
+  - 错误实现：reset 只清 elementCount 不清 head/tail。症状——复位后第一次入队写到了旧位置，读出的元素是上一次的残留值。
+notes: "item/buffer 在官方接口里声明为 VARIANT；本机 CODESYS 3.5.22.40 不识别该类型、无法直接编译，实验时按 INT 等价实例化（item: INT、buffer: ARRAY[*] OF INT），语义与判据不变。"

@@ -1,0 +1,80 @@
+{
+  "source": "FUNCTION_BLOCK FB_P16\nVAR_INPUT\n    processLength : USINT;\n    sensor1 : BOOL;\n    sensor2 : BOOL;\n    sensor3 : BOOL;\n    sensor4 : BOOL;\n    sensor5 : BOOL;\n    station1Start : BOOL;\n    station2Complete : BOOL;\n    station3Complete : BOOL;\n    station4Complete : BOOL;\n    processSequence : ARRAY[1..8] OF USINT;\nEND_VAR\nVAR_OUTPUT\n    conveyorLeft : BOOL := FALSE;\n    conveyorRight : BOOL := FALSE;\nEND_VAR\nVAR\n    (* State: 0 = idle, 1 = transporting, 2 = processing, 3 = error. *)\n    state : USINT := 0;\n    stepIndex : INT := 0;\n    currentStation : USINT := 1;\n    targetStation : USINT := 0;\n    activeLength : INT := 0;\n    activeSequence : ARRAY[1..8] OF USINT;\n\n    errorLatched : BOOL := FALSE;\n    invalidSequence : BOOL;\n    inputLength : INT;\n    i : INT;\n\n    previousStart : BOOL := FALSE;\n    startEdge : BOOL;\n    pendingStart : BOOL := FALSE;\n\n    startupScans : USINT := 0;\n    startupBlocked : BOOL;\n    rightInhibitScans : USINT := 0;\n\n    targetPresent : BOOL;\n    currentPresent : BOOL;\n    currentComplete : BOOL;\nEND_VAR\n\n(* Each invocation is one 20 ms scan.\n   C10 is interpreted literally: both first scans have stopped outputs.\n   C9 is rolling: every left-output scan inhibits right for the next\n   ten scans, not merely for ten scans following a rising edge.\n   No reset input is provided; an error remains latched for this instance.\n   Compilation and per-scan functional verification are not claimed. *)\n\nconveyorLeft := FALSE;\nconveyorRight := FALSE;\n\nstartEdge := station1Start AND NOT previousStart;\npreviousStart := station1Start;\n\nstartupBlocked := startupScans < 2;\nIF startupBlocked THEN\n    startupScans := startupScans + 1;\nEND_IF;\n\n(* Validate before indexing. Also enforce the supplied sequence contract:\n   intermediate entries are processing stations; the last entry is 5. *)\ninputLength := USINT_TO_INT(processLength);\ninvalidSequence := (inputLength < 1) OR (inputLength > 8);\n\nIF NOT invalidSequence THEN\n    FOR i := 1 TO inputLength DO\n        IF (processSequence[i] < 1) OR (processSequence[i] > 5) THEN\n            invalidSequence := TRUE;\n        END_IF;\n\n        IF i < inputLength THEN\n            IF (processSequence[i] < 2) OR (processSequence[i] > 4) THEN\n                invalidSequence := TRUE;\n            END_IF;\n        ELSE\n            IF processSequence[i] <> 5 THEN\n                invalidSequence := TRUE;\n            END_IF;\n        END_IF;\n    END_FOR;\nEND_IF;\n\nIF invalidSequence THEN\n    errorLatched := TRUE;\nEND_IF;\n\nIF errorLatched THEN\n    state := 3;\n    pendingStart := FALSE;\nELSE\n    (* Capture a qualified start during the startup output hold as well. *)\n    IF (state = 0) AND startEdge AND sensor1 THEN\n        pendingStart := TRUE;\n    END_IF;\n\n    IF NOT startupBlocked THEN\n        CASE state OF\n            0:\n                IF pendingStart THEN\n                    pendingStart := FALSE;\n                    IF sensor1 THEN\n                        (* Snapshot the recipe for this product. *)\n                        activeLength := inputLength;\n                        FOR i := 1 TO activeLength DO\n                            activeSequence[i] := processSequence[i];\n                        END_FOR;\n                        stepIndex := 1;\n                        currentStation := 1;\n                        targetStation := activeSequence[stepIndex];\n                        state := 1;\n                    END_IF;\n                END_IF;\n\n            1:\n                (* Transport and arrival are handled below. *)\n\n            2:\n                currentPresent := FALSE;\n                currentComplete := FALSE;\n\n                CASE currentStation OF\n                    2:\n                        currentPresent := sensor2;\n                        currentComplete := station2Complete;\n                    3:\n                        currentPresent := sensor3;\n                        currentComplete := station3Complete;\n                    4:\n                        currentPresent := sensor4;\n                        currentComplete := station4Complete;\n                END_CASE;\n\n                (* Completion is a level-qualified signal; arrival alone\n                   never authorizes departure from a processing station. *)\n                IF currentPresent AND currentComplete THEN\n                    IF (stepIndex >= 1) AND\n                       (stepIndex < activeLength) THEN\n                        stepIndex := stepIndex + 1;\n                        targetStation := activeSequence[stepIndex];\n                        state := 1;\n                    ELSE\n                        errorLatched := TRUE;\n                        state := 3;\n                    END_IF;\n                END_IF;\n\n            ELSE\n                errorLatched := TRUE;\n                state := 3;\n        END_CASE;\n\n        IF (state = 1) AND NOT errorLatched THEN\n            targetPresent := FALSE;\n            CASE targetStation OF\n                2: targetPresent := sensor2;\n                3: targetPresent := sensor3;\n                4: targetPresent := sensor4;\n                5: targetPresent := sensor5;\n                ELSE\n                    errorLatched := TRUE;\n                    state := 3;\n            END_CASE;\n\n            IF NOT errorLatched THEN\n                IF targetPresent THEN\n                    (* Arrival has priority over motor energization. *)\n                    currentStation := targetStation;\n                    IF targetStation = 5 THEN\n                        state := 0;\n                        stepIndex := 0;\n                        activeLength := 0;\n                    ELSE\n                        state := 2;\n                    END_IF;\n                ELSIF targetStation < currentStation THEN\n                    conveyorLeft := TRUE;\n                ELSIF targetStation > currentStation THEN\n                    IF rightInhibitScans = 0 THEN\n                        conveyorRight := TRUE;\n                    END_IF;\n                ELSE\n                    (* A repeated station requires its sensor to be present;\n                       no direction is meaningful until it is present. *)\n                    conveyorLeft := FALSE;\n                    conveyorRight := FALSE;\n                END_IF;\n            END_IF;\n        END_IF;\n    END_IF;\nEND_IF;\n\n(* Final safety override. *)\nIF errorLatched OR startupBlocked THEN\n    conveyorLeft := FALSE;\n    conveyorRight := FALSE;\nEND_IF;\n\n(* Update after permission evaluation: the tenth scan following the\n   last left scan is still inhibited; right is permitted on the eleventh. *)\nIF conveyorLeft THEN\n    rightInhibitScans := 10;\nELSIF rightInhibitScans > 0 THEN\n    rightInhibitScans := rightInhibitScans - 1;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 121,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P16_1_42\\tools\\candidate_2\\fast\\source.st:121-13..121-13: error: invalid statement in case element of ST 'CASE' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P16_1_42\\tools\\candidate_2\\fast\\source.st:121-13..121-13: error: invalid statement in case element of ST 'CASE' statement."
+        }
+      ],
+      "elapsed_s": 0.172,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.109,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 8,
+    "passed": 3,
+    "passed_ids": [
+      "P16-03",
+      "P16-05",
+      "P16-06"
+    ],
+    "failures": [
+      {
+        "case_id": "P16-01",
+        "cycle": 1,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P16-02",
+        "cycle": 1,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P16-04",
+        "cycle": 1,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P16-07",
+        "cycle": 2,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P16-08",
+        "cycle": 1,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3985,
+  "tag": "candidate_2"
+}

@@ -1,0 +1,137 @@
+{
+  "task_id": "S01",
+  "title": "双工位气动夹具互锁",
+  "difficulty": "easy",
+  "category": "A",
+  "requirement": "双工位气动夹具用于同时定位两个零件，但气源只有一路，因此两个夹具不能同时动作。\n\n控制要求：\n1. StartBtn 为上升沿触发：若左工位有零件（LeftPartPresent = TRUE）而右夹具未在夹紧，则左夹具 ClampLeft 夹紧；右侧对称。\n2. 夹紧动作只做一次保持，不随 StartBtn 电平反复动作；要松开必须由同一按钮在另一工位动作时自动让位（即后启动的工位会等待）。\n3. 任一工位没有零件（对应 PartPresent = FALSE）时，该侧不允许夹紧。\n4. EStop_NC = FALSE（急停）时两侧夹具立即松开，ClampLeft 与 ClampRight 同时为 FALSE，并清空忙标志。\n5. 任一时刻 ClampLeft 与 ClampRight 不得同时为 TRUE。\n6. Busy 表示当前已有工位在夹紧过程中；Status 输出 16#0000 正常、16#8101 两侧同时请求、16#8102 急停中。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）",
+  "io_table": [
+    {
+      "direction": "IN",
+      "name": "StartBtn",
+      "data_type": "BOOL",
+      "description": "启动按钮（上升沿有效）"
+    },
+    {
+      "direction": "IN",
+      "name": "LeftPartPresent",
+      "data_type": "BOOL",
+      "description": "左工位零件到位"
+    },
+    {
+      "direction": "IN",
+      "name": "RightPartPresent",
+      "data_type": "BOOL",
+      "description": "右工位零件到位"
+    },
+    {
+      "direction": "IN",
+      "name": "EStop_NC",
+      "data_type": "BOOL",
+      "description": "急停常闭触点，TRUE = 正常"
+    },
+    {
+      "direction": "OUT",
+      "name": "ClampLeft",
+      "data_type": "BOOL",
+      "description": "左夹具夹紧输出"
+    },
+    {
+      "direction": "OUT",
+      "name": "ClampRight",
+      "data_type": "BOOL",
+      "description": "右夹具夹紧输出"
+    },
+    {
+      "direction": "OUT",
+      "name": "Busy",
+      "data_type": "BOOL",
+      "description": "有工位正在夹紧"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "状态码"
+    }
+  ],
+  "initial_state": "ClampLeft = FALSE；ClampRight = FALSE；Busy = FALSE；Status = 16#0000；内部上升沿寄存器 StartBtnLast = FALSE。",
+  "constraints": [
+    "K1 ClampLeft 与 ClampRight 不得同时为 TRUE（互斥）。",
+    "K2 只有在对应工位零件到位且急停正常时，才允许该侧夹紧。",
+    "K3 夹紧由 StartBtn 上升沿触发一次，按住不放不得重复触发。",
+    "K4 EStop_NC = FALSE 时两侧输出立即清零，忙标志清除。"
+  ],
+  "provenance": "改编自公开题（P05 Weld Gap Alarm and Startup Inhibition（课程题库））；改编点：把「间隙超限才允许报警」的启动抑制结构，改造成「两工位互斥夹紧」；去掉焊缝工艺，改为通用气动工位；为什么这样改：原始结构证明了「多个使能条件必须同时成立」的写法，而夹具互斥是 PLC 现场最常见的安全约束，适合作为最简变体；来源与审核记录见 data/provenance.csv 第 22 行",
+  "spec_ref": "data/specs/S01.ltl",
+  "error_examples": [
+    "错误实现：ClampLeft := StartBtn AND LeftPartPresent；ClampRight := StartBtn AND RightPartPresent。症状——两侧同时夹紧，气源压力跌落，两个夹具都夹不到底。",
+    "错误实现：用 StartBtn 的电平而不是上升沿。症状——按住按钮期间夹具每周期翻转，气缸发出连续的排气声。"
+  ],
+  "notes": "",
+  "spec_text": "# task: S01\n# meta: easy / A 开关量联锁\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(!EStop_NC -> (!ClampLeft && !ClampRight))    -- 急停当周期两侧夹具必须松开（K4）\nC2: G(ClampLeft -> LeftPartPresent)    -- 夹紧的前提是对应工位有零件（左侧）（K2）\nC2b: G(ClampRight -> RightPartPresent)    -- 夹紧的前提是对应工位有零件（右侧）（K2）\nC4: G(!(ClampLeft && ClampRight))    -- 两侧夹具互斥（共用一路气源）（K1）\nC10: G[0,1](!ClampLeft && !ClampRight && !Busy)    -- 上电首周期两侧不夹紧、不忙（初态）\n",
+  "spec_sha256": "fc7c44b99f84be149228c29082cfcbb1b1f849377080bfadc8322ea2b94322bf",
+  "task_version": "bda4dc55",
+  "task_sha256": "bda4dc55eba84c60b02032ec6334824848e6cbc558eabb01df477ff1e2004beb",
+  "source_path": "data/tasks/S01.yaml",
+  "degraded": false,
+  "missing_fields": [],
+  "warnings": [],
+  "semantic_warnings": [],
+  "interface_io_table": [
+    {
+      "direction": "IN",
+      "name": "StartBtn",
+      "data_type": "BOOL",
+      "description": "启动按钮（上升沿有效）"
+    },
+    {
+      "direction": "IN",
+      "name": "LeftPartPresent",
+      "data_type": "BOOL",
+      "description": "左工位零件到位"
+    },
+    {
+      "direction": "IN",
+      "name": "RightPartPresent",
+      "data_type": "BOOL",
+      "description": "右工位零件到位"
+    },
+    {
+      "direction": "IN",
+      "name": "EStop_NC",
+      "data_type": "BOOL",
+      "description": "急停常闭触点，TRUE = 正常"
+    },
+    {
+      "direction": "OUT",
+      "name": "ClampLeft",
+      "data_type": "BOOL",
+      "description": "左夹具夹紧输出"
+    },
+    {
+      "direction": "OUT",
+      "name": "ClampRight",
+      "data_type": "BOOL",
+      "description": "右夹具夹紧输出"
+    },
+    {
+      "direction": "OUT",
+      "name": "Busy",
+      "data_type": "BOOL",
+      "description": "有工位正在夹紧"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "状态码"
+    }
+  ],
+  "type_declarations": "",
+  "type_origins": {},
+  "pou_name": "FB_S01",
+  "pou_kind": "FUNCTION_BLOCK",
+  "dialect_requirements": [],
+  "skeleton_compiled": false,
+  "scan_cycle_ms": 20
+}

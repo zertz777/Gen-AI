@@ -1,0 +1,3 @@
+case_id,cycle,MotorForward,MotorReverse,CompletionLight
+P11-05,1,FALSE,FALSE,FALSE
+P11-05,2,FALSE,FALSE,FALSE

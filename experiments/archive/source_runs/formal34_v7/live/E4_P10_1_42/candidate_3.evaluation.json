@@ -1,0 +1,68 @@
+{
+  "source": "FUNCTION_BLOCK FB_P10\nVAR_INPUT\n    TemperatureSensorInput : REAL;\n    SetTemperature : REAL;\nEND_VAR\nVAR_OUTPUT\n    CurrentTemperature : REAL;\n    SetTempDisplay : REAL;\n    HeaterStatus : BOOL := FALSE;\n    OverheatProtection : BOOL := FALSE;\n    HeaterOutput : BOOL := FALSE;\nEND_VAR\nVAR\n    StartupScans : UINT := 0;\n    HeatingScans : UINT := 0;\n    ProtectionScans : UINT := 0;\n    SensorFault : BOOL := FALSE;\n    PreviousSensorFault : BOOL := FALSE;\nEND_VAR\n\n(*\n    每次调用代表20 ms；计数记录上一输出实际保持的完整周期。\n    本源码未经过真实编译或逐周期功能验证。\n\n    规约冲突报告：\n    C9 为 G(P -> G[0,150](P))。保护保持期间，每个周期均再次\n    要求随后150周期保持保护，因此一旦触发，保护不能再解除。\n    这与需求所述等待3 s后解除保护的意图不一致。\n    本实现保留C9的字面安全约束，锁存保护，不擅自改写C9，\n    不新增复位接口。3 s计时完成不会解除该锁存，解除行为待审。\n\n    C10按形式化区间[0,1]实现：启动前两次调用关闭加热且无保护。\n    温度等于设定值时需求未指定切换，保持此前加热状态；\n    故障和过热保护始终优先。\n    C7/C7b要求故障后的下一周期关闭，故保留上一周期故障状态；\n    当前周期检测到故障也立即关闭。\n*)\n\nCurrentTemperature := TemperatureSensorInput;\nSetTempDisplay := SetTemperature;\n\nSensorFault := (TemperatureSensorInput < 0.0)\n            OR (TemperatureSensorInput > 100.0);\n\nIF StartupScans < 2 THEN\n    StartupScans := StartupScans + 1;\n    HeaterOutput := FALSE;\n    OverheatProtection := FALSE;\n    HeatingScans := 0;\n    ProtectionScans := 0;\nELSE\n    IF OverheatProtection THEN\n        HeaterOutput := FALSE;\n        HeatingScans := 0;\n\n        IF ProtectionScans < 150 THEN\n            ProtectionScans := ProtectionScans + 1;\n        END_IF;\n\n        (* C9要求继续锁存，即使已完成150个等待周期。 *)\n    ELSE\n        ProtectionScans := 0;\n\n        (* 上次输出为TRUE，表示已经完成一个20 ms加热周期。 *)\n        IF HeaterOutput THEN\n            IF HeatingScans < 251 THEN\n                HeatingScans := HeatingScans + 1;\n            END_IF;\n        ELSE\n            HeatingScans := 0;\n        END_IF;\n\n        (* “超过5 s”采用严格大于：251个完整周期为5.02 s。 *)\n        IF HeatingScans > 250 THEN\n            OverheatProtection := TRUE;\n            HeaterOutput := FALSE;\n            HeatingScans := 0;\n            ProtectionScans := 0;\n        ELSIF SensorFault OR PreviousSensorFault THEN\n            HeaterOutput := FALSE;\n            HeatingScans := 0;\n        ELSIF TemperatureSensorInput < SetTemperature THEN\n            HeaterOutput := TRUE;\n        ELSIF TemperatureSensorInput > SetTemperature THEN\n            HeaterOutput := FALSE;\n            HeatingScans := 0;\n        END_IF;\n    END_IF;\nEND_IF;\n\n(* 最终安全仲裁及状态显示。 *)\nIF OverheatProtection OR SensorFault OR PreviousSensorFault THEN\n    HeaterOutput := FALSE;\n    HeatingScans := 0;\nEND_IF;\n\nHeaterStatus := HeaterOutput;\nPreviousSensorFault := SensorFault;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 22.969,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 5,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "P10-01",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P10-02",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P10-03",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P10-04",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P10-05",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 2775,
+  "tag": "candidate_3"
+}

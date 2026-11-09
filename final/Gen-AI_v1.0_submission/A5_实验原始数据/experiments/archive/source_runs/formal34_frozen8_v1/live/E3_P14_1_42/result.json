@@ -1,0 +1,60 @@
+{
+  "run_id": "E3_P14_1_42",
+  "setting_id": "E3",
+  "framework": "self",
+  "model": "deepseek-v4.1-flash",
+  "task_id": "P14",
+  "task_version": "57db5684",
+  "repeat_idx": 1,
+  "seed": 42,
+  "start_ts": "2026-11-01T05:56:53.033354+00:00",
+  "latency_s": 321.875,
+  "candidates": 3,
+  "repair_rounds": 0,
+  "compile_status": "fail",
+  "compile_stage": "first",
+  "compile_errors": [
+    {
+      "code": "E_TYPE",
+      "severity": "error",
+      "line": 35,
+      "message": "不能将类型 '未知的类型: 'LEN(ipText)'' 转换为类型'INT'",
+      "raw": "不能将类型 '未知的类型: 'LEN(ipText)'' 转换为类型'INT'"
+    },
+    {
+      "code": "E_COMPILE",
+      "severity": "error",
+      "line": 35,
+      "message": "需要程序名、函数或功能块实例替代 'LEN'",
+      "raw": "需要程序名、函数或功能块实例替代 'LEN'"
+    },
+    {
+      "code": "E_TYPE",
+      "severity": "error",
+      "line": 39,
+      "message": "不能将类型 '未知的类型: 'MID(ipText, 1, i)'' 转换为类型'STRING(1)'",
+      "raw": "不能将类型 '未知的类型: 'MID(ipText, 1, i)'' 转换为类型'STRING(1)'"
+    },
+    {
+      "code": "E_UNDECLARED",
+      "severity": "error",
+      "line": 39,
+      "message": "没有定义标识符'MID' ",
+      "raw": "没有定义标识符'MID' "
+    },
+    {
+      "code": "E_COMPILE",
+      "severity": "error",
+      "line": 39,
+      "message": "需要程序名、函数或功能块实例替代 'MID'",
+      "raw": "需要程序名、函数或功能块实例替代 'MID'"
+    }
+  ],
+  "test_total": 0,
+  "test_passed": 0,
+  "verify_status": "skipped",
+  "final_status": "abandoned:budget",
+  "artifact_path": "live/E3_P14_1_42",
+  "tokens_in": 3850,
+  "tokens_out": 36354
+}

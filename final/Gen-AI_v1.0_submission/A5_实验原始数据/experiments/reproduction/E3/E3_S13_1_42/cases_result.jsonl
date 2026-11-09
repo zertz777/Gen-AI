@@ -1,0 +1,6 @@
+{"task_id": "S13", "case_id": "S13-01", "status": "fail", "mismatch": {"cycle": 1, "variable": "MainMotor", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "S13", "case_id": "S13-02", "status": "fail", "mismatch": {"cycle": 1, "variable": "MainMotor", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "S13", "case_id": "S13-03", "status": "fail", "mismatch": {"cycle": 1, "variable": "MainMotor", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "S13", "case_id": "S13-04", "status": "fail", "mismatch": {"cycle": 1, "variable": "MainMotor", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "S13", "case_id": "S13-05", "status": "fail", "mismatch": {"cycle": 1, "variable": "MainMotor", "expected": true, "actual": false}, "latency_s": 0.002}
+{"task_id": "S13", "case_id": "S13-06", "status": "pass", "mismatch": null, "latency_s": 0.002}

@@ -1,0 +1,3 @@
+case_id,cycle,hiAlarm,loAlarm,error,status
+P03-05,1,FALSE,FALSE,TRUE,16#8002
+P03-05,2,FALSE,FALSE,TRUE,16#8002

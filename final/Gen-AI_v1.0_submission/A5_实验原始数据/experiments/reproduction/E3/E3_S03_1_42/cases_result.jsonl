@@ -1,0 +1,4 @@
+{"task_id": "S03", "case_id": "S03-01", "status": "fail", "mismatch": {"cycle": 1, "variable": "DriveA_Run", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "S03", "case_id": "S03-02", "status": "fail", "mismatch": {"cycle": 1, "variable": "DriveA_Run", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "S03", "case_id": "S03-03", "status": "fail", "mismatch": {"cycle": 1, "variable": "DriveA_Run", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "S03", "case_id": "S03-04", "status": "fail", "mismatch": {"cycle": 1, "variable": "DriveA_Run", "expected": true, "actual": false}, "latency_s": 0.001}

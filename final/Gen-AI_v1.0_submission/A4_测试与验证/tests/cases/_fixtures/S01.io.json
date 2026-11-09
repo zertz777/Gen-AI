@@ -1,0 +1,45 @@
+{
+  "task_id": "S01",
+  "io": [
+    {
+      "name": "StartBtn",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "LeftPartPresent",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "RightPartPresent",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "EStop_NC",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "ClampLeft",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "ClampRight",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "Busy",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "Status",
+      "direction": "OUT",
+      "type": "WORD"
+    }
+  ]
+}

@@ -1,0 +1,171 @@
+{
+  "source": "FUNCTION_BLOCK FB_P19\nVAR_INPUT\n    ManualMode : BOOL;\n    SingleStepMode : BOOL;\n    SingleCycleMode : BOOL;\n    ContinuousMode : BOOL;\n    EmergencyStop : BOOL;\n    Start : BOOL;\n    DownButton : BOOL;\n    UpButton : BOOL;\n    LeftButton : BOOL;\n    RightButton : BOOL;\n    GripButton : BOOL;\n    ReleaseButton : BOOL;\n    DownLimitSwitch : BOOL;\n    UpLimitSwitch : BOOL;\n    LeftLimitSwitch : BOOL;\n    RightLimitSwitch : BOOL;\n    GripLimitSwitch : BOOL;\n    ReleaseLimitSwitch : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MoveDown : BOOL := FALSE;\n    MoveUp : BOOL := FALSE;\n    MoveLeft : BOOL := FALSE;\n    MoveRight : BOOL := FALSE;\n    ActivateGrip : BOOL := FALSE;\n    ActivateRelease : BOOL := FALSE;\nEND_VAR\nVAR\n    Initialized : BOOL := FALSE;\n    PreviousStart : BOOL := FALSE;\n    StartArmed : BOOL := FALSE;\n    StartPulse : BOOL := FALSE;\n    ModeCode : INT := 0;\n    PreviousMode : INT := 0;\n    ModeCount : INT := 0;\n    Step : INT := 1;\n    Running : BOOL := FALSE;\n    ActionComplete : BOOL := FALSE;\nEND_VAR\n\n(*\n    Each invocation is one 20 ms scan.\n\n    Semantic conflicts retained for review:\n    1. C6 unconditionally requires grip to remain active until its limit.\n       This conflicts with emergency stopping (C1/K4), manual button\n       release (K1), and switching out of the active mode (K2).\n       This implementation gives emergency stop, mode isolation and\n       manual button release priority. Automatic grip otherwise holds\n       until GripLimitSwitch.\n\n    2. C2 unconditionally requests MoveDown even if UpButton also requests\n       motion. Together with symmetric manual requirements this conflicts\n       with C4. Opposing simultaneous manual buttons inhibit both outputs.\n\n    3. C10 requires no output on the first scan, whereas C2 may require\n       MoveDown on that scan. First-scan output inhibition takes priority.\n\n    No compilation or cycle-by-cycle verification is claimed.\n*)\n\nMoveDown := FALSE;\nMoveUp := FALSE;\nMoveLeft := FALSE;\nMoveRight := FALSE;\nActivateGrip := FALSE;\nActivateRelease := FALSE;\nActionComplete := FALSE;\nStartPulse := FALSE;\n\nModeCode := 0;\nModeCount := 0;\n\nIF ManualMode THEN\n    ModeCount := ModeCount + 1;\n    ModeCode := 1;\nEND_IF;\nIF SingleStepMode THEN\n    ModeCount := ModeCount + 1;\n    ModeCode := 2;\nEND_IF;\nIF SingleCycleMode THEN\n    ModeCount := ModeCount + 1;\n    ModeCode := 3;\nEND_IF;\nIF ContinuousMode THEN\n    ModeCount := ModeCount + 1;\n    ModeCode := 4;\nEND_IF;\n\n(* Invalid selection is fail-safe; the caller normally selects one mode. *)\nIF ModeCount <> 1 THEN\n    ModeCode := 0;\nEND_IF;\n\nIF NOT Initialized THEN\n    (* C10: no action or automatic start is accepted on the first scan. *)\n    Initialized := TRUE;\n    Step := 1;\n    Running := FALSE;\n    StartArmed := EmergencyStop AND NOT Start;\n    PreviousMode := ModeCode;\n\nELSIF NOT EmergencyStop THEN\n    (* Highest priority: outputs already cleared for this scan. *)\n    Step := 1;\n    Running := FALSE;\n    StartArmed := FALSE;\n    PreviousMode := ModeCode;\n\nELSE\n    (* A held Start through an emergency stop cannot restart operation.\n       A healthy scan with Start released re-arms the request. *)\n    IF NOT Start THEN\n        StartArmed := TRUE;\n    END_IF;\n\n    StartPulse := Start AND NOT PreviousStart AND StartArmed;\n    IF StartPulse THEN\n        StartArmed := FALSE;\n    END_IF;\n\n    (* Never carry automatic progress into another selected mode. *)\n    IF ModeCode <> PreviousMode THEN\n        Step := 1;\n        Running := FALSE;\n    END_IF;\n    PreviousMode := ModeCode;\n\n    CASE ModeCode OF\n        0:\n            Step := 1;\n            Running := FALSE;\n\n        1:\n            Step := 1;\n            Running := FALSE;\n\n            MoveDown := DownButton AND NOT UpButton\n                        AND NOT DownLimitSwitch;\n            MoveUp := UpButton AND NOT DownButton\n                      AND NOT UpLimitSwitch;\n            MoveLeft := LeftButton AND NOT RightButton\n                        AND NOT LeftLimitSwitch;\n            MoveRight := RightButton AND NOT LeftButton\n                         AND NOT RightLimitSwitch;\n            ActivateGrip := GripButton AND NOT ReleaseButton\n                            AND NOT GripLimitSwitch;\n            ActivateRelease := ReleaseButton AND NOT GripButton\n                               AND NOT ReleaseLimitSwitch;\n\n        2, 3, 4:\n            (* Reject corrupt internal progress without issuing motion. *)\n            IF (Step < 1) OR (Step > 8) THEN\n                Step := 1;\n                Running := FALSE;\n            ELSE\n                (* Start presses during an active action are not queued. *)\n                IF StartPulse AND NOT Running THEN\n                    Running := TRUE;\n                END_IF;\n\n                IF Running THEN\n                    CASE Step OF\n                        1:\n                            MoveDown := NOT DownLimitSwitch;\n                            ActionComplete := DownLimitSwitch;\n                        2:\n                            ActivateGrip := NOT GripLimitSwitch;\n                            ActionComplete := GripLimitSwitch;\n                        3:\n                            MoveUp := NOT UpLimitSwitch;\n                            ActionComplete := UpLimitSwitch;\n                        4:\n                            MoveRight := NOT RightLimitSwitch;\n                            ActionComplete := RightLimitSwitch;\n                        5:\n                            MoveDown := NOT DownLimitSwitch;\n                            ActionComplete := DownLimitSwitch;\n                        6:\n                            ActivateRelease := NOT ReleaseLimitSwitch;\n                            ActionComplete := ReleaseLimitSwitch;\n                        7:\n                            MoveUp := NOT UpLimitSwitch;\n                            ActionComplete := UpLimitSwitch;\n                        8:\n                            MoveLeft := NOT LeftLimitSwitch;\n                            ActionComplete := LeftLimitSwitch;\n                    END_CASE;\n\n                    IF ActionComplete THEN\n                        (* At most one step completes per invocation.\n                           The completed action is already off this scan. *)\n                        IF Step = 8 THEN\n                            Step := 1;\n                            Running := ModeCode = 4;\n                        ELSE\n                            Step := Step + 1;\n                            IF ModeCode = 2 THEN\n                                Running := FALSE;\n                            END_IF;\n                        END_IF;\n                    END_IF;\n                END_IF;\n            END_IF;\n    END_CASE;\nEND_IF;\n\n(* Sample Start even during emergency stop and initial inhibition. *)\nPreviousStart := Start;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 38,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:38-5..38-19: error: invalid variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:38-5..38-19: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 101,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:101-5..101-8: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:101-5..101-8: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 108,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:108-5..108-8: error: invalid statement list in 'ELSEIF' statement of ST 'IF' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:108-5..108-8: error: invalid statement list in 'ELSEIF' statement of ST 'IF' statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 104,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:104-29..108-8: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:104-29..108-8: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 127,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:127-9..127-12: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:127-9..127-12: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 134,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:134-13..134-16: error: invalid statement in case element of ST 'CASE' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:134-13..134-16: error: invalid statement in case element of ST 'CASE' statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 166,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:166-26..166-29: error: invalid test expression defined for ST 'CASE' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:166-26..166-29: error: invalid test expression defined for ST 'CASE' statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 197,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:197-29..197-32: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:197-29..197-32: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 200,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:200-29..202-39: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:200-29..202-39: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 196,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:196-28..196-35: error: invalid test expression defined for ST 'IF' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:196-28..196-35: error: invalid test expression defined for ST 'IF' statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 206,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:206-17..206-22: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:206-17..206-22: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 207,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:207-13..207-18: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:207-13..207-18: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 133,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:133-9..158-33: error: invalid case element(s) defined after 'OF' in ST 'CASE' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P19_1_42\\tools\\candidate_2\\fast\\source.st:133-9..158-33: error: invalid case element(s) defined after 'OF' in ST 'CASE' statement."
+        }
+      ],
+      "elapsed_s": 0.219,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 25.235,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 9,
+    "passed": 3,
+    "passed_ids": [
+      "P19-06",
+      "P19-07",
+      "P19-08"
+    ],
+    "failures": [
+      {
+        "case_id": "P19-01",
+        "cycle": 1,
+        "signal": "MoveDown",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P19-02",
+        "cycle": 1,
+        "signal": "MoveDown",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P19-03",
+        "cycle": 1,
+        "signal": "MoveDown",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P19-04",
+        "cycle": 1,
+        "signal": "MoveDown",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P19-05",
+        "cycle": 1,
+        "signal": "MoveDown",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P19-09",
+        "cycle": 1,
+        "signal": "MoveDown",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 4505,
+  "tag": "candidate_2"
+}

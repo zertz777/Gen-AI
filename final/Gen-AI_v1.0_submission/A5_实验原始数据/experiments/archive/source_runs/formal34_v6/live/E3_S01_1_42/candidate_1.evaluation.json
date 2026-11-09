@@ -1,0 +1,64 @@
+{
+  "source": "FUNCTION_BLOCK FB_S01\nVAR_INPUT\n    StartBtn : BOOL;\n    LeftPartPresent : BOOL;\n    RightPartPresent : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    ClampLeft : BOOL;\n    ClampRight : BOOL;\n    Busy : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    StartBtnLast : BOOL := FALSE;\n    StartRising : BOOL;\n    LeftRequest : BOOL;\n    RightRequest : BOOL;\n    InitCycles : INT := 2;\nEND_VAR\n\nStartRising := StartBtn AND NOT StartBtnLast;\n\n(* 上电初态保护：前两个扫描周期不夹紧、不忙，满足 C10 *)\nIF InitCycles > 0 THEN\n    ClampLeft := FALSE;\n    ClampRight := FALSE;\n    Busy := FALSE;\n    IF NOT EStop_NC THEN\n        Status := 16#8102;\n    ELSE\n        Status := 16#0000;\n    END_IF;\n    InitCycles := InitCycles - 1;\n\n(* 急停最高优先级：立即松开两侧并清忙 *)\nELSIF NOT EStop_NC THEN\n    ClampLeft := FALSE;\n    ClampRight := FALSE;\n    Busy := FALSE;\n    Status := 16#8102;\n\nELSE\n    Status := 16#0000;\n\n    (* 零件不在位时，对应侧不允许保持夹紧，满足 C2/C2b *)\n    IF ClampLeft AND NOT LeftPartPresent THEN\n        ClampLeft := FALSE;\n    END_IF;\n    IF ClampRight AND NOT RightPartPresent THEN\n        ClampRight := FALSE;\n    END_IF;\n\n    (* StartBtn 上升沿请求处理 *)\n    IF StartRising THEN\n        LeftRequest := LeftPartPresent AND NOT ClampLeft;\n        RightRequest := RightPartPresent AND NOT ClampRight;\n\n        (* 两侧同时请求：不动作，报 8101，满足互斥 C4 *)\n        IF LeftRequest AND RightRequest THEN\n            Status := 16#8101;\n\n        (* 左侧请求：若右侧已夹紧则让位 *)\n        ELSIF LeftRequest THEN\n            ClampRight := FALSE;\n            ClampLeft := TRUE;\n\n        (* 右侧请求：若左侧已夹紧则让位 *)\n        ELSIF RightRequest THEN\n            ClampLeft := FALSE;\n            ClampRight := TRUE;\n        END_IF;\n    END_IF;\n\n    (* 最终互锁保护：任何情况下不得同时夹紧 *)\n    IF ClampLeft AND ClampRight THEN\n        ClampLeft := FALSE;\n        ClampRight := FALSE;\n    END_IF;\n\n    Busy := ClampLeft OR ClampRight;\nEND_IF;\n\nStartBtnLast := StartBtn;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.109,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 2,
+    "passed_ids": [
+      "S01-03",
+      "S01-06"
+    ],
+    "failures": [
+      {
+        "case_id": "S01-01",
+        "cycle": 1,
+        "signal": "ClampLeft",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S01-02",
+        "cycle": 1,
+        "signal": "ClampRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S01-04",
+        "cycle": 1,
+        "signal": "ClampLeft",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S01-05",
+        "cycle": 1,
+        "signal": "Status",
+        "expected": 33025,
+        "actual": 0
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 19938,
+  "tag": "candidate_1"
+}

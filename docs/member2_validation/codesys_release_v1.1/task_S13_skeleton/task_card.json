@@ -1,0 +1,174 @@
+{
+  "task_id": "S13",
+  "title": "双段输送合流同步与堵料防撞",
+  "difficulty": "hard",
+  "category": "C",
+  "requirement": "两段输送线在合流点汇合，控制系统要同时管住「不撞料」「不堵料」「不频繁换档」三件事。\n\n控制要求：\n1. LineRun = FALSE 时 MainMotor、MergeMotor 立即 FALSE，SpeedHigh = FALSE，Status = 16#0000。\n2. 启动：LineRun 上升沿且 JamAlarm = FALSE 时 MainMotor = TRUE；MergeMotor 只在 PartAtMerge = FALSE 且 MainMotor = TRUE 时才允许为 TRUE。\n3. 防撞互锁：PartAtMerge = TRUE 时 MergeMotor 必须为 FALSE（合流段有料，汇流段不得继续送料）。\n4. 堵料：JamSensor = TRUE 连续 2 s（100 个扫描周期）→ 两电机 FALSE、JamAlarm = TRUE、Status = 16#8C01。\n5. 复位：JamSensor = FALSE 且 ResetBtn 上升沿才清 JamAlarm 与 Status；复位后必须重新给 LineRun 上升沿才允许启动。\n6. 速度档：MainMotor = TRUE 且 PartOnMain 连续 TRUE 3 s（150 周期）→ SpeedHigh = TRUE；PartOnMain 连续 FALSE 5 s（250 周期）→ SpeedHigh = FALSE；两个时限之间保持原档位。\n7. ModeAuto = FALSE 时只做联锁与报警，不自动启停（手动模式由操作员点动，本规约不约束）。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）",
+  "io_table": [
+    {
+      "direction": "IN",
+      "name": "LineRun",
+      "data_type": "BOOL",
+      "description": "产线运行指令，上升沿启动"
+    },
+    {
+      "direction": "IN",
+      "name": "PartAtMerge",
+      "data_type": "BOOL",
+      "description": "合流段有料"
+    },
+    {
+      "direction": "IN",
+      "name": "PartOnMain",
+      "data_type": "BOOL",
+      "description": "主线段有料"
+    },
+    {
+      "direction": "IN",
+      "name": "JamSensor",
+      "data_type": "BOOL",
+      "description": "堵料检测开关"
+    },
+    {
+      "direction": "IN",
+      "name": "ResetBtn",
+      "data_type": "BOOL",
+      "description": "复位按钮，上升沿有效"
+    },
+    {
+      "direction": "IN",
+      "name": "ModeAuto",
+      "data_type": "BOOL",
+      "description": "TRUE = 自动模式"
+    },
+    {
+      "direction": "OUT",
+      "name": "MainMotor",
+      "data_type": "BOOL",
+      "description": "主输送电机"
+    },
+    {
+      "direction": "OUT",
+      "name": "MergeMotor",
+      "data_type": "BOOL",
+      "description": "汇流段输送电机"
+    },
+    {
+      "direction": "OUT",
+      "name": "SpeedHigh",
+      "data_type": "BOOL",
+      "description": "高速档"
+    },
+    {
+      "direction": "OUT",
+      "name": "JamAlarm",
+      "data_type": "BOOL",
+      "description": "堵料报警"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "状态码"
+    }
+  ],
+  "initial_state": "MainMotor = MergeMotor = SpeedHigh = JamAlarm = FALSE；Status = 16#0000；LineRunLast = ResetBtnLast = FALSE；堵料计时器 = 0；有料计时器 = 0。",
+  "constraints": [
+    "K1 LineRun = FALSE 时两台电机必须为 FALSE。",
+    "K2 PartAtMerge = TRUE 时 MergeMotor 不得为 TRUE（防撞互锁）。",
+    "K3 JamSensor 连续 2 s 为 TRUE 必须在 2 s 内报警并停机，Status = 16#8C01；报警锁存到复位。",
+    "K4 复位需要 JamSensor = FALSE 且 ResetBtn 上升沿，复位后需重新 LineRun 上升沿。",
+    "K5 有料 3 s 切高速、无料 5 s 回落低速，中间区间保持原档位（不抖动）。"
+  ],
+  "provenance": "自拟（参照 西门子杯中国智能制造挑战赛 离散行业自动化（逻辑算法）赛题中的合流段与防堵工艺）；改编点：新增合流防撞互锁、堵料 2 s 定位停机、速度档 3 s/5 s 双时限滞回三组要求；为什么这样改：把「多段设备协同」拆成互斥、响应时限、滞回三类可逐周期判定的性质，正好覆盖 C4、C5、C7 三种条款；来源与审核记录见 data/provenance.csv 第 34 行",
+  "spec_ref": "data/specs/S13.ltl",
+  "error_examples": [
+    "错误实现：汇流电机只跟随 LineRun，不判断 PartAtMerge。症状——合流段已有料时汇流段继续送料，两件工件在合流点相撞。",
+    "错误实现：堵料用即时报警（JamSensor 为 TRUE 就报警）。症状——工件短暂遮挡光电开关就停机，产线每小时停十几次。"
+  ],
+  "notes": "",
+  "spec_text": "# task: S13\n# meta: hard / C 状态机与节拍\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(!LineRun -> !MainMotor && !MergeMotor)    -- 总停时两段电机都必须停（K1）\nC4: G(PartAtMerge -> !MergeMotor)    -- 合流段有料时汇流段不得送料（防撞互锁）（K2）\nC5: G(JamSensor && LineRun -> F[0,100] JamAlarm)    -- 堵料 2 s 内必须报警（100 周期）（K3）\nC6: G(JamAlarm && !(ResetBtn && !JamSensor) -> X(JamAlarm))    -- 报警锁存到复位条件满足（K3/K4）\nC7: G(PartOnMain && MainMotor && !SpeedHigh -> F[0,150] SpeedHigh)    -- 有料 3 s 内切高速（150 周期）（K5）\nC10: G[0,1](!MainMotor && !MergeMotor && !SpeedHigh && !JamAlarm && Status == 16#0000)    -- 上电首周期全部停机、无报警（初态）\n",
+  "spec_sha256": "48354125b76334382f806d59cb13f412ff179bca3c917248d4080d0cabfecdfa",
+  "task_version": "c508f56c",
+  "task_sha256": "c508f56c626b0e2cc199b13063f23bbce69aca5288fe2f3e1e87898830a2993c",
+  "source_path": "data/tasks/S13.yaml",
+  "degraded": false,
+  "missing_fields": [],
+  "warnings": [],
+  "semantic_warnings": [],
+  "interface_io_table": [
+    {
+      "direction": "IN",
+      "name": "LineRun",
+      "data_type": "BOOL",
+      "description": "产线运行指令，上升沿启动"
+    },
+    {
+      "direction": "IN",
+      "name": "PartAtMerge",
+      "data_type": "BOOL",
+      "description": "合流段有料"
+    },
+    {
+      "direction": "IN",
+      "name": "PartOnMain",
+      "data_type": "BOOL",
+      "description": "主线段有料"
+    },
+    {
+      "direction": "IN",
+      "name": "JamSensor",
+      "data_type": "BOOL",
+      "description": "堵料检测开关"
+    },
+    {
+      "direction": "IN",
+      "name": "ResetBtn",
+      "data_type": "BOOL",
+      "description": "复位按钮，上升沿有效"
+    },
+    {
+      "direction": "IN",
+      "name": "ModeAuto",
+      "data_type": "BOOL",
+      "description": "TRUE = 自动模式"
+    },
+    {
+      "direction": "OUT",
+      "name": "MainMotor",
+      "data_type": "BOOL",
+      "description": "主输送电机"
+    },
+    {
+      "direction": "OUT",
+      "name": "MergeMotor",
+      "data_type": "BOOL",
+      "description": "汇流段输送电机"
+    },
+    {
+      "direction": "OUT",
+      "name": "SpeedHigh",
+      "data_type": "BOOL",
+      "description": "高速档"
+    },
+    {
+      "direction": "OUT",
+      "name": "JamAlarm",
+      "data_type": "BOOL",
+      "description": "堵料报警"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "状态码"
+    }
+  ],
+  "type_declarations": "",
+  "type_origins": {},
+  "pou_name": "FB_S13",
+  "pou_kind": "FUNCTION_BLOCK",
+  "dialect_requirements": [],
+  "skeleton_compiled": false,
+  "scan_cycle_ms": 20
+}

@@ -1,0 +1,9 @@
+{
+  "case_id": "C00_good",
+  "source": ".\\validation\\codesys_release_v1.1\\C00_good\\source.st",
+  "project": ".\\validation\\codesys_release_v1.1\\C00_good\\compile.project",
+  "result": ".\\validation\\codesys_release_v1.1\\C00_good\\result.json",
+  "source_sha256": "a30363a54ce95bfe964499f0692fe447a0272a4886053b3e2b11240efcf2e343",
+  "application": "Application",
+  "task_card": ".\\validation\\codesys_release_v1.1\\C00_good\\task_card.json"
+}

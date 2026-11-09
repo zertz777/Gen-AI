@@ -1,0 +1,39 @@
+{
+  "source": "FUNCTION_BLOCK FB_P02\nVAR_INPUT\n    value : DWORD;\nEND_VAR\nVAR_OUTPUT\n    hasChanged : BOOL := FALSE;\n    hasRisingEdges : BOOL := FALSE;\n    risingBits : DWORD := DWORD#16#00000000;\n    noOfRisingBits : USINT := USINT#0;\n    hasFallingEdges : BOOL := FALSE;\n    fallingBits : DWORD := DWORD#16#00000000;\n    noOfFallingBits : USINT := USINT#0;\nEND_VAR\nVAR\n    lastValue : DWORD := DWORD#16#00000000;\n    initialized : BOOL := FALSE;\n    currentValue : DWORD;\n    changedBits : DWORD;\n    risingWork : DWORD;\n    fallingWork : DWORD;\n    bitIndex : INT;\nEND_VAR\n\n(*\n需求原文：\nWrite a function block FB that checks for rising and falling edges in\neach bit of a dual-word (DWord) input value every cycle. The function\nblock should be able to detect and report changes, rising edges, and\nfalling edges in the input value.\n\n每次调用为一个20 ms扫描周期。\n\n规约冲突，保留并报告为待审：\nC7: G(!hasChanged -> X(!hasRisingEdges && !hasFallingEdges))\n要求无变化之后的下一周期也无边沿，与K1/K2要求检测下一周期\n实际发生的变化冲突。例如输入依次为0、0、1时无法同时满足。\n\nC10: G[0,1](!hasChanged && !hasRisingEdges && !hasFallingEdges &&\n           noOfRisingBits == 0 && noOfFallingBits == 0)\n若[0,1]按包含两个扫描周期解释，则要求前两个周期均不报告；\n这与K4仅抑制首周期、K1/K2从第二周期开始比较的要求冲突。\n\n本实现采用候选策略：按I/O及K1至K4逐周期实现。\n不声称同时满足上述冲突条款；未声明编译或逐周期验证通过。\n*)\n\ncurrentValue := value;\n\nhasChanged := FALSE;\nhasRisingEdges := FALSE;\nhasFallingEdges := FALSE;\nrisingBits := DWORD#16#00000000;\nfallingBits := DWORD#16#00000000;\nnoOfRisingBits := USINT#0;\nnoOfFallingBits := USINT#0;\n\nIF initialized THEN\n    (* 本周期快照与上一周期值只生成一次变化掩码。 *)\n    changedBits := currentValue XOR lastValue;\n    risingBits := changedBits AND currentValue;\n    fallingBits := changedBits AND lastValue;\n\n    hasChanged := changedBits <> DWORD#16#00000000;\n    hasRisingEdges := risingBits <> DWORD#16#00000000;\n    hasFallingEdges := fallingBits <> DWORD#16#00000000;\n\n    risingWork := risingBits;\n    fallingWork := fallingBits;\n\n    (* DWORD共32位，两个计数的范围均为0至32。 *)\n    FOR bitIndex := 0 TO 31 DO\n        IF (risingWork AND DWORD#16#00000001) <> DWORD#16#00000000 THEN\n            noOfRisingBits := noOfRisingBits + USINT#1;\n        END_IF;\n        IF (fallingWork AND DWORD#16#00000001) <> DWORD#16#00000000 THEN\n            noOfFallingBits := noOfFallingBits + USINT#1;\n        END_IF;\n\n        risingWork := SHR(risingWork, 1);\n        fallingWork := SHR(fallingWork, 1);\n    END_FOR;\nELSE\n    (* 首周期只建立基准，所有输出保持本周期清零结果。 *)\n    initialized := TRUE;\nEND_IF;\n\nlastValue := currentValue;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.125,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P02-01",
+      "P02-02",
+      "P02-03",
+      "P02-04",
+      "P02-05",
+      "P02-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 2750,
+  "tag": "candidate_1"
+}

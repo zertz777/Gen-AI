@@ -1,0 +1,75 @@
+{
+  "source": "(*\n  Semantic conflict report (not resolved silently):\n  1) Req.4/K4 says \"VFDRun=TRUE and any non-zero code -> TripOutput immediately\", but Req.1 and LTL C1 exclude 16#0001 from trip.\n     This FB follows Req.1/C1: 16#0001 is treated as light fault only.\n  2) LTL C2 says G(TripOutput -> !VFDRun), but K1/K4/C1 require TripOutput TRUE in the same scan when VFDRun can still be TRUE.\n     VFDRun is a read-only input; this FB cannot write it. Immediate trip/latch is implemented and the conflict is reported here.\n  3) C10 requires no trip/alarm and Status=16#0000 in the first cycle. If a heavy fault is already present at power-up, immediate K1 conflicts.\n     This FB forces initial outputs on the first scan and processes faults from the next scan.\n*)\nFUNCTION_BLOCK FB_S10\nVAR_INPUT\n    VFDFaultCode : WORD;\n    VFDRun : BOOL;\n    ResetBtn : BOOL;\nEND_VAR\nVAR_OUTPUT\n    AlarmLamp : BOOL;\n    TripOutput : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    FirstScan : BOOL := TRUE;\n    ResetBtnLast : BOOL := FALSE;\n    TripLatched : BOOL := FALSE;\n    LatchedFaultCode : WORD := 16#0000;\n    ResetPulse : BOOL;\n    NoFault : BOOL;\n    LightFault : BOOL;\n    HeavyFault : BOOL;\n    RunNonLightFault : BOOL;\n    TripCondition : BOOL;\nEND_VAR\n\nIF FirstScan THEN\n    TripOutput := FALSE;\n    AlarmLamp := FALSE;\n    Status := 16#0000;\n    TripLatched := FALSE;\n    LatchedFaultCode := 16#0000;\n    ResetBtnLast := ResetBtn;\n    FirstScan := FALSE;\nELSE\n    ResetPulse := ResetBtn AND NOT ResetBtnLast;\n    ResetBtnLast := ResetBtn;\n\n    NoFault := (VFDFaultCode = 16#0000);\n    LightFault := (VFDFaultCode = 16#0001);\n    HeavyFault := (VFDFaultCode = 16#0002) OR (VFDFaultCode = 16#0003);\n    RunNonLightFault := VFDRun AND (VFDFaultCode <> 16#0000) AND (VFDFaultCode <> 16#0001);\n    TripCondition := HeavyFault OR RunNonLightFault;\n\n    IF TripLatched THEN\n        TripOutput := TRUE;\n        AlarmLamp := TRUE;\n\n        IF TripCondition THEN\n            LatchedFaultCode := VFDFaultCode;\n        END_IF;\n\n        Status := LatchedFaultCode;\n\n        IF ResetPulse AND NoFault THEN\n            TripLatched := FALSE;\n            LatchedFaultCode := 16#0000;\n            TripOutput := FALSE;\n            AlarmLamp := FALSE;\n            Status := 16#0000;\n        END_IF;\n    ELSE\n        IF TripCondition THEN\n            TripLatched := TRUE;\n            LatchedFaultCode := VFDFaultCode;\n            TripOutput := TRUE;\n            AlarmLamp := TRUE;\n            Status := VFDFaultCode;\n        ELSIF LightFault THEN\n            TripOutput := FALSE;\n            AlarmLamp := TRUE;\n            Status := 16#0001;\n        ELSE\n            TripOutput := FALSE;\n            AlarmLamp := FALSE;\n            Status := 16#0000;\n        END_IF;\n    END_IF;\nEND_IF;\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.266,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.859,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "S10-01",
+        "cycle": 1,
+        "signal": "AlarmLamp",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S10-02",
+        "cycle": 1,
+        "signal": "AlarmLamp",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S10-03",
+        "cycle": 1,
+        "signal": "AlarmLamp",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S10-04",
+        "cycle": 1,
+        "signal": "AlarmLamp",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S10-05",
+        "cycle": 1,
+        "signal": "AlarmLamp",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S10-06",
+        "cycle": 1,
+        "signal": "AlarmLamp",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 12565,
+  "tag": "candidate_1"
+}

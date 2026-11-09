@@ -1,0 +1,68 @@
+{
+  "source": "FUNCTION_BLOCK FB_S12\nVAR_INPUT\n    EStop_NC : BOOL;\n    ResetBtn : BOOL;\n    StartBtn : BOOL;\n    DoorClosed : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MachineRun : BOOL;\n    ShiftCount : UINT;\n    AlarmLamp : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    ResetLatched : BOOL := FALSE;\n    ResetBtnLast : BOOL := FALSE;\n    StartBtnLast : BOOL := FALSE;\n    ResetRise : BOOL;\n    StartRise : BOOL;\n    RunScanCount : UINT := UINT#0;\n    RunScanLimit : UINT := UINT#2999;\n    ShiftMax : UINT := UINT#65535;\nEND_VAR\n\n(* Semantic conflict note: C10 requires !AlarmLamp in the first scan. If EStop_NC = FALSE\n   in that first scan, requirement 1 requires AlarmLamp = TRUE immediately. This\n   implementation gives priority to the explicit EStop safety requirement. *)\n\nResetRise := ResetBtn AND NOT ResetBtnLast;\nStartRise := StartBtn AND NOT StartBtnLast;\n\nIF NOT EStop_NC THEN\n    MachineRun := FALSE;\n    AlarmLamp := TRUE;\n    Status := WORD#16#8B01;\n    ResetLatched := FALSE;\n    RunScanCount := UINT#0;\nELSIF NOT DoorClosed THEN\n    MachineRun := FALSE;\n    AlarmLamp := FALSE;\n    Status := WORD#16#8B03;\n    ResetLatched := FALSE;\n    RunScanCount := UINT#0;\nELSE\n    AlarmLamp := FALSE;\n    IF NOT ResetLatched THEN\n        MachineRun := FALSE;\n        Status := WORD#16#8B02;\n        RunScanCount := UINT#0;\n        IF ResetRise THEN\n            ResetLatched := TRUE;\n        END_IF;\n    ELSE\n        IF StartRise THEN\n            MachineRun := TRUE;\n        END_IF;\n        Status := WORD#16#0000;\n    END_IF;\nEND_IF;\n\nIF MachineRun THEN\n    IF RunScanCount >= RunScanLimit THEN\n        IF ShiftCount < ShiftMax THEN\n            ShiftCount := ShiftCount + UINT#1;\n        END_IF;\n        RunScanCount := UINT#0;\n    ELSE\n        RunScanCount := RunScanCount + UINT#1;\n    END_IF;\nELSE\n    RunScanCount := UINT#0;\nEND_IF;\n\nResetBtnLast := ResetBtn;\nStartBtnLast := StartBtn;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.234,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.922,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 5,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "S12-01",
+        "cycle": 1,
+        "signal": "MachineRun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S12-02",
+        "cycle": 1,
+        "signal": "MachineRun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S12-03",
+        "cycle": 1,
+        "signal": "MachineRun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S12-04",
+        "cycle": 1,
+        "signal": "MachineRun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S12-05",
+        "cycle": 1,
+        "signal": "MachineRun",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 26086,
+  "tag": "candidate_2"
+}

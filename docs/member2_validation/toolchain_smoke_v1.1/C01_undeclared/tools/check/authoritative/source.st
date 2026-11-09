@@ -1,0 +1,6 @@
+FUNCTION_BLOCK FB_AgentProbeUndeclared
+VAR_OUTPUT
+ y : BOOL;
+END_VAR
+y := AgentSignalNotDeclared_6E79B1;
+END_FUNCTION_BLOCK

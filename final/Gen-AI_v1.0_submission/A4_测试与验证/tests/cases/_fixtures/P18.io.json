@@ -1,0 +1,40 @@
+{
+  "task_id": "P18",
+  "io": [
+    {
+      "name": "enqueue",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "dequeue",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "reset",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "elementCount",
+      "direction": "OUT",
+      "type": "DINT"
+    },
+    {
+      "name": "status",
+      "direction": "OUT",
+      "type": "WORD"
+    },
+    {
+      "name": "item",
+      "direction": "IN",
+      "type": "VARIANT"
+    },
+    {
+      "name": "buffer",
+      "direction": "IN",
+      "type": "VARIANT"
+    }
+  ]
+}

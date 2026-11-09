@@ -1,0 +1,39 @@
+{
+  "source": "FUNCTION_BLOCK FB_P05\nVAR_INPUT\n    Gap_Exceeded : BOOL;\n    Weld_E_Stop_NC : BOOL;\n    DebounceTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    Operator_Alert : BOOL;\n    Weld_Soft_Start_Active : BOOL;\nEND_VAR\nVAR\n    (* Internal state only - the external interface is left unchanged. *)\n    Init_Elapsed : TIME := T#0s;          (* time since power-up        *)\n    Deb_Elapsed : TIME := T#0s;           (* accumulated gap TRUE time  *)\n    EStop_Active : BOOL := FALSE;         (* decoded emergency stop     *)\n    Init_Inhibition_Active : BOOL := TRUE;(* power-up inhibition window *)\nEND_VAR\n\n(* =====================================================================\n   FB_P05 - weld gap alarm with power-up monitoring inhibition, input\n   debouncing during normal monitoring and emergency-stop priority.\n\n   Scan cycle: 20 ms (5 s inhibition = 250 scans).  Timers are built\n   only from IEC TIME arithmetic and comparisons, because this compiler\n   provides no standard-library timer FB (TON was unknown to it).\n\n   Declared building blocks: base types, TIME +/- and comparisons,\n   BOOL logic.  No standard FB instance, no vendor extension, no\n   VARIANT, no open array, no dynamic memory, no file/network access,\n   no GOTO, no undeclared variable.\n\n   Required initial state is produced on the first scan: Init_Elapsed is\n   T#0s so Init_Inhibition_Active is TRUE (Weld_Soft_Start_Active TRUE),\n   Operator_Alert is FALSE and Deb_Elapsed is T#0s.\n   ===================================================================== *)\n\n(* --- decode the normally-closed emergency-stop input ----------------- *)\n(* TRUE in Weld_E_Stop_NC means \"e-stop not pressed\" (see I/O table). *)\nEStop_Active := NOT Weld_E_Stop_NC;\n\n(* --- power-up 5 s inhibition window (K1 / requirement 2 / C10) ------- *)\n(* Init_Elapsed holds the time already spent since power-up.  On the\n   very first scan it is still T#0s, hence the window is active and\n   Weld_Soft_Start_Active is TRUE (C10).  It counts absolute time since\n   power-up and is deliberately not influenced by the emergency stop. *)\nInit_Inhibition_Active := (Init_Elapsed < T#5s);\n\n(* --- priority chain: K4 (e-stop) > K1 (inhibition) > K2/K3 ----------- *)\nIF EStop_Active THEN\n    (* K4 / C1 / C2 : the emergency stop has priority over the\n       initialization period and over normal monitoring.  The alarm is\n       released in this very scan and any incomplete debounce timing is\n       cleared. *)\n    Deb_Elapsed := T#0s;\n    Operator_Alert := FALSE;\nELSIF Init_Inhibition_Active THEN\n    (* K1 / requirement 2 : no alarm during initialization and the\n       gap-signal debounce time must NOT accumulate in this period. *)\n    Deb_Elapsed := T#0s;\n    Operator_Alert := FALSE;\nELSE\n    (* K2 / K3 / requirement 3 : normal monitoring.\n       The elapsed time only grows while Gap_Exceeded is TRUE, so the\n       alarm can be set only after Gap_Exceeded has remained TRUE for\n       DebounceTime.  When the signal becomes FALSE the timing is\n       cleared in the same scan and the alarm drops immediately. *)\n    IF Gap_Exceeded THEN\n        IF Deb_Elapsed < DebounceTime THEN\n            Deb_Elapsed := Deb_Elapsed + T#20ms;\n        END_IF;\n    ELSE\n        Deb_Elapsed := T#0s;\n    END_IF;\n    Operator_Alert := Gap_Exceeded AND (Deb_Elapsed >= DebounceTime);\nEND_IF;\n\n(* --- Weld_Soft_Start_Active ----------------------------------------- *)\n(* Requirement 5 : this output marks only the power-up inhibition\n   window; it is not a continuous speed ramp and it is not influenced by\n   the emergency stop. *)\nWeld_Soft_Start_Active := Init_Inhibition_Active;\n\n(* --- advance the power-up timer at the end of the scan -------------- *)\nIF Init_Elapsed < T#5s THEN\n    Init_Elapsed := Init_Elapsed + T#20ms;\nEND_IF;\n\n(* =====================================================================\n   REPORTED SPEC CONFLICT - preserved, not silently resolved.\n\n   Requirement 3 / constraint K3 :\n       \"When the signal becomes FALSE, switch off the alarm and clear\n        debounce timing.\"  -> immediate release.\n   LTL C9 :\n       G(Operator_Alert -> G[0,25](Operator_Alert))  -> the alarm, once\n       set, must stay TRUE at least 25 scans (500 ms at 20 ms/scan).\n\n   If Gap_Exceeded returns to FALSE within 500 ms after the alarm was\n   set, the two clauses contradict each other: K3 demands release in the\n   same scan, C9 forbids release before 500 ms.  Both cannot hold.\n\n   This implementation follows the primary requirement text, the\n   constraint list K1-K4 and the remaining LTL clauses C1/C2/C6/C10\n   (C6, \"Operator_Alert W !Gap_Exceeded\", explicitly permits the release\n   in the very scan in which the gap signal falls).  Consequently C9 is\n   NOT satisfied in that boundary case - this is reported, not hidden.\n\n   No interface was added or changed.  No artificial 500 ms hold was\n   inserted, because that would silently break requirement 3 / K3.  No\n   claim is made that this text is functionally verified: compilation\n   only proves that it compiles; functional correctness has to be\n   established by per-cycle tests, and any C9 counterexample produced by\n   those tests is exactly the conflict reported above.\n   ===================================================================== *)\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.219,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 16.906,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P05-01",
+      "P05-02",
+      "P05-03",
+      "P05-04",
+      "P05-05",
+      "P05-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

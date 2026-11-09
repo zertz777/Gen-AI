@@ -1,0 +1,4 @@
+case_id,cycle,SensorValid,DegradedMode,ControlValue,AlarmLamp,Status
+S11-01,1,TRUE,FALSE,50.0,FALSE,16#0000
+S11-01,2,TRUE,FALSE,100.0,FALSE,16#0000
+S11-01,3,TRUE,FALSE,0.0,FALSE,16#0000

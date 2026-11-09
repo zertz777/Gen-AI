@@ -1,0 +1,76 @@
+{
+  "source": "(*\n  Semantic conflict retained for cycle-level testing:\n  Control requirement 1 defines SensorValid TRUE for 4..20 mA.\n  K1 / requirement 3 define recovery validity for 3.8..20.5 mA.\n  This implementation follows K1 hysteresis; the 3.8..4.0 mA and 20.0..20.5 mA\n  boundaries are therefore retained as specified and must be verified by tests.\n*)\n\nFUNCTION_BLOCK FB_S11\nVAR_INPUT\n    SensorCurrent : REAL;\n    FallbackValue : REAL;\nEND_VAR\nVAR_OUTPUT\n    SensorValid : BOOL;\n    DegradedMode : BOOL;\n    ControlValue : REAL;\n    AlarmLamp : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    FirstScan : BOOL := TRUE;\n    FaultCounter : INT := 0;\n    RecoveryCounter : INT := 0;\n    BlinkCounter : INT := 0;\n    LastControlValue : REAL := 0.0;\nEND_VAR\n\n(* First scan keeps the specified initial state, including C10. *)\nIF FirstScan THEN\n    SensorValid := FALSE;\n    DegradedMode := FALSE;\n    ControlValue := 0.0;\n    AlarmLamp := FALSE;\n    Status := 16#0000;\n    FaultCounter := 0;\n    RecoveryCounter := 0;\n    BlinkCounter := 0;\n    LastControlValue := 0.0;\n    FirstScan := FALSE;\nELSE\n    (* 1 Hz blink: 20 ms scan, 50 scans = 1 s, 25 scans ON / 25 scans OFF. *)\n    BlinkCounter := BlinkCounter + 1;\n    IF BlinkCounter >= 50 THEN\n        BlinkCounter := 0;\n    END_IF;\n\n    (* Sensor validity with K1 hysteresis:\n       invalid if < 3.6 mA or > 21 mA;\n       valid if 3.8..20.5 mA;\n       otherwise keep previous validity. *)\n    IF (SensorCurrent < 3.6) OR (SensorCurrent > 21.0) THEN\n        SensorValid := FALSE;\n    ELSIF (SensorCurrent >= 3.8) AND (SensorCurrent <= 20.5) THEN\n        SensorValid := TRUE;\n    ELSE\n        (* keep previous SensorValid *)\n        ;\n    END_IF;\n\n    IF DegradedMode THEN\n        (* K3/K4: during degraded mode, including recovery confirmation,\n           ControlValue is the fallback value. *)\n        ControlValue := FallbackValue;\n        AlarmLamp := TRUE;\n\n        IF SensorValid THEN\n            (* Recovery confirmation period: SensorValid and DegradedMode may\n               both be TRUE; Status = 16#8A03. Hold for at least 3 s\n               (150 scans), then exit on the following scan. *)\n            RecoveryCounter := RecoveryCounter + 1;\n            Status := 16#8A03;\n\n            IF RecoveryCounter >= 151 THEN\n                DegradedMode := FALSE;\n                RecoveryCounter := 0;\n                FaultCounter := 0;\n                Status := 16#0000;\n                AlarmLamp := FALSE;\n                ControlValue := (SensorCurrent - 4.0) / 16.0 * 100.0;\n                LastControlValue := ControlValue;\n            END_IF;\n        ELSE\n            (* Still broken while degraded: Status = 16#8A02. *)\n            RecoveryCounter := 0;\n            Status := 16#8A02;\n        END_IF;\n    ELSE\n        IF SensorValid THEN\n            (* Normal operation. *)\n            FaultCounter := 0;\n            RecoveryCounter := 0;\n            Status := 16#0000;\n            AlarmLamp := FALSE;\n            ControlValue := (SensorCurrent - 4.0) / 16.0 * 100.0;\n            LastControlValue := ControlValue;\n        ELSE\n            (* Broken signal but not yet degraded: Status = 16#8A01,\n               AlarmLamp blinks. After 2 s (100 scans), enter degraded mode. *)\n            FaultCounter := FaultCounter + 1;\n\n            IF FaultCounter >= 100 THEN\n                DegradedMode := TRUE;\n                Status := 16#8A02;\n                AlarmLamp := TRUE;\n                ControlValue := FallbackValue;\n                RecoveryCounter := 0;\n            ELSE\n                Status := 16#8A01;\n                AlarmLamp := (BlinkCounter < 25);\n                ControlValue := LastControlValue;\n            END_IF;\n        END_IF;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 58,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_S11_1_42\\tools\\candidate_1\\fast\\source.st:58-9..58-9: error: invalid statement defined after 'ELSE' in ST 'IF' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_S11_1_42\\tools\\candidate_1\\fast\\source.st:58-9..58-9: error: invalid statement defined after 'ELSE' in ST 'IF' statement."
+        }
+      ],
+      "elapsed_s": 0.219,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 26.328,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 5,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "S11-01",
+        "cycle": 1,
+        "signal": "SensorValid",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S11-02",
+        "cycle": 1,
+        "signal": "SensorValid",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S11-03",
+        "cycle": 1,
+        "signal": "SensorValid",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S11-04",
+        "cycle": 1,
+        "signal": "AlarmLamp",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S11-05",
+        "cycle": 1,
+        "signal": "SensorValid",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 19390,
+  "tag": "candidate_1"
+}

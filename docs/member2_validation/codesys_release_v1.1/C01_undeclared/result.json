@@ -1,0 +1,199 @@
+{
+  "elapsed_s": 2.0949630737304688, 
+  "evidence_kind": "live", 
+  "messages": [
+    {
+      "stage": "build", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "------ 开始编译应用程序 PLCWinNT.Application -------"
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "代码典型化..."
+    }, 
+    {
+      "stage": "build", 
+      "native_number": 32, 
+      "native_prefix": "C", 
+      "severity": "error", 
+      "object_name": "FB_AgentProbeUndeclared", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "行1,列1 (Impl)", 
+      "raw": "不能将类型 '未知的类型: 'AgentSignalNotDeclared_6E79B1'' 转换为类型'BOOL'"
+    }, 
+    {
+      "stage": "build", 
+      "native_number": 46, 
+      "native_prefix": "C", 
+      "severity": "error", 
+      "object_name": "FB_AgentProbeUndeclared", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "行1,列1 (Impl)", 
+      "raw": "没有定义标识符'AgentSignalNotDeclared_6E79B1' "
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "编译完成--2错误,0警告"
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "SA", 
+      "severity": "text", 
+      "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+      "position_text": "", 
+      "raw": "其他代码检查..."
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "SA", 
+      "severity": "text", 
+      "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+      "position_text": "", 
+      "raw": "其他代码检查完成-0 个错误"
+    }
+  ], 
+  "errors": [
+    {
+      "code": "E_TYPE", 
+      "severity": "error", 
+      "line": 5, 
+      "raw": "不能将类型 '未知的类型: 'AgentSignalNotDeclared_6E79B1'' 转换为类型'BOOL'", 
+      "message": "不能将类型 '未知的类型: 'AgentSignalNotDeclared_6E79B1'' 转换为类型'BOOL'"
+    }, 
+    {
+      "code": "E_UNDECLARED", 
+      "severity": "error", 
+      "line": 5, 
+      "raw": "没有定义标识符'AgentSignalNotDeclared_6E79B1' ", 
+      "message": "没有定义标识符'AgentSignalNotDeclared_6E79B1' "
+    }
+  ], 
+  "code_generated": false, 
+  "stages": {
+    "build": {
+      "status": "fail", 
+      "elapsed_s": 0.73171234130859375, 
+      "errors": [
+        {
+          "code": "E_TYPE", 
+          "severity": "error", 
+          "line": 5, 
+          "raw": "不能将类型 '未知的类型: 'AgentSignalNotDeclared_6E79B1'' 转换为类型'BOOL'", 
+          "message": "不能将类型 '未知的类型: 'AgentSignalNotDeclared_6E79B1'' 转换为类型'BOOL'"
+        }, 
+        {
+          "code": "E_UNDECLARED", 
+          "severity": "error", 
+          "line": 5, 
+          "raw": "没有定义标识符'AgentSignalNotDeclared_6E79B1' ", 
+          "message": "没有定义标识符'AgentSignalNotDeclared_6E79B1' "
+        }
+      ], 
+      "messages": [
+        {
+          "stage": "build", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "------ 开始编译应用程序 PLCWinNT.Application -------"
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "代码典型化..."
+        }, 
+        {
+          "stage": "build", 
+          "native_number": 32, 
+          "native_prefix": "C", 
+          "severity": "error", 
+          "object_name": "FB_AgentProbeUndeclared", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "行1,列1 (Impl)", 
+          "raw": "不能将类型 '未知的类型: 'AgentSignalNotDeclared_6E79B1'' 转换为类型'BOOL'"
+        }, 
+        {
+          "stage": "build", 
+          "native_number": 46, 
+          "native_prefix": "C", 
+          "severity": "error", 
+          "object_name": "FB_AgentProbeUndeclared", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "行1,列1 (Impl)", 
+          "raw": "没有定义标识符'AgentSignalNotDeclared_6E79B1' "
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "编译完成--2错误,0警告"
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "SA", 
+          "severity": "text", 
+          "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+          "position_text": "", 
+          "raw": "其他代码检查..."
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "SA", 
+          "severity": "text", 
+          "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+          "position_text": "", 
+          "raw": "其他代码检查完成-0 个错误"
+        }
+      ]
+    }, 
+    "generate": {
+      "status": "skipped", 
+      "elapsed_s": 0.0, 
+      "errors": [], 
+      "reason": "build_fail", 
+      "messages": []
+    }
+  }, 
+  "linked_pou": "FB_AgentProbeUndeclared", 
+  "status": "fail", 
+  "compiler": "CODESYS", 
+  "case_id": "C01_undeclared", 
+  "source_line_mapping": {
+    "status": "known_object_partitions_calibrated", 
+    "imported_text_spans": [
+      {
+        "object_name": "FB_AgentProbeUndeclared", 
+        "imported_prefix_lines": 1, 
+        "part": "declaration", 
+        "source_start_line": 1, 
+        "source_end_line": 4
+      }, 
+      {
+        "object_name": "FB_AgentProbeUndeclared", 
+        "imported_prefix_lines": 0, 
+        "part": "implementation", 
+        "source_start_line": 5, 
+        "source_end_line": 5
+      }
+    ], 
+    "note": "Decl/Impl line mapping calibrated with native diagnostics; unknown objects/positions remain null"
+  }, 
+  "source_sha256": "938fe28d7ed276f3adbc2598220984afb0437ab8204952e2697edf6955b7882d"
+}

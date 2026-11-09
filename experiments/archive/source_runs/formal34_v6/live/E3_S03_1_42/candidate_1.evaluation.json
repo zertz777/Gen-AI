@@ -1,0 +1,285 @@
+{
+  "source": "FUNCTION_BLOCK FB_S03\nVAR_INPUT\n    DoorSwitch : BOOL;\n    ZoneAOccupied : BOOL;\n    ZoneBOccupied : BOOL;\n    ResetBtn : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    DriveA_Run : BOOL;\n    DriveB_Run : BOOL;\n    AlarmLamp : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    FirstScan : BOOL := TRUE;\n    ReadyForRestart : BOOL := TRUE;\n    B_Run : BOOL := FALSE;\n    B_StopPending : BOOL := FALSE;\n    B_StopTimer : TON;\n    ResetTrig : R_TRIG;\nEND_VAR\n\n(* 注意：接口未提供 B 区动作完成信号，因此仅实现 500ms 延时停止，无法提前因动作完成而停止。 *)\n(* 注意：接口未提供启动按钮，因此实现为复位后自动使能运行。 *)\n\nIF FirstScan THEN\n    DriveA_Run := FALSE;\n    DriveB_Run := FALSE;\n    AlarmLamp := FALSE;\n    Status := 16#0000;\n    B_Run := FALSE;\n    B_StopPending := FALSE;\n    ReadyForRestart := TRUE;\n    FirstScan := FALSE;\n    B_StopTimer(IN := FALSE, PT := T#500MS);\n    ResetTrig(CLK := FALSE);\nELSE\n    ResetTrig(CLK := ResetBtn);\n\n    IF NOT EStop_NC THEN\n        DriveA_Run := FALSE;\n        B_Run := FALSE;\n        B_StopPending := FALSE;\n        DriveB_Run := FALSE;\n        AlarmLamp := TRUE;\n        Status := 16#8303;\n        ReadyForRestart := FALSE;\n        B_StopTimer(IN := FALSE, PT := T#500MS);\n    ELSE\n        IF DoorSwitch THEN\n            DriveA_Run := FALSE;\n            AlarmLamp := TRUE;\n            Status := 16#8302;\n            ReadyForRestart := FALSE;\n            IF B_Run THEN\n                IF NOT B_StopPending THEN\n                    B_StopPending := TRUE;\n                END_IF;\n            END_IF;\n            B_StopTimer(IN := B_StopPending, PT := T#500MS);\n            IF B_StopTimer.Q THEN\n                B_Run := FALSE;\n                B_StopPending := FALSE;\n            END_IF;\n            DriveB_Run := B_Run;\n        ELSE\n            B_StopTimer(IN := B_StopPending, PT := T#500MS);\n            IF B_StopTimer.Q THEN\n                B_Run := FALSE;\n                B_StopPending := FALSE;\n            END_IF;\n            IF ResetTrig.Q AND NOT B_StopPending THEN\n                ReadyForRestart := TRUE;\n            END_IF;\n            IF NOT ReadyForRestart THEN\n                DriveA_Run := FALSE;\n                IF B_StopPending THEN\n                    DriveB_Run := B_Run;\n                ELSE\n                    B_Run := FALSE;\n                    DriveB_Run := FALSE;\n                END_IF;\n                AlarmLamp := FALSE;\n                Status := 16#8301;\n            ELSE\n                DriveA_Run := TRUE;\n                B_Run := TRUE;\n                DriveB_Run := TRUE;\n                AlarmLamp := FALSE;\n                Status := 16#0000;\n            END_IF;\n        END_IF;\n    END_IF;\nEND_IF;\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "fail",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.234,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 20,
+          "message": "未知的类型: 'TON'",
+          "raw": "未知的类型: 'TON'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 21,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 36,
+          "message": "需要程序名、函数或功能块实例替代 'B_StopTimer'",
+          "raw": "需要程序名、函数或功能块实例替代 'B_StopTimer'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 37,
+          "message": "需要程序名、函数或功能块实例替代 'ResetTrig'",
+          "raw": "需要程序名、函数或功能块实例替代 'ResetTrig'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 39,
+          "message": "需要程序名、函数或功能块实例替代 'ResetTrig'",
+          "raw": "需要程序名、函数或功能块实例替代 'ResetTrig'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 49,
+          "message": "需要程序名、函数或功能块实例替代 'B_StopTimer'",
+          "raw": "需要程序名、函数或功能块实例替代 'B_StopTimer'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 61,
+          "message": "需要程序名、函数或功能块实例替代 'B_StopTimer'",
+          "raw": "需要程序名、函数或功能块实例替代 'B_StopTimer'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 62,
+          "message": "此处需要有类型 'BOOL'的表达式",
+          "raw": "此处需要有类型 'BOOL'的表达式"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 62,
+          "message": "未知的类型: 'TON'",
+          "raw": "未知的类型: 'TON'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 62,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 68,
+          "message": "需要程序名、函数或功能块实例替代 'B_StopTimer'",
+          "raw": "需要程序名、函数或功能块实例替代 'B_StopTimer'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 69,
+          "message": "此处需要有类型 'BOOL'的表达式",
+          "raw": "此处需要有类型 'BOOL'的表达式"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 69,
+          "message": "未知的类型: 'TON'",
+          "raw": "未知的类型: 'TON'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 69,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 73,
+          "message": "此处需要有类型 'BOOL'的表达式",
+          "raw": "此处需要有类型 'BOOL'的表达式"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 73,
+          "message": "未知的类型: 'ResetTrig.Q'",
+          "raw": "未知的类型: 'ResetTrig.Q'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 73,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 73,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        }
+      ],
+      "elapsed_s": 23.063,
+      "evidence_kind": "live"
+    },
+    "errors": [
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 20,
+        "message": "未知的类型: 'TON'",
+        "raw": "未知的类型: 'TON'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 21,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 36,
+        "message": "需要程序名、函数或功能块实例替代 'B_StopTimer'",
+        "raw": "需要程序名、函数或功能块实例替代 'B_StopTimer'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 37,
+        "message": "需要程序名、函数或功能块实例替代 'ResetTrig'",
+        "raw": "需要程序名、函数或功能块实例替代 'ResetTrig'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 39,
+        "message": "需要程序名、函数或功能块实例替代 'ResetTrig'",
+        "raw": "需要程序名、函数或功能块实例替代 'ResetTrig'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 49,
+        "message": "需要程序名、函数或功能块实例替代 'B_StopTimer'",
+        "raw": "需要程序名、函数或功能块实例替代 'B_StopTimer'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 61,
+        "message": "需要程序名、函数或功能块实例替代 'B_StopTimer'",
+        "raw": "需要程序名、函数或功能块实例替代 'B_StopTimer'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 62,
+        "message": "此处需要有类型 'BOOL'的表达式",
+        "raw": "此处需要有类型 'BOOL'的表达式"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 62,
+        "message": "未知的类型: 'TON'",
+        "raw": "未知的类型: 'TON'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 62,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 68,
+        "message": "需要程序名、函数或功能块实例替代 'B_StopTimer'",
+        "raw": "需要程序名、函数或功能块实例替代 'B_StopTimer'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 69,
+        "message": "此处需要有类型 'BOOL'的表达式",
+        "raw": "此处需要有类型 'BOOL'的表达式"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 69,
+        "message": "未知的类型: 'TON'",
+        "raw": "未知的类型: 'TON'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 69,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 73,
+        "message": "此处需要有类型 'BOOL'的表达式",
+        "raw": "此处需要有类型 'BOOL'的表达式"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 73,
+        "message": "未知的类型: 'ResetTrig.Q'",
+        "raw": "未知的类型: 'ResetTrig.Q'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 73,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 73,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      }
+    ],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "skipped",
+    "total": 0,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": []
+  },
+  "repair_rounds": 0,
+  "token_count": 20305,
+  "tag": "candidate_1"
+}

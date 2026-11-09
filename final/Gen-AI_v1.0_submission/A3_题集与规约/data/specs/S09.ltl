@@ -1,0 +1,10 @@
+# task: S09
+# meta: medium / C 状态机与节拍
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(!EStop_NC -> (!WaterValve && !LyeValve && !RinseValve && !PumpRun))    -- 急停当周期所有阀门与泵关断（K5）
+C2: G(PumpRun -> (WaterValve || LyeValve || RinseValve))    -- 泵运行的前提是至少一个阀门打开（禁止空转）（K3）
+C4: G(!(WaterValve && LyeValve) && !(WaterValve && RinseValve) && !(LyeValve && RinseValve))    -- 三路阀门两两互斥（同一步只开一个阀）（K2）
+C5: G(StartCIP && StepNo == 0 -> F[0,5](StepNo == 1))    -- 启动清洗后 100 ms 内必须进入水洗步（响应时限）（K1）
+C10: G[0,1](StepNo == 0 && !PumpRun)    -- 上电首周期步号为 0、泵不运行（初态）

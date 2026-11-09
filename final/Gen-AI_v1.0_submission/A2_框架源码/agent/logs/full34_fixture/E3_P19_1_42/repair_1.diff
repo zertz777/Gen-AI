@@ -1,0 +1,8 @@
+--- before.st
++++ after.st
+@@ -32,4 +32,4 @@
+ RETURN;
+ END_FUNCTION_BLOCK
+ 
+-(* FIXTURE_COMPILE_FAIL *)
++(*  *)

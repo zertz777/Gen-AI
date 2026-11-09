@@ -1,0 +1,78 @@
+{
+  "source": "(*\n需求原文：\nWrite a function block FB implementing a First-In-First-Out (FIFO) circular queue for INT items. Derive queue capacity from the actual length of the caller-supplied INT buffer.\n\n1. Each rising edge of enqueue requests one enqueue operation. If the queue is not full, append the current item value to its tail.\n2. Each rising edge of dequeue requests one dequeue operation. If the queue is not empty, remove its front element and write that value back to item. The caller must not request enqueue and dequeue in the same invocation.\n3. When reset is TRUE, empty the queue and set elementCount to zero. Reset takes priority over enqueue and dequeue; stored buffer values need not be overwritten.\n4. Output the current number of valid elements through elementCount. Zero means the queue is empty; a count equal to the actual buffer array length means it is full.\n5. Reject a dequeue request on an empty queue or an enqueue request on a full queue. Leave the queue and item unchanged and report the reason through status.\n6. The queue is empty on its first invocation. Define head and tail positions and other internal state within the implementation; do not expose them as interface parameters.\n\nStatus codes:\n- 16#0000: No error in this invocation, including idle, reset and successful operations.\n- 16#8001: The dequeue request was rejected because the queue is empty.\n- 16#8002: The enqueue request was rejected because the queue is full.\n\n中文摘要：FIFO 环形队列：入队/出队按上升沿各触发一次，\nreset 优先清空，空队出队或满队入队被拒绝并给出状态码。\n\n任务：P18，FIFO First-In-First-Out Queue。\n每次调用代表一个 20 ms 扫描周期。\nbuffer 为调用者提供的非空一维 INT 数组。\n初态：head = tail = 0；elementCount = 0；status = 16#0000。\nhead、tail 使用相对于数组下界的偏移，不要求数组下界为零。\n\n完整形式化规约：\n# task: P18\n# meta: hard / B 模拟量与数据处理\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(reset -> elementCount == 0)\n    复位当周期队列必须清空，优先于同周期的入队/出队。（K1）\nC4: G(reset && enqueue -> elementCount == 0)\n    复位与入队同时请求时当拍以复位为准。（K1）\nC2: G(elementCount >= 0)\n    元素计数不得为负。（K3/K4）\nC9: G(status == 16#8001 -> elementCount == 0)\n    空队出队被拒绝时仍为空。（K3）\nC10: G[0,0](elementCount == 0)\n    上电当拍队列为空。（初态）\n\n语义冲突报告：\n若 C10 指首次调用结束后的输出，则它与“每个入队上升沿均执行”\n在首次调用 enqueue = TRUE 且 reset = FALSE 时冲突。\n本实现将初态定义为首次调用处理请求之前的空队列，\n并处理首次调用的上升沿；因此不能声称满足上述扫描后解释的 C10。\n\n实现约定：\n复位也采样请求电平，复位期间出现的上升沿不会延迟执行。\n同时置位 enqueue 与 dequeue 违反调用约束；本实现不执行任何\n队列操作，但仍采样电平。没有新增未定义的错误码。\n非空队列使用期间，调用者须保持同一个缓冲区及其边界不变。\n\n编译与测试说明：\n保留 ARRAY[*] OF INT，使用 LOWER_BOUND 和 UPPER_BOUND。\n需由支持开放数组及其边界查询的编译 profile 验证。\n当前对话未提供可执行工具或已配置的测试命令，\n未运行真实编译器或逐周期测试，不声称已经验证正确。\n*)\n\nFUNCTION_BLOCK FB_P18\nVAR_INPUT\n    enqueue : BOOL;\n    dequeue : BOOL;\n    reset : BOOL;\nEND_VAR\nVAR_OUTPUT\n    elementCount : DINT := 0;\n    status : WORD := WORD#16#0000;\nEND_VAR\nVAR_IN_OUT\n    item : INT;\n    buffer : ARRAY[*] OF INT;\nEND_VAR\nVAR\n    initialized : BOOL := FALSE;\n    previousEnqueue : BOOL := FALSE;\n    previousDequeue : BOOL := FALSE;\n    enqueueEdge : BOOL := FALSE;\n    dequeueEdge : BOOL := FALSE;\n    head : DINT := 0;\n    tail : DINT := 0;\n    lowerBound : DINT;\n    upperBound : DINT;\n    capacity : DINT;\nEND_VAR\n\nlowerBound := LOWER_BOUND(buffer, 1);\nupperBound := UPPER_BOUND(buffer, 1);\ncapacity := upperBound - lowerBound + 1;\n\nIF NOT initialized THEN\n    head := 0;\n    tail := 0;\n    elementCount := 0;\n    previousEnqueue := FALSE;\n    previousDequeue := FALSE;\n    initialized := TRUE;\nEND_IF;\n\nenqueueEdge := enqueue AND NOT previousEnqueue;\ndequeueEdge := dequeue AND NOT previousDequeue;\nstatus := WORD#16#0000;\n\nIF reset THEN\n    head := 0;\n    tail := 0;\n    elementCount := 0;\nELSIF NOT (enqueue AND dequeue) THEN\n    IF enqueueEdge THEN\n        IF elementCount >= capacity THEN\n            status := WORD#16#8002;\n        ELSE\n            buffer[lowerBound + tail] := item;\n            IF tail = capacity - 1 THEN\n                tail := 0;\n            ELSE\n                tail := tail + 1;\n            END_IF;\n            elementCount := elementCount + 1;\n        END_IF;\n    ELSIF dequeueEdge THEN\n        IF elementCount = 0 THEN\n            status := WORD#16#8001;\n        ELSE\n            item := buffer[lowerBound + head];\n            IF head = capacity - 1 THEN\n                head := 0;\n            ELSE\n                head := head + 1;\n            END_IF;\n            elementCount := elementCount - 1;\n        END_IF;\n    END_IF;\nEND_IF;\n\npreviousEnqueue := enqueue;\npreviousDequeue := dequeue;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 74,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E2_P18_1_42\\tools\\baseline\\fast\\source.st:74-20..74-20: error: invalid subrange list defined in array specification.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E2_P18_1_42\\tools\\baseline\\fast\\source.st:74-20..74-20: error: invalid subrange list defined in array specification."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 89,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E2_P18_1_42\\tools\\baseline\\fast\\source.st:89-26..89-27: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E2_P18_1_42\\tools\\baseline\\fast\\source.st:89-26..89-27: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 89,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E2_P18_1_42\\tools\\baseline\\fast\\source.st:89-27..89-37: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E2_P18_1_42\\tools\\baseline\\fast\\source.st:89-27..89-37: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 90,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E2_P18_1_42\\tools\\baseline\\fast\\source.st:90-25..90-26: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E2_P18_1_42\\tools\\baseline\\fast\\source.st:90-25..90-26: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 90,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E2_P18_1_42\\tools\\baseline\\fast\\source.st:90-26..90-36: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E2_P18_1_42\\tools\\baseline\\fast\\source.st:90-26..90-36: error: invalid statement in ST statement."
+        }
+      ],
+      "elapsed_s": 0.265,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 42.797,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 9,
+    "passed": 9,
+    "passed_ids": [
+      "P18-01",
+      "P18-02",
+      "P18-03",
+      "P18-04",
+      "P18-05",
+      "P18-06",
+      "P18-07",
+      "P18-08",
+      "P18-09"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

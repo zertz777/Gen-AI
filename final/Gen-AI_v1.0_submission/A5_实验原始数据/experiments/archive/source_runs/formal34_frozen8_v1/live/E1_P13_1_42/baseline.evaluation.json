@@ -1,0 +1,39 @@
+{
+  "source": "FUNCTION_BLOCK FB_P13\nVAR_INPUT\n    OCCUPANCY_DETECTED : BOOL;\n    ENERGY_SAVING_MODE : BOOL;\n    HVAC_MODE_SELECTOR : INT;\nEND_VAR\nVAR_OUTPUT\n    SUPPLY_FAN_RUN : BOOL;\n    TEMP_SETPOINT_ADJUST : INT;\nEND_VAR\nVAR CONSTANT\n    (* 30 s start delay expressed in scan cycles: 30 s / 20 ms = 1500 *)\n    STARTUP_DELAY_SCANS : INT := 1500;\nEND_VAR\nVAR\n    (* Scan-cycle counter for the 30 s start delay *)\n    StartupCounter : INT := 0;\n    (* Power-up first-scan flag, used to arm the start-delay timing *)\n    FirstScan : BOOL := TRUE;\nEND_VAR\n\n(* Start-delay timing (K1/K2):\n   accumulate only while occupied and Night mode is NOT selected;\n   reset immediately on loss of occupancy or on Night mode. *)\nIF OCCUPANCY_DETECTED AND (HVAC_MODE_SELECTOR <> 3) THEN\n    IF StartupCounter < STARTUP_DELAY_SCANS THEN\n        StartupCounter := StartupCounter + 1;\n    END_IF;\nELSE\n    StartupCounter := 0;\nEND_IF;\n\n(* Power-up: clear the start-delay timing on the very first scan so the\n   delay is measured over whole scan periods (K1/K2). *)\nIF FirstScan THEN\n    FirstScan := FALSE;\n    StartupCounter := 0;\nEND_IF;\n\n(* Fan enable: TRUE only after the delay has been held for 30 s (K1/K2).\n   Because the counter above is reset whenever the permit condition is\n   lost, this output is FALSE in the same scan that occupancy drops or\n   Night mode is selected (C2/C3/C6). *)\nSUPPLY_FAN_RUN := (StartupCounter >= STARTUP_DELAY_SCANS);\n\n(* Temperature-setpoint adjustment (K3):\n   computed from the current inputs on every scan, including the first.\n   The energy-saving selection affects Auto mode only. *)\nCASE HVAC_MODE_SELECTOR OF\n    0:  (* Auto: occupied 0; unoccupied +3 (energy-saving) / +2 (standard) *)\n        IF OCCUPANCY_DETECTED THEN\n            TEMP_SETPOINT_ADJUST := 0;\n        ELSIF ENERGY_SAVING_MODE THEN\n            TEMP_SETPOINT_ADJUST := 3;\n        ELSE\n            TEMP_SETPOINT_ADJUST := 2;\n        END_IF;\n    1:  (* Comfort: occupied 0; unoccupied +1 *)\n        IF OCCUPANCY_DETECTED THEN\n            TEMP_SETPOINT_ADJUST := 0;\n        ELSE\n            TEMP_SETPOINT_ADJUST := 1;\n        END_IF;\n    2:  (* Economy: occupied 0; unoccupied +4 *)\n        IF OCCUPANCY_DETECTED THEN\n            TEMP_SETPOINT_ADJUST := 0;\n        ELSE\n            TEMP_SETPOINT_ADJUST := 4;\n        END_IF;\n    3:  (* Night: +4 regardless of occupancy *)\n        TEMP_SETPOINT_ADJUST := 4;\n    ELSE\n        (* Undefined selector value: hold a safe neutral adjustment *)\n        TEMP_SETPOINT_ADJUST := 0;\nEND_CASE;\n\n(* Clamp the adjustment to ±4 °C (K4/C4). *)\nIF TEMP_SETPOINT_ADJUST > 4 THEN\n    TEMP_SETPOINT_ADJUST := 4;\nELSIF TEMP_SETPOINT_ADJUST < -4 THEN\n    TEMP_SETPOINT_ADJUST := -4;\nEND_IF;\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.266,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 27.125,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P13-01",
+      "P13-02",
+      "P13-03",
+      "P13-04",
+      "P13-05",
+      "P13-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

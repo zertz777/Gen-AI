@@ -1,0 +1,14 @@
+{
+  "mutant_id": "M-S10-2",
+  "task_id": "S10",
+  "operator": "边界偏移",
+  "description": "重故障阈值边界：16#0003 → 16#0004",
+  "base_source": "03_程序案例/E1_S10_1_42/final.st",
+  "patches": [
+    {
+      "from": "(VFDFaultCode = 16#0003)",
+      "to": "(VFDFaultCode = 16#0004)"
+    }
+  ],
+  "expect_killer": "S10-02（code=3 应跳闸）"
+}

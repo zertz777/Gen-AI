@@ -1,0 +1,12 @@
+# task: P02
+# meta: easy / B 模拟量与数据处理
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+#
+# note: 本题是纯数据处理（双字边沿），题库未给出任何停止类信号，因此不写 C1（停止优先）；边沿标志的一致性由 C2/C7/C8 覆盖。
+
+C2: G(hasChanged -> (hasRisingEdges || hasFallingEdges))    -- 报了变化就必须报出至少一类边沿（三个标志不得自相矛盾）（K1）
+C2b: G((hasRisingEdges || hasFallingEdges) -> hasChanged)    -- 报了边沿就必然有变化（防止上电或复位时误报）（K4）
+C7: G(!hasChanged -> X(!hasRisingEdges && !hasFallingEdges))    -- 无变化的周期之后不得凭空出现边沿标志（不抖动）（K1）
+C8: G(hasChanged == FALSE -> noOfRisingBits == 0 && noOfFallingBits == 0)    -- 无变化时两个计数必须为 0（计数与标志同源）（K3）
+C10: G[0,1](!hasChanged && !hasRisingEdges && !hasFallingEdges && noOfRisingBits == 0 && noOfFallingBits == 0)    -- 上电首周期不报变化（没有上一周期可比）（K4）

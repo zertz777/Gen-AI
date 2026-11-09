@@ -1,0 +1,2 @@
+case_id,cycle,MotorForward,MotorReverse,kick,CompletionLight,firingTemp
+P20-08,1,FALSE,FALSE,FALSE,FALSE,0.0

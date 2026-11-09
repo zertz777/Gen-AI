@@ -1,0 +1,9 @@
+{
+  "case_id": "C03_syntax",
+  "source": ".\\validation\\codesys_release_v1.1\\C03_syntax\\source.st",
+  "project": ".\\validation\\codesys_release_v1.1\\C03_syntax\\compile.project",
+  "result": ".\\validation\\codesys_release_v1.1\\C03_syntax\\result.json",
+  "source_sha256": "61195556b53a9e1757c6561dbf77d98ed5ae40b04227268b8bbb0538aebdef60",
+  "application": "Application",
+  "task_card": ".\\validation\\codesys_release_v1.1\\C03_syntax\\task_card.json"
+}

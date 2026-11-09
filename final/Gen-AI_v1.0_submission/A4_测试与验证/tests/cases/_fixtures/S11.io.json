@@ -1,0 +1,40 @@
+{
+  "task_id": "S11",
+  "io": [
+    {
+      "name": "SensorCurrent",
+      "direction": "IN",
+      "type": "REAL"
+    },
+    {
+      "name": "FallbackValue",
+      "direction": "IN",
+      "type": "REAL"
+    },
+    {
+      "name": "SensorValid",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "DegradedMode",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "ControlValue",
+      "direction": "OUT",
+      "type": "REAL"
+    },
+    {
+      "name": "AlarmLamp",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "Status",
+      "direction": "OUT",
+      "type": "WORD"
+    }
+  ]
+}

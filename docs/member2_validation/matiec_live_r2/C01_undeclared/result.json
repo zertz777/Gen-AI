@@ -1,0 +1,19 @@
+{
+  "case_id": "C01_undeclared",
+  "kind": "undeclared",
+  "expected": "fail",
+  "status": "fail",
+  "elapsed_s": 0.156,
+  "source_sha256": "938fe28d7ed276f3adbc2598220984afb0437ab8204952e2697edf6955b7882d",
+  "errors": [
+    {
+      "code": "E_UNDECLARED",
+      "severity": "error",
+      "line": 5,
+      "message": ".\\validation\\matiec_live_r2\\C01_undeclared\\source.st:5-6..5-34: error: Ambiguous enumerate value or Variable not declared in this scope.",
+      "raw": ".\\validation\\matiec_live_r2\\C01_undeclared\\source.st:5-6..5-34: error: Ambiguous enumerate value or Variable not declared in this scope."
+    }
+  ],
+  "evidence_kind": "live_fast_compiler",
+  "functional_tests_run": false
+}

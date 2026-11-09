@@ -1,0 +1,5 @@
+# Runtime, verification, and report-build dependencies.
+# The Agent core uses Python 3.10+ standard library only.
+pytest>=8.0,<10
+matplotlib>=3.8,<4
+python-docx>=1.1,<2

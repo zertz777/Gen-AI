@@ -1,0 +1,70 @@
+{
+  "source": "FUNCTION_BLOCK FB_S13\nVAR_INPUT\n    LineRun : BOOL;\n    PartAtMerge : BOOL;\n    PartOnMain : BOOL;\n    JamSensor : BOOL;\n    ResetBtn : BOOL;\n    ModeAuto : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MainMotor : BOOL;\n    MergeMotor : BOOL;\n    SpeedHigh : BOOL;\n    JamAlarm : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    LineRunLast : BOOL := FALSE;\n    ResetBtnLast : BOOL := FALSE;\n    JamTimer : INT := 0;\n    HighTimer : INT := 0;\n    LowTimer : INT := 0;\n    WaitForLineRunCycle : BOOL := FALSE;\n    LineRunRising : BOOL;\n    ResetRising : BOOL;\n    FirstScan : BOOL := TRUE;\nEND_VAR\n\n(* 冲突说明：\n   1) 第1条“LineRun = FALSE -> Status = 16#0000”与第5条“报警锁存到复位并清Status”交叉时，\n      本实现按安全/锁存优先：JamAlarm = TRUE 时 Status 保持 16#8C01 直到复位；\n      无报警总停时 Status 置 16#0000。\n   2) 形式化 C5 写作 JamSensor && LineRun，但 K3/第4条文本写作 JamSensor 连续 2 s 即报警；\n      本实现采用文本 K3 的更强安全条件，即 JamSensor 连续 100 扫描周期即报警停机。\n*)\n\nIF FirstScan THEN\n    MainMotor := FALSE;\n    MergeMotor := FALSE;\n    SpeedHigh := FALSE;\n    JamAlarm := FALSE;\n    Status := 16#0000;\n    JamTimer := 0;\n    HighTimer := 0;\n    LowTimer := 0;\n    WaitForLineRunCycle := FALSE;\n    LineRunRising := FALSE;\n    ResetRising := FALSE;\n    LineRunLast := LineRun;\n    ResetBtnLast := ResetBtn;\nELSE\n    LineRunRising := LineRun AND NOT LineRunLast;\n    ResetRising := ResetBtn AND NOT ResetBtnLast;\n    LineRunLast := LineRun;\n    ResetBtnLast := ResetBtn;\nEND_IF;\n\n(* 堵料检测与报警锁存：连续 2 s = 100 扫描周期 *)\nIF NOT FirstScan THEN\n    IF JamSensor THEN\n        IF JamTimer < 100 THEN\n            JamTimer := JamTimer + 1;\n        END_IF;\n    ELSE\n        JamTimer := 0;\n    END_IF;\n\n    IF JamTimer >= 100 THEN\n        JamAlarm := TRUE;\n        Status := 16#8C01;\n        MainMotor := FALSE;\n        MergeMotor := FALSE;\n        SpeedHigh := FALSE;\n    END_IF;\nELSE\n    JamTimer := 0;\nEND_IF;\n\n(* 复位：JamSensor = FALSE 且 ResetBtn 上升沿 *)\nIF ResetRising AND NOT JamSensor THEN\n    JamAlarm := FALSE;\n    Status := 16#0000;\n    JamTimer := 0;\n    WaitForLineRunCycle := TRUE;\nEND_IF;\n\n(* 总停：LineRun = FALSE 时两电机和高速档立即 FALSE *)\nIF NOT LineRun THEN\n    MainMotor := FALSE;\n    MergeMotor := FALSE;\n    SpeedHigh := FALSE;\n    IF NOT JamAlarm THEN\n        Status := 16#0000;\n    END_IF;\n    WaitForLineRunCycle := FALSE;\nEND_IF;\n\n(* 自动启动：LineRun 上升沿且无报警、复位后未等待新上升沿 *)\nIF ModeAuto AND LineRunRising AND NOT JamAlarm AND NOT WaitForLineRunCycle THEN\n    MainMotor := TRUE;\nEND_IF;\n\n(* 自动模式下汇流段允许送料：MainMotor = TRUE 且 PartAtMerge = FALSE *)\nIF ModeAuto AND MainMotor AND NOT PartAtMerge AND NOT JamAlarm THEN\n    MergeMotor := TRUE;\nEND_IF;\n\n(* 速度档：有料 3 s = 150 周期切高速；无料 5 s = 250 周期回低速；中间保持 *)\nIF ModeAuto AND MainMotor AND NOT JamAlarm THEN\n    IF PartOnMain THEN\n        IF HighTimer < 32767 THEN\n            HighTimer := HighTimer + 1;\n        END_IF;\n        LowTimer := 0;\n    ELSE\n        HighTimer := 0;\n        IF LowTimer < 32767 THEN\n            LowTimer := LowTimer + 1;\n        END_IF;\n    END_IF;\n\n    IF HighTimer >= 150 THEN\n        SpeedHigh := TRUE;\n    END_IF;\n\n    IF LowTimer >= 250 THEN\n        SpeedHigh := FALSE;\n    END_IF;\nELSE\n    HighTimer := 0;\n    LowTimer := 0;\nEND_IF;\n\n(* 安全强制：防撞互锁、报警停机、总停、主电机停止时禁止汇流段 *)\nIF NOT MainMotor OR PartAtMerge OR JamAlarm THEN\n    MergeMotor := FALSE;\nEND_IF;\n\nIF NOT LineRun THEN\n    MainMotor := FALSE;\n    MergeMotor := FALSE;\n    SpeedHigh := FALSE;\nEND_IF;\n\nIF JamAlarm THEN\n    MainMotor := FALSE;\n    MergeMotor := FALSE;\n    SpeedHigh := FALSE;\nEND_IF;\n\nIF PartAtMerge THEN\n    MergeMotor := FALSE;\nEND_IF;\n\nFirstScan := FALSE;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 22.438,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 1,
+    "passed_ids": [
+      "S13-06"
+    ],
+    "failures": [
+      {
+        "case_id": "S13-01",
+        "cycle": 1,
+        "signal": "MainMotor",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S13-02",
+        "cycle": 1,
+        "signal": "MainMotor",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S13-03",
+        "cycle": 1,
+        "signal": "MainMotor",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S13-04",
+        "cycle": 1,
+        "signal": "MainMotor",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S13-05",
+        "cycle": 1,
+        "signal": "MainMotor",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 21514,
+  "tag": "candidate_1"
+}

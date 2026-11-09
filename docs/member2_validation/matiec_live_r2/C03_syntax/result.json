@@ -1,0 +1,19 @@
+{
+  "case_id": "C03_syntax",
+  "kind": "syntax",
+  "expected": "fail",
+  "status": "fail",
+  "elapsed_s": 0.079,
+  "source_sha256": "61195556b53a9e1757c6561dbf77d98ed5ae40b04227268b8bbb0538aebdef60",
+  "errors": [
+    {
+      "code": "E_SYNTAX",
+      "severity": "error",
+      "line": 8,
+      "message": ".\\validation\\matiec_live_r2\\C03_syntax\\source.st:8-6..8-6: error: expecting 'THEN' after test expression in ST 'IF' statement.",
+      "raw": ".\\validation\\matiec_live_r2\\C03_syntax\\source.st:8-6..8-6: error: expecting 'THEN' after test expression in ST 'IF' statement."
+    }
+  ],
+  "evidence_kind": "live_fast_compiler",
+  "functional_tests_run": false
+}

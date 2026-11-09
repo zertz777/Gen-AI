@@ -1,0 +1,590 @@
+{
+  "compiler": "MATIEC",
+  "recorded_at": "2026-10-31T06:43:59.603506+00:00",
+  "exe_sha256": "297ebae11fe29f4b02c81cdba2ec7ba072705088f279b05fdf76e4a692a7f1ea",
+  "evidence_kind": "live_fast_compiler",
+  "authoritative_compilation": false,
+  "functional_tests_run": false,
+  "case_count": 40,
+  "cases": [
+    {
+      "case_id": "C00_good",
+      "kind": "known_good",
+      "expected": "pass",
+      "status": "pass",
+      "elapsed_s": 0.172,
+      "source_sha256": "a30363a54ce95bfe964499f0692fe447a0272a4886053b3e2b11240efcf2e343",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "C01_undeclared",
+      "kind": "undeclared",
+      "expected": "fail",
+      "status": "fail",
+      "elapsed_s": 0.156,
+      "source_sha256": "938fe28d7ed276f3adbc2598220984afb0437ab8204952e2697edf6955b7882d",
+      "errors": [
+        {
+          "code": "E_UNDECLARED",
+          "severity": "error",
+          "line": 5,
+          "message": ".\\validation\\matiec_live_r2\\C01_undeclared\\source.st:5-6..5-34: error: Ambiguous enumerate value or Variable not declared in this scope.",
+          "raw": ".\\validation\\matiec_live_r2\\C01_undeclared\\source.st:5-6..5-34: error: Ambiguous enumerate value or Variable not declared in this scope."
+        }
+      ],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "C02_type",
+      "kind": "type",
+      "expected": "fail",
+      "status": "fail",
+      "elapsed_s": 0.156,
+      "source_sha256": "e83155bc35aa0dfa829d346499d9faab94a909fc447bc17c9ab31899207e91d6",
+      "errors": [
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 5,
+          "message": ".\\validation\\matiec_live_r2\\C02_type\\source.st:5-1..5-17: error: Incompatible data types for ':=' operation.",
+          "raw": ".\\validation\\matiec_live_r2\\C02_type\\source.st:5-1..5-17: error: Incompatible data types for ':=' operation."
+        }
+      ],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "C03_syntax",
+      "kind": "syntax",
+      "expected": "fail",
+      "status": "fail",
+      "elapsed_s": 0.079,
+      "source_sha256": "61195556b53a9e1757c6561dbf77d98ed5ae40b04227268b8bbb0538aebdef60",
+      "errors": [
+        {
+          "code": "E_SYNTAX",
+          "severity": "error",
+          "line": 8,
+          "message": ".\\validation\\matiec_live_r2\\C03_syntax\\source.st:8-6..8-6: error: expecting 'THEN' after test expression in ST 'IF' statement.",
+          "raw": ".\\validation\\matiec_live_r2\\C03_syntax\\source.st:8-6..8-6: error: expecting 'THEN' after test expression in ST 'IF' statement."
+        }
+      ],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "C04_missing_dependency",
+      "kind": "missing_dependency",
+      "expected": "fail",
+      "note": "故意引用未定义依赖类型；实际诊断可能为未声明/未知类型，不断言一定归类为缺库",
+      "status": "fail",
+      "elapsed_s": 0.078,
+      "source_sha256": "8b67b9d358d2481cd1a4b238ea233627ea1fbd89ac48fbbdaaf74cd065202e33",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 3,
+          "message": ".\\validation\\matiec_live_r2\\C04_missing_dependency\\source.st:3-8..3-41: error: invalid specification in variable declaration.",
+          "raw": ".\\validation\\matiec_live_r2\\C04_missing_dependency\\source.st:3-8..3-41: error: invalid specification in variable declaration."
+        },
+        {
+          "code": "E_SYNTAX",
+          "severity": "error",
+          "line": 5,
+          "message": ".\\validation\\matiec_live_r2\\C04_missing_dependency\\source.st:5-4..5-4: error: syntax error",
+          "raw": ".\\validation\\matiec_live_r2\\C04_missing_dependency\\source.st:5-4..5-4: error: syntax error"
+        },
+        {
+          "code": "E_SYNTAX",
+          "severity": "error",
+          "line": null,
+          "message": "Parsing failed because of too many consecutive syntax errors. Bailing out!",
+          "raw": "Parsing failed because of too many consecutive syntax errors. Bailing out!"
+        }
+      ],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "C05_dead_code",
+      "kind": "dead_code",
+      "expected": "observe",
+      "note": "观察实际诊断；编译器可优化且不发警告，不强制产生死代码warning",
+      "status": "pass",
+      "elapsed_s": 0.157,
+      "source_sha256": "1aca0a4230a2d2a557bc49bb4e75c1b1a7d3ed51062663f39a5a4cfeb6b971b8",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_P01_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.156,
+      "source_sha256": "ee17525c23dd45b2f297c62c3e2b5e9e92140b4f49edc8b0b0c03cd25422a7a2",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_P02_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.172,
+      "source_sha256": "95f8705a14f0122aa88c8c051668e23f5c6a0ff143c9626ccca6c74c3892b6df",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_P03_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.157,
+      "source_sha256": "8a785394f6ab6463c82207102210342ada258c7d93011ec39d8e94dc01bb8469",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_P04_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "timeout",
+      "elapsed_s": 3.109,
+      "source_sha256": "31658eeba6938c2378fe75e4d38f5444d016a537aaa1d9ab15a3dadc5a0c3072",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 11,
+          "message": ".\\validation\\matiec_live_r2\\task_P04_skeleton\\source.st:11-24..11-28: error: invalid specification in variable declaration.",
+          "raw": ".\\validation\\matiec_live_r2\\task_P04_skeleton\\source.st:11-24..11-28: error: invalid specification in variable declaration."
+        }
+      ],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_P05_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.187,
+      "source_sha256": "a0535179b36b96ebc7e4ee139c2dc1d8518737d22e2ff67ed72ee216e180eae5",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_P06_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.188,
+      "source_sha256": "768037fe5e815f4fd81dca458906ef71dc7e1dec69c81a11f77a170def872968",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_P07_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "fail",
+      "elapsed_s": 0.094,
+      "source_sha256": "81864fbfbccf5926fbff61d4bab51f4dd766d50392e03b8b21097c9e9bec5ed9",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 6,
+          "message": ".\\validation\\matiec_live_r2\\task_P07_skeleton\\source.st:6-10..7-1: error: ';' missing at end of data type declaration.",
+          "raw": ".\\validation\\matiec_live_r2\\task_P07_skeleton\\source.st:6-10..7-1: error: ';' missing at end of data type declaration."
+        }
+      ],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_P08_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "fail",
+      "elapsed_s": 0.094,
+      "source_sha256": "3932a02270fd4d943e53aa5b7b31f4ea998736bcea76ed6a599e254a0983346e",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 10,
+          "message": ".\\validation\\matiec_live_r2\\task_P08_skeleton\\source.st:10-10..11-1: error: ';' missing at end of data type declaration.",
+          "raw": ".\\validation\\matiec_live_r2\\task_P08_skeleton\\source.st:10-10..11-1: error: ';' missing at end of data type declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 17,
+          "message": ".\\validation\\matiec_live_r2\\task_P08_skeleton\\source.st:17-26..17-26: error: invalid subrange list defined in array specification.",
+          "raw": ".\\validation\\matiec_live_r2\\task_P08_skeleton\\source.st:17-26..17-26: error: invalid subrange list defined in array specification."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 18,
+          "message": ".\\validation\\matiec_live_r2\\task_P08_skeleton\\source.st:18-22..18-22: error: invalid subrange list defined in array specification.",
+          "raw": ".\\validation\\matiec_live_r2\\task_P08_skeleton\\source.st:18-22..18-22: error: invalid subrange list defined in array specification."
+        }
+      ],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_P09_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.172,
+      "source_sha256": "0ac0d90e1212c9803992291ef4e6ab3c762fa2a3f8e719760d59c0d92b9e7474",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_P10_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.172,
+      "source_sha256": "9abe46d24ddf0fb3e7ae309dbd72804a6a4d5f9002226b52be44eb595af971d0",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_P11_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.172,
+      "source_sha256": "9f3569ef8a909f1167efe28bb8ceef4019ccfbda8cf24f512844c292e6e39363",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_P12_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "timeout",
+      "elapsed_s": 3.094,
+      "source_sha256": "c74e3d2893ecc79e91c3b2a6f02741af5e3c5514cc45e7198812b8251237bb4f",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 12,
+          "message": ".\\validation\\matiec_live_r2\\task_P12_skeleton\\source.st:12-32..12-36: error: invalid specification in variable declaration.",
+          "raw": ".\\validation\\matiec_live_r2\\task_P12_skeleton\\source.st:12-32..12-36: error: invalid specification in variable declaration."
+        }
+      ],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_P13_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.156,
+      "source_sha256": "a1f0f1c05d961be856893dd36c3851d6616639e043287d75dab2d39be655b0eb",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_P14_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "fail",
+      "elapsed_s": 0.093,
+      "source_sha256": "f589905ccc3fe61f0db85dc5eab535e1b5617d14b8f02e47abcb779d11d78c85",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 3,
+          "message": ".\\validation\\matiec_live_r2\\task_P14_skeleton\\source.st:3-19..3-20: error: ';' missing at end of input variable(s) declaration.",
+          "raw": ".\\validation\\matiec_live_r2\\task_P14_skeleton\\source.st:3-19..3-20: error: ';' missing at end of input variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 3,
+          "message": ".\\validation\\matiec_live_r2\\task_P14_skeleton\\source.st:3-20..3-24: error: invalid input variable(s) declaration.",
+          "raw": ".\\validation\\matiec_live_r2\\task_P14_skeleton\\source.st:3-20..3-24: error: invalid input variable(s) declaration."
+        }
+      ],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_P15_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.172,
+      "source_sha256": "d1dfd03ff2e3b071a1300970ee1cb21e36ad4dab44f77a56b796ab825d79544a",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_P16_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.172,
+      "source_sha256": "bb6a4071340c40e0e0a8f77f2cb63064d75e5c14b9488073a8ba102bd0928503",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_P17_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "fail",
+      "elapsed_s": 0.094,
+      "source_sha256": "e58b5773bc23b82f188574796ad9117c3fbc21624cf40ac894d74f8348f4aab3",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 7,
+          "message": ".\\validation\\matiec_live_r2\\task_P17_skeleton\\source.st:7-10..8-1: error: ';' missing at end of data type declaration.",
+          "raw": ".\\validation\\matiec_live_r2\\task_P17_skeleton\\source.st:7-10..8-1: error: ';' missing at end of data type declaration."
+        }
+      ],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_P18_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "timeout",
+      "elapsed_s": 3.109,
+      "source_sha256": "bb7139f8151d7824603e23379b7c24833cef8eb251f47b87b297c6e127fe3d0a",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 12,
+          "message": ".\\validation\\matiec_live_r2\\task_P18_skeleton\\source.st:12-12..12-19: error: invalid variable(s) declaration.",
+          "raw": ".\\validation\\matiec_live_r2\\task_P18_skeleton\\source.st:12-12..12-19: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 13,
+          "message": ".\\validation\\matiec_live_r2\\task_P18_skeleton\\source.st:13-5..13-20: error: invalid variable(s) declaration.",
+          "raw": ".\\validation\\matiec_live_r2\\task_P18_skeleton\\source.st:13-5..13-20: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_SYNTAX",
+          "severity": "error",
+          "line": 12,
+          "message": ".\\validation\\matiec_live_r2\\task_P18_skeleton\\source.st:12-5..12-18: error: unexpected token after 'VAR_IN_OUT' in in_out variable(s) declaration.",
+          "raw": ".\\validation\\matiec_live_r2\\task_P18_skeleton\\source.st:12-5..12-18: error: unexpected token after 'VAR_IN_OUT' in in_out variable(s) declaration."
+        }
+      ],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_P19_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.172,
+      "source_sha256": "be81793dd74e0eca3bf985628dbd2c4f80539ee34b27d5d9f96a8b490de8dae0",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_P20_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.171,
+      "source_sha256": "a9f22566f17e4b5b7416f35e4a601e167714cc836cfa462b6f2f61bdd0f712cf",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_S01_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.172,
+      "source_sha256": "a414205596be375575fbac4911e0688b017bdb17632cc68684f0a7f4c6d81794",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_S02_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.156,
+      "source_sha256": "2316287df9cb5f8c896cc229a84450ccc455288ac3293886e4cda448eb92a2aa",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_S03_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.172,
+      "source_sha256": "f2d9d9b06109df3ec555c2ada7315fe52e548bd019efd1ee84dcc458b77bd802",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_S04_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.157,
+      "source_sha256": "9ade2c555e526ba8975ba0b362b458367ca174587cd56e3940b2c4f25abef47a",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_S05_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.188,
+      "source_sha256": "68334f70a5faeccf3f8d7602f1ce2dac631fc224d8b104ef21a3ea6830ab705b",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_S06_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.172,
+      "source_sha256": "90d10d9500b9f226c42a58e55019caf59f7ad97a1bd8b15e515c227b15313437",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_S07_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.203,
+      "source_sha256": "11a085f8da516845c35b99e5d45fba49a61c0d9ea0c6d4ca05b10ad1d73cc4cc",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_S08_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.188,
+      "source_sha256": "2b9af7c59e270afa15a1ac6f1d7c742c2096f5742199c1c3cfe5697cacbddc0c",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_S09_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.188,
+      "source_sha256": "c9f2fa34f07b175c53b59c0bc929104a83c621512c15e3a0bb08110970488193",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_S10_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.187,
+      "source_sha256": "782456dd318a797700c82b784b96efb5f1d4b90587150fbce50b19a31bdd12f6",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_S11_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.172,
+      "source_sha256": "0e3300207e38ecd94f260917cea5f25cc37be89b020bf3a4bc534ecc054db31e",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_S12_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.203,
+      "source_sha256": "b0c1054b153b95eef78ab40228e898c90cafa4616a44ff299ce40e6a7b0b0112",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_S13_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.188,
+      "source_sha256": "3a46a04b5c64b099147cd2ab6f78e3a919f2ce629b27a133edf46b8d192b6d1f",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    },
+    {
+      "case_id": "task_S14_skeleton",
+      "kind": "task_skeleton",
+      "expected": "observe",
+      "status": "pass",
+      "elapsed_s": 0.171,
+      "source_sha256": "eff3164013939d551efa677bbfb2c179c1876e96fe9570573297b7ddb43e69bc",
+      "errors": [],
+      "evidence_kind": "live_fast_compiler",
+      "functional_tests_run": false
+    }
+  ]
+}

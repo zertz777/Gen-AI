@@ -1,0 +1,219 @@
+{
+  "elapsed_s": 2.026458740234375, 
+  "evidence_kind": "live", 
+  "messages": [
+    {
+      "stage": "build", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "------ 开始编译应用程序 PLCWinNT.Application -------"
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "代码典型化..."
+    }, 
+    {
+      "stage": "build", 
+      "native_number": 77, 
+      "native_prefix": "C", 
+      "severity": "error", 
+      "object_name": "FB_AgentProbeMissingDependency", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "4行 (Decl)", 
+      "raw": "未知的类型: 'FB_AgentMissingLibraryProbe_6E79B1'"
+    }, 
+    {
+      "stage": "build", 
+      "native_number": 35, 
+      "native_prefix": "C", 
+      "severity": "error", 
+      "object_name": "FB_AgentProbeMissingDependency", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "行1,列1 (Impl)", 
+      "raw": "需要程序名、函数或功能块实例替代 'dep'"
+    }, 
+    {
+      "stage": "build", 
+      "native_number": 181, 
+      "native_prefix": "C", 
+      "severity": "information", 
+      "object_name": "FB_AgentProbeMissingDependency", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "4行 (Decl)", 
+      "raw": "相关位置"
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "C", 
+      "severity": "text", 
+      "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+      "position_text": "", 
+      "raw": "编译完成--2错误,0警告"
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "SA", 
+      "severity": "text", 
+      "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+      "position_text": "", 
+      "raw": "其他代码检查..."
+    }, 
+    {
+      "stage": "build", 
+      "native_prefix": "SA", 
+      "severity": "text", 
+      "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+      "position_text": "", 
+      "raw": "其他代码检查完成-0 个错误"
+    }
+  ], 
+  "errors": [
+    {
+      "code": "E_TYPE", 
+      "severity": "error", 
+      "line": 3, 
+      "raw": "未知的类型: 'FB_AgentMissingLibraryProbe_6E79B1'", 
+      "message": "未知的类型: 'FB_AgentMissingLibraryProbe_6E79B1'"
+    }, 
+    {
+      "code": "E_COMPILE", 
+      "severity": "error", 
+      "line": 5, 
+      "raw": "需要程序名、函数或功能块实例替代 'dep'", 
+      "message": "需要程序名、函数或功能块实例替代 'dep'"
+    }
+  ], 
+  "code_generated": false, 
+  "stages": {
+    "build": {
+      "status": "fail", 
+      "elapsed_s": 0.7481689453125, 
+      "errors": [
+        {
+          "code": "E_TYPE", 
+          "severity": "error", 
+          "line": 3, 
+          "raw": "未知的类型: 'FB_AgentMissingLibraryProbe_6E79B1'", 
+          "message": "未知的类型: 'FB_AgentMissingLibraryProbe_6E79B1'"
+        }, 
+        {
+          "code": "E_COMPILE", 
+          "severity": "error", 
+          "line": 5, 
+          "raw": "需要程序名、函数或功能块实例替代 'dep'", 
+          "message": "需要程序名、函数或功能块实例替代 'dep'"
+        }
+      ], 
+      "messages": [
+        {
+          "stage": "build", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "------ 开始编译应用程序 PLCWinNT.Application -------"
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "代码典型化..."
+        }, 
+        {
+          "stage": "build", 
+          "native_number": 77, 
+          "native_prefix": "C", 
+          "severity": "error", 
+          "object_name": "FB_AgentProbeMissingDependency", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "4行 (Decl)", 
+          "raw": "未知的类型: 'FB_AgentMissingLibraryProbe_6E79B1'"
+        }, 
+        {
+          "stage": "build", 
+          "native_number": 35, 
+          "native_prefix": "C", 
+          "severity": "error", 
+          "object_name": "FB_AgentProbeMissingDependency", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "行1,列1 (Impl)", 
+          "raw": "需要程序名、函数或功能块实例替代 'dep'"
+        }, 
+        {
+          "stage": "build", 
+          "native_number": 181, 
+          "native_prefix": "C", 
+          "severity": "information", 
+          "object_name": "FB_AgentProbeMissingDependency", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "4行 (Decl)", 
+          "raw": "相关位置"
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "C", 
+          "severity": "text", 
+          "category": "97f48d64-a2a3-4856-b640-75c046e37ea9", 
+          "position_text": "", 
+          "raw": "编译完成--2错误,0警告"
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "SA", 
+          "severity": "text", 
+          "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+          "position_text": "", 
+          "raw": "其他代码检查..."
+        }, 
+        {
+          "stage": "build", 
+          "native_prefix": "SA", 
+          "severity": "text", 
+          "category": "220493a1-f49b-4416-9a3f-a545db707cbe", 
+          "position_text": "", 
+          "raw": "其他代码检查完成-0 个错误"
+        }
+      ]
+    }, 
+    "generate": {
+      "status": "skipped", 
+      "elapsed_s": 0.0, 
+      "errors": [], 
+      "reason": "build_fail", 
+      "messages": []
+    }
+  }, 
+  "linked_pou": "FB_AgentProbeMissingDependency", 
+  "status": "fail", 
+  "compiler": "CODESYS", 
+  "case_id": "C04_missing_dependency", 
+  "source_line_mapping": {
+    "status": "known_object_partitions_calibrated", 
+    "imported_text_spans": [
+      {
+        "object_name": "FB_AgentProbeMissingDependency", 
+        "imported_prefix_lines": 1, 
+        "part": "declaration", 
+        "source_start_line": 1, 
+        "source_end_line": 4
+      }, 
+      {
+        "object_name": "FB_AgentProbeMissingDependency", 
+        "imported_prefix_lines": 0, 
+        "part": "implementation", 
+        "source_start_line": 5, 
+        "source_end_line": 5
+      }
+    ], 
+    "note": "Decl/Impl line mapping calibrated with native diagnostics; unknown objects/positions remain null"
+  }, 
+  "source_sha256": "8b67b9d358d2481cd1a4b238ea233627ea1fbd89ac48fbbdaaf74cd065202e33"
+}

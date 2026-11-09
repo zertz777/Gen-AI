@@ -76,7 +76,6 @@ python agent/run.py --framework self --model "准确模型ID" --tasks data/tasks
 运行配置器自身测试：
 
 ```powershell
-Set-Location "release/member2-v1.1/成员2_提交包_v1.1"
 python -m unittest tests_unit.test_configure_codesys -v
 ```
 

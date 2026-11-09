@@ -1,0 +1,8 @@
+{"task_id": "P17", "case_id": "P17-01", "status": "error", "mismatch": {"error": "P17-01 缺输出列：recipeQueryResult"}, "reason": "P17-01 缺输出列：recipeQueryResult", "latency_s": 0.001}
+{"task_id": "P17", "case_id": "P17-02", "status": "error", "mismatch": {"error": "P17-02 缺输出列：recipeQueryResult"}, "reason": "P17-02 缺输出列：recipeQueryResult", "latency_s": 0.001}
+{"task_id": "P17", "case_id": "P17-03", "status": "error", "mismatch": {"error": "P17-03 缺输出列：recipeQueryResult"}, "reason": "P17-03 缺输出列：recipeQueryResult", "latency_s": 0.001}
+{"task_id": "P17", "case_id": "P17-04", "status": "error", "mismatch": {"error": "P17-04 缺输出列：recipeQueryResult"}, "reason": "P17-04 缺输出列：recipeQueryResult", "latency_s": 0.001}
+{"task_id": "P17", "case_id": "P17-05", "status": "error", "mismatch": {"error": "P17-05 缺输出列：recipeQueryResult"}, "reason": "P17-05 缺输出列：recipeQueryResult", "latency_s": 0.001}
+{"task_id": "P17", "case_id": "P17-06", "status": "error", "mismatch": {"error": "P17-06 缺输出列：recipeQueryResult"}, "reason": "P17-06 缺输出列：recipeQueryResult", "latency_s": 0.001}
+{"task_id": "P17", "case_id": "P17-07", "status": "error", "mismatch": {"error": "P17-07 缺输出列：recipeQueryResult"}, "reason": "P17-07 缺输出列：recipeQueryResult", "latency_s": 0.001}
+{"task_id": "P17", "case_id": "P17-08", "status": "error", "mismatch": {"error": "P17-08 缺输出列：recipeQueryResult"}, "reason": "P17-08 缺输出列：recipeQueryResult", "latency_s": 0.001}

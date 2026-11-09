@@ -1,0 +1,3 @@
+case_id,cycle,pumpGroup[].priority,pumpGroup[].selection,pumpGroup[].RunComd
+P07-06,1,"[""2"", ""4"", ""1"", ""5"", ""3""]","[TRUE, TRUE, TRUE, TRUE, TRUE]","[FALSE, FALSE, FALSE, FALSE, FALSE]"
+P07-06,2,"[""2"", ""4"", ""1"", ""5"", ""3""]","[TRUE, TRUE, TRUE, TRUE, TRUE]","[FALSE, FALSE, FALSE, FALSE, FALSE]"

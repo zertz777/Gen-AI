@@ -1,0 +1,77 @@
+{
+  "source": "FUNCTION_BLOCK FB_P11\nVAR_INPUT\n    Mode : BOOL;\n    ForwardButton : BOOL;\n    ReverseButton : BOOL;\n    SensorA : BOOL;\n    SensorB : BOOL;\n    SensorC : BOOL;\n    ButtonA : BOOL;\n    ButtonB : BOOL;\n    ButtonC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MotorForward : BOOL := FALSE;\n    MotorReverse : BOOL := FALSE;\n    CompletionLight : BOOL := FALSE;\nEND_VAR\nVAR\n    (* 0 = IDLE/current station A; 1 = moving to B;\n       2 = waiting at B; 3 = moving to C;\n       4 = waiting at C; 5 = completed. *)\n    StationState : INT := 0;\n    StartupScans : USINT := 0;\n    PreviousMode : BOOL := FALSE;\n    PreviousButtonA : BOOL := FALSE;\n    PreviousButtonB : BOOL := FALSE;\n    PreviousButtonC : BOOL := FALSE;\n    RiseA : BOOL;\n    RiseB : BOOL;\n    RiseC : BOOL;\nEND_VAR\n\n(*\n需求原文：\nA simple automated production line consists of three workstations: Workstation A, Workstation B, and Workstation C. The product needs to go through these three stations in sequence to be considered fully completed. There is a motor in the production line that is responsible for moving the product from one workstation to the next. The sequence of the line is from Workstation A to Workstation B, and then to Workstation C. Each workstation has a sensor (used to detect if the product has arrived) and a button (used to trigger the signal that the station's processing is complete).\nControl requirements:\n1. Mode Switching: The mode switch (Mode) is used to switch between manual and automatic modes of the production line.\n2. Manual Mode: In manual mode, the forward rotation button (ForwardButton) controls the forward rotation of the motor, and the reverse rotation button (ReverseButton) controls the reverse rotation of the motor. Forward and reverse rotation operations need to be interlocked and cannot be performed simultaneously.\n3. Automatic Mode:\n   - When the product arrives at Workstation A, SensorA detects the product, and after the operator triggers the processing complete signal via ButtonA, the motor starts forward rotation to move the product to Workstation B.\n   - When the product arrives at Workstation B, SensorB detects the product, the motor stops, and after the operator triggers the processing complete signal via ButtonB, the motor starts forward rotation to move the product to Workstation C.\n   - When the product arrives at Workstation C, SensorC detects the product, the motor stops, and after the operator triggers the processing complete signal via ButtonC, the completion indicator light (CompletionLight) turns on, indicating that the product processing is complete. When the product is taken away, i.e., SensorC no longer detects the product, the completion indicator light (CompletionLight) turns off.\n\nScan period: 20 ms.\nC10 G[0,1] is implemented as two initial inhibited scans.\nCompletion buttons use rising edges, tracked in every mode.\nLeaving automatic mode discards unfinished automatic progression;\na completed product retains its light until SensorC becomes FALSE.\n\nSpecification limitation retained for review:\nThe formal note refers to emergency-stop abnormal tests, but no emergency-stop\ninput or observable emergency-stop condition exists in this interface.\nEmergency-stop behavior cannot be implemented or adjudicated from these inputs.\nNo compilation or cycle-test verification is claimed.\n*)\n\nRiseA := ButtonA AND NOT PreviousButtonA;\nRiseB := ButtonB AND NOT PreviousButtonB;\nRiseC := ButtonC AND NOT PreviousButtonC;\n\nMotorForward := FALSE;\nMotorReverse := FALSE;\n\nIF NOT SensorC THEN\n    CompletionLight := FALSE;\nEND_IF;\n\nIF StartupScans < 2 THEN\n    StartupScans := StartupScans + 1;\n    StationState := 0;\n    CompletionLight := FALSE;\nELSE\n    IF NOT Mode THEN\n        StationState := 0;\n        (* Conflicting manual commands stop both directions. *)\n        MotorForward := ForwardButton AND NOT ReverseButton;\n        MotorReverse := ReverseButton AND NOT ForwardButton;\n    ELSE\n        IF NOT PreviousMode THEN\n            StationState := 0;\n        END_IF;\n\n        IF CompletionLight THEN\n            (* Hold independently of mode until the product leaves C. *)\n            StationState := 5;\n        ELSE\n            CASE StationState OF\n                0:\n                    IF SensorA AND RiseA THEN\n                        StationState := 1;\n                        MotorForward := TRUE;\n                    END_IF;\n\n                1:\n                    IF SensorB THEN\n                        (* Arrival always stops transport for this scan.\n                           A coincident completion edge is retained by\n                           advancing the state for the next scan. *)\n                        IF RiseB THEN\n                            StationState := 3;\n                        ELSE\n                            StationState := 2;\n                        END_IF;\n                    ELSE\n                        MotorForward := TRUE;\n                    END_IF;\n\n                2:\n                    IF SensorB AND RiseB THEN\n                        StationState := 3;\n                        MotorForward := TRUE;\n                    END_IF;\n\n                3:\n                    IF SensorC THEN\n                        IF RiseC THEN\n                            CompletionLight := TRUE;\n                            StationState := 5;\n                        ELSE\n                            StationState := 4;\n                        END_IF;\n                    ELSE\n                        MotorForward := TRUE;\n                    END_IF;\n\n                4:\n                    IF SensorC AND RiseC THEN\n                        CompletionLight := TRUE;\n                        StationState := 5;\n                    END_IF;\n\n                5:\n                    (* CompletionLight is already cleared on removal. *)\n                    StationState := 0;\n\n                ELSE\n                    (* Invalid internal state: stop and reinitialize. *)\n                    StationState := 0;\n            END_CASE;\n        END_IF;\n    END_IF;\nEND_IF;\n\nPreviousButtonA := ButtonA;\nPreviousButtonB := ButtonB;\nPreviousButtonC := ButtonC;\nPreviousMode := Mode;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 25.234,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 7,
+    "passed": 1,
+    "passed_ids": [
+      "P11-05"
+    ],
+    "failures": [
+      {
+        "case_id": "P11-01",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P11-02",
+        "cycle": 2,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P11-03",
+        "cycle": 2,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P11-04",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P11-06",
+        "cycle": 2,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P11-07",
+        "cycle": 2,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3698,
+  "tag": "candidate_2"
+}

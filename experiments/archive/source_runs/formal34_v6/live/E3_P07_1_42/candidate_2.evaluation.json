@@ -1,0 +1,157 @@
+{
+  "source": "TYPE ST_Pump :\nSTRUCT\n    priority : INT;\n    selection : BOOL;\n    RunComd : BOOL;\nEND_STRUCT\nEND_TYPE\n\nFUNCTION_BLOCK FB_P07\nVAR_INPUT\n    mode : BOOL;\n    start : BOOL;\n    stop : BOOL;\nEND_VAR\nVAR_IN_OUT\n    pumpGroup : ARRAY[1..5] OF ST_Pump;\nEND_VAR\nVAR\n    firstScan : BOOL := TRUE;\n    prevStart : BOOL;\n    started : BOOL;\n    activePump : ARRAY[1..5] OF BOOL;\n    selected : ARRAY[1..5] OF BOOL;\n    startEdge : BOOL;\n    i : INT;\n    n : INT;\n    bestIndex : INT;\n    bestPriority : INT;\n    bestFound : BOOL;\n    manualFound : BOOL;\n    anyActive : BOOL;\nEND_VAR\n\nIF stop THEN\n    FOR i := 1 TO 5 DO\n        pumpGroup[i].RunComd := FALSE;\n        activePump[i] := FALSE;\n    END_FOR;\n    started := FALSE;\nEND_IF;\n\nIF firstScan THEN\n    FOR i := 1 TO 5 DO\n        pumpGroup[i].RunComd := FALSE;\n        activePump[i] := FALSE;\n        selected[i] := FALSE;\n    END_FOR;\n    started := FALSE;\n    prevStart := start;\n    firstScan := FALSE;\nELSE\n    startEdge := start AND NOT prevStart;\n\n    IF NOT stop THEN\n        IF startEdge AND NOT started THEN\n            IF mode THEN\n                FOR i := 1 TO 5 DO\n                    activePump[i] := FALSE;\n                    selected[i] := FALSE;\n                END_FOR;\n\n                FOR n := 1 TO 3 DO\n                    bestFound := FALSE;\n                    bestIndex := 0;\n                    bestPriority := 0;\n                    FOR i := 1 TO 5 DO\n                        IF NOT selected[i] THEN\n                            IF (NOT bestFound) OR\n                               (pumpGroup[i].priority > bestPriority) OR\n                               ((pumpGroup[i].priority = bestPriority) AND (i < bestIndex)) THEN\n                                bestFound := TRUE;\n                                bestIndex := i;\n                                bestPriority := pumpGroup[i].priority;\n                            END_IF;\n                        END_IF;\n                    END_FOR;\n                    IF bestFound THEN\n                        selected[bestIndex] := TRUE;\n                        activePump[bestIndex] := TRUE;\n                    END_IF;\n                END_FOR;\n            ELSE\n                FOR i := 1 TO 5 DO\n                    activePump[i] := FALSE;\n                END_FOR;\n\n                manualFound := FALSE;\n                FOR i := 1 TO 5 DO\n                    IF NOT manualFound AND pumpGroup[i].selection THEN\n                        activePump[i] := TRUE;\n                        manualFound := TRUE;\n                    END_IF;\n                END_FOR;\n            END_IF;\n\n            anyActive := FALSE;\n            FOR i := 1 TO 5 DO\n                IF activePump[i] THEN\n                    anyActive := TRUE;\n                END_IF;\n            END_FOR;\n            started := anyActive;\n        END_IF;\n\n        IF started THEN\n            FOR i := 1 TO 5 DO\n                pumpGroup[i].RunComd := activePump[i];\n            END_FOR;\n        ELSE\n            FOR i := 1 TO 5 DO\n                pumpGroup[i].RunComd := FALSE;\n            END_FOR;\n        END_IF;\n    ELSE\n        FOR i := 1 TO 5 DO\n            pumpGroup[i].RunComd := FALSE;\n        END_FOR;\n    END_IF;\n\n    prevStart := start;\nEND_IF;\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 6,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_P07_1_42\\tools\\candidate_2\\fast\\source.st:6-10..7-1: error: ';' missing at end of data type declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_P07_1_42\\tools\\candidate_2\\fast\\source.st:6-10..7-1: error: ';' missing at end of data type declaration."
+        }
+      ],
+      "elapsed_s": 0.157,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.422,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 7,
+    "passed": 1,
+    "passed_ids": [
+      "P07-02"
+    ],
+    "failures": [
+      {
+        "case_id": "P07-01",
+        "cycle": 2,
+        "signal": "pumpGroup[].RunComd",
+        "expected": [
+          true,
+          false,
+          true,
+          false,
+          false
+        ],
+        "actual": [
+          true,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case_id": "P07-03",
+        "cycle": 1,
+        "signal": "pumpGroup[].RunComd",
+        "expected": [
+          true,
+          true,
+          true,
+          false,
+          false
+        ],
+        "actual": [
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case_id": "P07-04",
+        "cycle": 1,
+        "signal": "pumpGroup[].RunComd",
+        "expected": [
+          true,
+          false,
+          false,
+          false,
+          false
+        ],
+        "actual": [
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case_id": "P07-05",
+        "cycle": 1,
+        "signal": "pumpGroup[].RunComd",
+        "expected": [
+          true,
+          false,
+          false,
+          false,
+          false
+        ],
+        "actual": [
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case_id": "P07-06",
+        "cycle": 1,
+        "signal": "pumpGroup[].RunComd",
+        "expected": [
+          false,
+          true,
+          false,
+          true,
+          true
+        ],
+        "actual": [
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case_id": "P07-07",
+        "cycle": 1,
+        "signal": "pumpGroup[].RunComd",
+        "expected": [
+          false,
+          false,
+          true,
+          true,
+          true
+        ],
+        "actual": [
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 13030,
+  "tag": "candidate_2"
+}

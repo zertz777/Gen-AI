@@ -1,0 +1,78 @@
+{
+  "source": "FUNCTION_BLOCK FB_P18\nVAR_INPUT\n    enqueue : BOOL;\n    dequeue : BOOL;\n    reset : BOOL;\nEND_VAR\nVAR_OUTPUT\n    elementCount : DINT;\n    status : WORD;\nEND_VAR\nVAR_IN_OUT\n    item : INT;\n    buffer : ARRAY[*] OF INT;\nEND_VAR\nVAR\n    (* internal state; not exposed through the interface *)\n    enqueuePrev : BOOL := FALSE;\n    dequeuePrev : BOOL := FALSE;\n    head : DINT := 0;\n    tail : DINT := 0;\n    count : DINT := 0;\n    lower : DINT := 0;\n    capacity : DINT := 0;\n    idx : DINT := 0;\n    enqueueRise : BOOL := FALSE;\n    dequeueRise : BOOL := FALSE;\nEND_VAR\n\n(* derive lower bound and capacity from the actual caller-supplied buffer *)\nlower := LOWER_BOUND(buffer, 1);\ncapacity := UPPER_BOUND(buffer, 1) - lower + 1;\n\n(* one operation per rising edge *)\nenqueueRise := enqueue AND NOT enqueuePrev;\ndequeueRise := dequeue AND NOT dequeuePrev;\nenqueuePrev := enqueue;\ndequeuePrev := dequeue;\n\n(* default status: no error this invocation *)\nstatus := 16#0000;\n\nIF reset THEN\n    (* reset has priority over enqueue and dequeue *)\n    head := 0;\n    tail := 0;\n    count := 0;\nELSIF enqueueRise THEN\n    IF count < capacity THEN\n        idx := lower + tail;\n        buffer[idx] := item;\n        tail := tail + 1;\n        IF tail >= capacity THEN\n            tail := 0;\n        END_IF;\n        count := count + 1;\n    ELSE\n        (* queue is full: reject, leave queue and item unchanged *)\n        status := 16#8002;\n    END_IF;\nELSIF dequeueRise THEN\n    IF count > 0 THEN\n        idx := lower + head;\n        item := buffer[idx];\n        head := head + 1;\n        IF head >= capacity THEN\n            head := 0;\n        END_IF;\n        count := count - 1;\n    ELSE\n        (* queue is empty: reject, leave queue and item unchanged *)\n        status := 16#8001;\n    END_IF;\nEND_IF;\n\nelementCount := count;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 13,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P18_1_42\\tools\\baseline\\fast\\source.st:13-20..13-20: error: invalid subrange list defined in array specification.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P18_1_42\\tools\\baseline\\fast\\source.st:13-20..13-20: error: invalid subrange list defined in array specification."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 30,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P18_1_42\\tools\\baseline\\fast\\source.st:30-21..30-22: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P18_1_42\\tools\\baseline\\fast\\source.st:30-21..30-22: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 30,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P18_1_42\\tools\\baseline\\fast\\source.st:30-22..30-32: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P18_1_42\\tools\\baseline\\fast\\source.st:30-22..30-32: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 31,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P18_1_42\\tools\\baseline\\fast\\source.st:31-23..31-24: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P18_1_42\\tools\\baseline\\fast\\source.st:31-23..31-24: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 31,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P18_1_42\\tools\\baseline\\fast\\source.st:31-24..31-46: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P18_1_42\\tools\\baseline\\fast\\source.st:31-24..31-46: error: invalid statement in ST statement."
+        }
+      ],
+      "elapsed_s": 0.219,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 29.765,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 9,
+    "passed": 9,
+    "passed_ids": [
+      "P18-01",
+      "P18-02",
+      "P18-03",
+      "P18-04",
+      "P18-05",
+      "P18-06",
+      "P18-07",
+      "P18-08",
+      "P18-09"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

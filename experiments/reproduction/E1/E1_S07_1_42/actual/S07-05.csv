@@ -1,0 +1,3 @@
+case_id,cycle,Conveyor,FillValve,CapMotor,PackCyl,CycleCount,Status
+S07-05,1,TRUE,FALSE,FALSE,FALSE,0,16#0000
+S07-05,2,TRUE,FALSE,FALSE,FALSE,0,16#0000

@@ -1,0 +1,56 @@
+{
+  "status": "fail",
+  "fast": {
+    "status": "fail",
+    "errors": [
+      {
+        "code": "E_UNDECLARED",
+        "severity": "error",
+        "line": 5,
+        "message": ".\\validation\\toolchain_smoke_v1.1\\C01_undeclared\\tools\\check\\fast\\source.st:5-6..5-34: error: Ambiguous enumerate value or Variable not declared in this scope.",
+        "raw": ".\\validation\\toolchain_smoke_v1.1\\C01_undeclared\\tools\\check\\fast\\source.st:5-6..5-34: error: Ambiguous enumerate value or Variable not declared in this scope."
+      }
+    ],
+    "elapsed_s": 0.187,
+    "evidence_kind": "live"
+  },
+  "authoritative": {
+    "status": "fail",
+    "errors": [
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 5,
+        "message": "不能将类型 '未知的类型: 'AgentSignalNotDeclared_6E79B1'' 转换为类型'BOOL'",
+        "raw": "不能将类型 '未知的类型: 'AgentSignalNotDeclared_6E79B1'' 转换为类型'BOOL'"
+      },
+      {
+        "code": "E_UNDECLARED",
+        "severity": "error",
+        "line": 5,
+        "message": "没有定义标识符'AgentSignalNotDeclared_6E79B1' ",
+        "raw": "没有定义标识符'AgentSignalNotDeclared_6E79B1' "
+      }
+    ],
+    "elapsed_s": 32.235,
+    "evidence_kind": "live"
+  },
+  "errors": [
+    {
+      "code": "E_TYPE",
+      "severity": "error",
+      "line": 5,
+      "message": "不能将类型 '未知的类型: 'AgentSignalNotDeclared_6E79B1'' 转换为类型'BOOL'",
+      "raw": "不能将类型 '未知的类型: 'AgentSignalNotDeclared_6E79B1'' 转换为类型'BOOL'"
+    },
+    {
+      "code": "E_UNDECLARED",
+      "severity": "error",
+      "line": 5,
+      "message": "没有定义标识符'AgentSignalNotDeclared_6E79B1' ",
+      "raw": "没有定义标识符'AgentSignalNotDeclared_6E79B1' "
+    }
+  ],
+  "authoritative_available": true,
+  "evidence_kind": "live"
+}

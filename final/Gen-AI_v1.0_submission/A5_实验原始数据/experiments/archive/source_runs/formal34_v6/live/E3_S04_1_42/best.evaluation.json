@@ -1,0 +1,64 @@
+{
+  "source": "FUNCTION_BLOCK FB_S04\nVAR_INPUT\n    RawWeight : INT;\n    ZeroBtn : BOOL;\n    CalibWeight : REAL;\nEND_VAR\nVAR_OUTPUT\n    CompensatedWeight : REAL := 0.0;\n    ZeroOffset : INT := 0;\n    DriftAlarm : BOOL := FALSE;\n    Status : WORD := 16#0000;\nEND_VAR\nVAR\n    ZeroBtnLast : BOOL := FALSE;\n    delta : DINT;\n    driftOut : BOOL;\n    driftBack : BOOL;\nEND_VAR\n\n(* ============================================================\n * 冲突报告（保留，不自行修改接口或类型）：\n *\n * 冲突1：C10 要求上电首周期 CompensatedWeight == 0.0，\n *        而 C4 要求每周期 CompensatedWeight == (RawWeight - ZeroOffset) * 0.01。\n *        当首个扫描周期 RawWeight != 0 时，两者在首周期结束时的值矛盾。\n *        本实现按 C4 每周期计算补偿重量；VAR_OUTPUT 初值仅保证调用前为 0.0。\n *\n * 冲突2：Status = 16#8402 要求检测 RawWeight 超出 -32768..32767 的可用段，\n *        但 RawWeight 的外部接口类型为 INT，其合法范围恰好就是 -32768..32767，\n *        因此该超量程条件在类型层面不可达。本实现保留检测分支，但该分支不会执行。\n *        不新增接口、不修改 RawWeight 类型。\n * ============================================================ *)\n\n(* 边沿检测：ZeroBtn 上升沿更新零点并清漂移报警 *)\nIF ZeroBtn AND NOT ZeroBtnLast THEN\n    ZeroOffset := RawWeight;\n    DriftAlarm := FALSE;\nEND_IF;\nZeroBtnLast := ZeroBtn;\n\n(* 补偿重量：每周期按当前 RawWeight 和 ZeroOffset 计算，不使用上一周期结果 *)\nCompensatedWeight := (INT_TO_REAL(RawWeight) - INT_TO_REAL(ZeroOffset)) * 0.01;\n\n(* 计算偏差，使用 DINT 避免 INT 减法溢出 *)\ndelta := INT_TO_DINT(RawWeight) - INT_TO_DINT(ZeroOffset);\n\n(* 滞回判据：|delta| >= 200 置位；|delta| <= 150 复位；中间保持 *)\ndriftOut := (delta >= 200) OR (delta <= -200);\ndriftBack := (delta <= 150) AND (delta >= -150);\n\nIF driftOut THEN\n    DriftAlarm := TRUE;\nELSIF driftBack THEN\n    DriftAlarm := FALSE;\nEND_IF;\n\n(* 状态码：超量程优先，其次漂移，最后正常。\n   注意：RawWeight 为 INT，其范围恰为 -32768..32767，\n   因此 16#8402 分支不可达，仅保留结构以符合规约声明。 *)\nIF RawWeight < -32768 OR RawWeight > 32767 THEN\n    Status := 16#8402;  (* 采样值超量程（类型层面不可达） *)\nELSIF DriftAlarm THEN\n    Status := 16#8401;  (* 零点漂移 *)\nELSE\n    Status := 16#0000;  (* 正常 *)\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.203,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 2,
+    "passed_ids": [
+      "S04-04",
+      "S04-05"
+    ],
+    "failures": [
+      {
+        "case_id": "S04-01",
+        "cycle": 1,
+        "signal": "DriftAlarm",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S04-02",
+        "cycle": 2,
+        "signal": "DriftAlarm",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S04-03",
+        "cycle": 2,
+        "signal": "DriftAlarm",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S04-06",
+        "cycle": 1,
+        "signal": "DriftAlarm",
+        "expected": false,
+        "actual": true
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 8078,
+  "tag": "candidate_2"
+}

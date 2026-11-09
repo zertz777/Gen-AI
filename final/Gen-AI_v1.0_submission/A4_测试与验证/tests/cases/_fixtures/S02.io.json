@@ -1,0 +1,45 @@
+{
+  "task_id": "S02",
+  "io": [
+    {
+      "name": "FwdBtn",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "RevBtn",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "MaintKey",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "EStop_NC",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "MotorFwd",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "MotorRev",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "RunLamp",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "Status",
+      "direction": "OUT",
+      "type": "WORD"
+    }
+  ]
+}

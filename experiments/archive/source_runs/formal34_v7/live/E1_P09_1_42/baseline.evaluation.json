@@ -1,0 +1,124 @@
+{
+  "source": "FUNCTION_BLOCK FB_P09\nVAR_INPUT\n    cyclicExecution : BOOL;\n    trigger : BOOL;\n    value : LREAL;\n    windowSize : INT;\n    reset : BOOL;\nEND_VAR\nVAR_OUTPUT\n    average : LREAL := 0.0;\n    windowSizeReached : BOOL := FALSE;\n    error : BOOL := FALSE;\n    status : WORD := 16#0000;\nEND_VAR\nVAR\n    buffer : ARRAY[0..99] OF LREAL;\n    writeIndex : INT := 0;\n    sampleCount : INT := 0;\n    prevTrigger : BOOL := FALSE;\n    newSample : BOOL := FALSE;\n    triggerEdge : BOOL := FALSE;\n    i : INT;\n    idx : INT;\n    sum : LREAL;\nEND_VAR\n\n(* --------------------------------------------------------------- *)\n(* K3 / C3 / C3b: window size must be within 1..100                 *)\n(* --------------------------------------------------------------- *)\nIF (windowSize < 1) OR (windowSize > 100) THEN\n    error := TRUE;\n    status := 16#8200;\nELSE\n    error := FALSE;\n    status := 16#0000;\nEND_IF\n\n(* --------------------------------------------------------------- *)\n(* C2: windowSizeReached and error must never both be TRUE          *)\n(* --------------------------------------------------------------- *)\nIF error THEN\n    windowSizeReached := FALSE;\nEND_IF\n\n(* --------------------------------------------------------------- *)\n(* K4 / C1: reset has priority over cyclic execution and trigger    *)\n(* --------------------------------------------------------------- *)\nIF reset THEN\n    writeIndex := 0;\n    sampleCount := 0;\n    average := 0.0;\n    windowSizeReached := FALSE;\n    FOR i := 0 TO 99 DO\n        buffer[i] := 0.0;\n    END_FOR;\n    prevTrigger := trigger;\nELSIF error THEN\n    (* K3: invalid window -> do not update average, keep last value *)\n    prevTrigger := trigger;\nELSE\n    (* keep ring-buffer consistent if windowSize changed while running *)\n    IF writeIndex >= windowSize THEN\n        writeIndex := 0;\n    END_IF\n    IF sampleCount > windowSize THEN\n        sampleCount := windowSize;\n    END_IF\n\n    (* K2: detect rising edge of external trigger *)\n    triggerEdge := trigger AND NOT prevTrigger;\n\n    (* K1 / K2: cyclic execution takes precedence; no double counting *)\n    newSample := FALSE;\n    IF cyclicExecution THEN\n        newSample := TRUE;\n    ELSIF triggerEdge THEN\n        newSample := TRUE;\n    END_IF\n\n    IF newSample THEN\n        buffer[writeIndex] := value;\n        writeIndex := writeIndex + 1;\n        IF writeIndex >= windowSize THEN\n            writeIndex := 0;\n        END_IF\n        IF sampleCount < windowSize THEN\n            sampleCount := sampleCount + 1;\n        END_IF\n\n        (* arithmetic mean over the sampleCount most recent samples *)\n        sum := 0.0;\n        FOR i := 0 TO sampleCount - 1 DO\n            idx := (writeIndex - 1 - i) MOD windowSize;\n            IF idx < 0 THEN\n                idx := idx + windowSize;\n            END_IF\n            sum := sum + buffer[idx];\n        END_FOR\n        average := sum / INT_TO_LREAL(sampleCount);\n\n        IF sampleCount >= windowSize THEN\n            windowSizeReached := TRUE;\n        ELSE\n            windowSizeReached := FALSE;\n        END_IF\n    END_IF\n\n    prevTrigger := trigger;\nEND_IF\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 36,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:36-6..41-1: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:36-6..41-1: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 43,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:43-6..48-1: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:43-6..48-1: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 64,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:64-10..65-5: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:64-10..65-5: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 67,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:67-10..70-5: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:67-10..70-5: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 78,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:78-10..80-5: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:78-10..80-5: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 85,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:85-14..86-9: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:85-14..86-9: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 88,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:88-14..91-9: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:88-14..91-9: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 96,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:96-18..97-13: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:96-18..97-13: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 98,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:98-15..99-9: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:98-15..99-9: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 105,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:105-14..106-5: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:105-14..106-5: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 106,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:106-10..108-5: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:106-10..108-5: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 109,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:109-6..111-1: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E1_P09_1_42\\tools\\baseline\\fast\\source.st:109-6..111-1: error: ';' missing at the end of statement in ST statement."
+        }
+      ],
+      "elapsed_s": 0.125,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 16.109,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P09-01",
+      "P09-02",
+      "P09-03",
+      "P09-04",
+      "P09-05",
+      "P09-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

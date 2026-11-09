@@ -1,0 +1,50 @@
+{
+  "task_id": "S08",
+  "io": [
+    {
+      "name": "RecipeSelect",
+      "direction": "IN",
+      "type": "INT"
+    },
+    {
+      "name": "ChangeoverReq",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "PartHeight",
+      "direction": "IN",
+      "type": "REAL"
+    },
+    {
+      "name": "EStop_NC",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "ActiveRecipe",
+      "direction": "OUT",
+      "type": "INT"
+    },
+    {
+      "name": "SortLeft",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "SortRight",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "Busy",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "Status",
+      "direction": "OUT",
+      "type": "WORD"
+    }
+  ]
+}

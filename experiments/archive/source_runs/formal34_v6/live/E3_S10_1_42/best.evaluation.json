@@ -1,0 +1,39 @@
+{
+  "source": "FUNCTION_BLOCK FB_S10\nVAR_INPUT\n    VFDFaultCode : WORD;\n    VFDRun : BOOL;\n    ResetBtn : BOOL;\nEND_VAR\nVAR_OUTPUT\n    AlarmLamp : BOOL;\n    TripOutput : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    ResetBtnLast : BOOL := FALSE;\n    LatchedFaultCode : WORD := 16#0000;\n    TripLatched : BOOL := FALSE;\n    ResetEdge : BOOL;\n    NoFault : BOOL;\n    IsHeavyFault : BOOL;\nEND_VAR\n\n(* Conflict/未验证报告:\n   1) 需求4“运行中任何非零故障码跳闸”与需求1/C7“16#0001轻故障不跳闸”冲突。\n      本实现按需求1/C1/C7将 16#0001 作为轻故障例外处理。\n   2) C2: G(TripOutput -> !VFDRun) 涉及只读输入 VFDRun，FB 无法强制其状态；\n      本实现仅置 TripOutput，C2 必须由外部联锁保证，未在 FB 内验证。\n   3) C10 上电首周期不跳闸/不报警与 K1 重故障同周期跳闸在“首周期已有重故障”时冲突；\n      本实现不增加首周期屏蔽，按故障优先，初值由声明初态保证。\n*)\n\n    (*  ResetBtn 上升沿检测  *)\n    ResetEdge := ResetBtn AND NOT ResetBtnLast;\n    ResetBtnLast := ResetBtn;\n\n    (*  故障分级边界：16#0000 无故障，16#0001 轻故障，其余非零按重故障处理  *)\n    NoFault := (VFDFaultCode = 16#0000);\n    IsHeavyFault := (VFDFaultCode <> 16#0000) AND (VFDFaultCode <> 16#0001);\n\n    (*  重故障优先，立即锁存跳闸并记录故障码  *)\n    IF IsHeavyFault THEN\n        TripLatched := TRUE;\n        LatchedFaultCode := VFDFaultCode;\n    END_IF;\n\n    (*  仅 ResetBtn 上升沿且当前无故障时解除跳闸锁存  *)\n    IF ResetEdge AND NoFault THEN\n        TripLatched := FALSE;\n        LatchedFaultCode := 16#0000;\n    END_IF;\n\n    (*  输出映射  *)\n    TripOutput := TripLatched;\n    AlarmLamp := (VFDFaultCode <> 16#0000) OR TripLatched;\n\n    (*  Status 优先显示锁存重故障码；无锁存时显示当前故障码  *)\n    IF LatchedFaultCode <> 16#0000 THEN\n        Status := LatchedFaultCode;\n    ELSE\n        Status := VFDFaultCode;\n    END_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.234,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.812,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "S10-01",
+      "S10-02",
+      "S10-03",
+      "S10-04",
+      "S10-05",
+      "S10-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 10098,
+  "tag": "candidate_2"
+}

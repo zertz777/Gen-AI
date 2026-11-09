@@ -1,0 +1,10 @@
+# task: P07
+# meta: easy / A 开关量联锁
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(stop -> !RunComd)    -- 停止请求当周期必须清除运行命令（stop 优先于 start）（K4）
+C2: G(RunComd -> !stop)    -- 运行命令的前提是没有停止请求（互斥的许可形式）（K4）
+C4: G(!(start && stop))    -- 启动与停止同时有效属于非法请求，不得出现（K4）
+C6: G(RunComd -> (RunComd W stop))    -- 运行命令保持到停止请求出现为止（不自行掉线）（K1）
+C10: G[0,1](!RunComd)    -- 上电首周期无运行命令（初态）

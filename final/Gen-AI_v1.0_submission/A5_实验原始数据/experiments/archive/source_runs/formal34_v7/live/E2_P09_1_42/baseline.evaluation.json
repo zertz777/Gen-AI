@@ -1,0 +1,39 @@
+{
+  "source": "FUNCTION_BLOCK FB_P09\nVAR_INPUT\n    cyclicExecution : BOOL;\n    trigger : BOOL;\n    value : LREAL;\n    windowSize : INT;\n    reset : BOOL;\nEND_VAR\nVAR_OUTPUT\n    average : LREAL := 0.0;\n    windowSizeReached : BOOL := FALSE;\n    error : BOOL := FALSE;\n    status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    samples : ARRAY[0..99] OF LREAL;\n    writeIndex : INT := 0;\n    sampleCount : INT := 0;\n    activeWindowSize : INT := 0;\n    previousTrigger : BOOL := FALSE;\n    risingEdge : BOOL := FALSE;\n    acquire : BOOL := FALSE;\n    validWindow : BOOL := FALSE;\n    total : LREAL := 0.0;\n    i : INT := 0;\nEND_VAR\n\n(*\n需求原文：\nWrite a function block FB that calculates and updates a moving arithmetic mean.\nThe moving arithmetic mean is a method of averaging over consecutive data\npoints, where each new data point replaces the oldest data point, and then\nthe average is recalculated.\n\n1. When cyclicExecution is TRUE, a new data value is automatically read and\n   the moving average average is updated every scan cycle.\n2. Provide an external trigger signal trigger, which reads a new data value\n   and updates the moving average upon each rising edge.\n3. Provide a reset function reset, which resets the moving average calculation\n   when the reset signal is TRUE. If the window size is less than 1 or greater\n   than 100, output an error status and status code.\n\nThe status parameter indicates the execution status of the program:\n- 16#0000: Execution successful\n- 16#8200: Window length setting error, please set a value between 1 and 100.\n\n接口保持原名称、方向和类型。\ncyclicExecution 为 TRUE 时，trigger 不影响采样，每扫描最多采样一次。\n扫描周期：20 ms。窗口容量：1..100。\n初态：窗口为空，average = 0.0，windowSizeReached = FALSE，\nerror = FALSE，status = 16#0000，写入指针 = 0。\n\n约束：\nK1 cyclicExecution = TRUE 时每个扫描周期读入一个新数据并更新 average。\nK2 trigger 的每个上升沿读入一个新数据并更新 average，\n   与周期模式二选一，不重复计数。\nK3 windowSize 不在 1..100 时置 error = TRUE、status = 16#8200，\n   且不更新 average。\nK4 reset = TRUE 时清空窗口、把 windowSizeReached 置 FALSE，\n   其优先级高于 cyclicExecution 与 trigger。\n\n完整形式化规约：\n# task: P09\n# meta: medium / B 模拟量与数据处理\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(reset -> !windowSizeReached)\n    -- 复位当周期必须清除窗口满标志（复位优先于周期与触发）（K4）\nC3: G(windowSize < 1 -> F[0,1](error))\n    -- 窗口长度小于 1 时必须报错（不得静默）（K3）\nC3b: G(windowSize > 100 -> F[0,1](error))\n     -- 窗口长度大于 100 时必须报错（K3）\nC2: G(windowSizeReached -> !error)\n    -- 窗口满标志与错误标志不得同时为真（K3）\nC10: G[0,1](!windowSizeReached && !error && average == 0.0)\n     -- 上电首周期无窗口、无错误、平均值为 0（初态）\n\n原始数据告警：\nsemantic_warnings、warnings、missing_fields、dialect_requirements 均为空；\ntype_origins 为空。\n\n语义冲突报告：\nC10 若约束上电后的实际扫描输出，则与 K1 存在冲突：\n首扫描周期启用周期采样且 value 非零时，average 必须更新。\n首扫描窗口长度为 1 时，满标志也必须置 TRUE。\n初始扫描持续非法窗口时，C10 与 C3/C3b 的限时报错亦存在冲突。\n本实现保留声明初态，但实际调用立即执行采样及校验，\n不通过延迟采样或屏蔽错误来声称同时满足这些冲突条款。\n\n边界选择：\n有效窗口长度改变时清空旧窗口；当周期允许采样时立即采入新值。\n未填满窗口时，按实际已采集数量计算平均值。\n非法窗口时冻结 average 和采样数据，并清除满标志。\n非法窗口与 reset 同时出现时清空内部窗口，但依据 K3 保留 average；\n恢复有效配置后空窗口的 average 归零，或更新为当周期新样本。\ntrigger 历史每扫描更新，包括周期模式、复位和错误期间，\n因此不会在模式切换或恢复时补采已经发生的上升沿。\n\n实现变更：\n替换占位 RETURN，增加固定容量窗口、采样沿检测、复位及错误处理。\n当前对话无编译或测试执行工具，也未提供测试命令；\n未执行编译或逐周期测试，未声称已经验证正确。\n*)\n\nrisingEdge := trigger AND NOT previousTrigger;\npreviousTrigger := trigger;\n\nvalidWindow := (windowSize >= 1) AND (windowSize <= 100);\nacquire := cyclicExecution OR risingEdge;\n\nerror := NOT validWindow;\nIF validWindow THEN\n    status := WORD#16#0000;\nELSE\n    status := WORD#16#8200;\nEND_IF;\n\nIF reset THEN\n    FOR i := 0 TO 99 DO\n        samples[i] := 0.0;\n    END_FOR;\n    writeIndex := 0;\n    sampleCount := 0;\n    total := 0.0;\n    activeWindowSize := 0;\n    windowSizeReached := FALSE;\n\n    IF validWindow THEN\n        activeWindowSize := windowSize;\n        average := 0.0;\n    END_IF;\n\nELSIF NOT validWindow THEN\n    windowSizeReached := FALSE;\n\nELSE\n    IF activeWindowSize <> windowSize THEN\n        FOR i := 0 TO 99 DO\n            samples[i] := 0.0;\n        END_FOR;\n        writeIndex := 0;\n        sampleCount := 0;\n        total := 0.0;\n        average := 0.0;\n        activeWindowSize := windowSize;\n    END_IF;\n\n    IF acquire THEN\n        samples[writeIndex] := value;\n\n        IF sampleCount < activeWindowSize THEN\n            sampleCount := sampleCount + 1;\n        END_IF;\n\n        writeIndex := writeIndex + 1;\n        IF writeIndex >= activeWindowSize THEN\n            writeIndex := 0;\n        END_IF;\n\n        total := 0.0;\n        FOR i := 0 TO sampleCount - 1 DO\n            total := total + samples[i];\n        END_FOR;\n\n        average := total / INT_TO_LREAL(sampleCount);\n    ELSIF sampleCount = 0 THEN\n        average := 0.0;\n    END_IF;\n\n    windowSizeReached := (sampleCount = activeWindowSize);\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.265,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 22.797,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P09-01",
+      "P09-02",
+      "P09-03",
+      "P09-04",
+      "P09-05",
+      "P09-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

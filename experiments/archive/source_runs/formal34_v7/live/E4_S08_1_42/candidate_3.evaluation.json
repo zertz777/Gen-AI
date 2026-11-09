@@ -1,0 +1,57 @@
+{
+  "source": "FUNCTION_BLOCK FB_S08\nVAR_INPUT\n    RecipeSelect : INT;\n    ChangeoverReq : BOOL;\n    PartHeight : REAL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    ActiveRecipe : INT := 1;\n    SortLeft : BOOL := FALSE;\n    SortRight : BOOL := FALSE;\n    Busy : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    ChangeoverReqLast : BOOL := FALSE;\n    ChangeoverRise : BOOL;\n    StartupScans : INT := 0;\n    BusyScans : INT := 0;\n    BusyAtScanStart : BOOL;\n    RecipeValid : BOOL;\n    LeftThreshold : REAL;\n    RightThreshold : REAL;\nEND_VAR\n\n(*\n    扫描周期：20 ms。\n\n    待审语义冲突：\n    C9 原文：G(Busy -> G[0,100](Busy))。\n    该公式从每个 Busy 周期重新要求未来 100 周期保持 Busy，\n    因而一旦 Busy 为 TRUE，便不能再清除；与需求中的\n    “保持 2 s 后自动清除”矛盾。\n    本实现采用需求中的有限 2 s 保持，不声称满足原 C9。\n\n    C10 原文：\n    G[0,1](!SortLeft && !SortRight && !Busy && ActiveRecipe == 1)。\n    按闭区间解释，前两个调用保持上电状态，期间请求边沿不排队。\n\n    边界待审：\n    等于右阈值既不属于右分拣区间，也不属于“超过右阈值”。\n    按原文严格比较：等于右阈值时不分拣、不报超规格。\n\n    EStop_NC 未指定复位或状态码语义：\n    此处仅采用安全抑制，急停时禁止分拣及接受新切换；\n    已开始的切换计时继续，不改变 ActiveRecipe。\n\n    K4 的“同一产品”缺少产品身份或通过检测接口；\n    本实现保证逐扫描互斥，不声称验证跨扫描产品身份一致性。\n    未提供编译或逐周期测试证据。\n*)\n\nChangeoverRise := ChangeoverReq AND NOT ChangeoverReqLast;\nChangeoverReqLast := ChangeoverReq;\n\nRecipeValid := (RecipeSelect >= 1) AND (RecipeSelect <= 3);\n\nSortLeft := FALSE;\nSortRight := FALSE;\nStatus := WORD#16#0000;\n\nIF NOT RecipeValid THEN\n    Status := WORD#16#8801;\nEND_IF;\n\nIF StartupScans < 2 THEN\n    ActiveRecipe := 1;\n    Busy := FALSE;\n    BusyScans := 0;\n    StartupScans := StartupScans + 1;\nELSE\n    BusyAtScanStart := Busy;\n\n    (* 接受切换的扫描为计时起点；100 个后续扫描为 2 s。 *)\n    IF BusyAtScanStart THEN\n        IF BusyScans < 100 THEN\n            BusyScans := BusyScans + 1;\n        END_IF;\n\n        IF BusyScans >= 100 THEN\n            Busy := FALSE;\n            BusyScans := 0;\n        END_IF;\n    END_IF;\n\n    (* 扫描开始时仍忙的请求不在本扫描到期后重新接受。 *)\n    IF EStop_NC\n       AND ChangeoverRise\n       AND NOT BusyAtScanStart\n       AND RecipeValid\n       AND (PartHeight = 0.0) THEN\n        ActiveRecipe := RecipeSelect;\n        Busy := TRUE;\n        BusyScans := 0;\n    END_IF;\n\n    CASE ActiveRecipe OF\n        1:\n            LeftThreshold := 30.0;\n            RightThreshold := 60.0;\n        2:\n            LeftThreshold := 50.0;\n            RightThreshold := 90.0;\n        3:\n            LeftThreshold := 70.0;\n            RightThreshold := 120.0;\n    ELSE\n        (* 内部状态异常时禁止动作，不自行恢复到其他配方。 *)\n        LeftThreshold := 0.0;\n        RightThreshold := 0.0;\n    END_CASE;\n\n    IF EStop_NC\n       AND NOT Busy\n       AND (ActiveRecipe >= 1)\n       AND (ActiveRecipe <= 3)\n       AND (PartHeight > 0.0) THEN\n\n        IF PartHeight < LeftThreshold THEN\n            SortLeft := TRUE;\n        ELSIF PartHeight < RightThreshold THEN\n            SortRight := TRUE;\n        ELSIF PartHeight > RightThreshold THEN\n            (* 非法选择错误优先，保留 K3 的状态码。 *)\n            IF RecipeValid THEN\n                Status := WORD#16#8802;\n            END_IF;\n        END_IF;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 26.079,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 5,
+    "passed": 2,
+    "passed_ids": [
+      "S08-03",
+      "S08-05"
+    ],
+    "failures": [
+      {
+        "case_id": "S08-01",
+        "cycle": 1,
+        "signal": "SortLeft",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S08-02",
+        "cycle": 1,
+        "signal": "Busy",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S08-04",
+        "cycle": 1,
+        "signal": "SortLeft",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3024,
+  "tag": "candidate_3"
+}

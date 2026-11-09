@@ -1,0 +1,8 @@
+{"case_id": "S10-01", "status": "pass", "mismatch": null}
+{"case_id": "S10-02", "status": "pass", "mismatch": null}
+{"case_id": "S10-03", "status": "pass", "mismatch": null}
+{"case_id": "S10-04", "status": "pass", "mismatch": null}
+{"case_id": "S10-05", "status": "pass", "mismatch": null}
+{"case_id": "S10-06", "status": "pass", "mismatch": null}
+{"case_id": "S10-07", "status": "pass", "mismatch": null}
+{"case_id": "S10-08", "status": "fail", "mismatch": {"cycle": 4, "variable": "AlarmLamp", "expected": true, "actual": false}}

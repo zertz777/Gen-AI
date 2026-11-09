@@ -1,0 +1,72 @@
+{
+  "source": "FUNCTION_BLOCK FB_S02\nVAR_INPUT\n    FwdBtn : BOOL;\n    RevBtn : BOOL;\n    MaintKey : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MotorFwd : BOOL := FALSE;\n    MotorRev : BOOL := FALSE;\n    RunLamp : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    StartupScans : INT := 0;\n    PreviousDirection : INT := 0;\n    LastDirection : INT := 0;\n    RequestedDirection : INT := 0;\n    OffTicks : INT := 0;\n    BlinkTicks : INT := 0;\nEND_VAR\n\n(*\n    每次调用为一个20 ms扫描周期。\n    方向编码：0=停止，1=正转，2=反转。\n\n    需求待审：\n    原文第1条的无条件即时启动，与换向死区及C10启动禁止存在\n    字面冲突。本实现保留启动禁止、安全锁定和换向死区优先。\n    C10的闭区间[0,1]按前两个扫描周期禁止输出实现；其文字说明\n    “上电首周期”与该闭区间范围不完全一致，待审。\n\n    双按钮同时有效的仲裁未指定：运行中保持当前方向，\n    停止时正转优先。正常态RunLamp按任一方向运行点亮。\n    本源码不表示已通过编译或逐周期功能验证。\n*)\n\n(* 保存上一周期方向，用于判断首次断开的扫描时刻。 *)\nPreviousDirection := 0;\nIF MotorFwd THEN\n    PreviousDirection := 1;\nELSIF MotorRev THEN\n    PreviousDirection := 2;\nEND_IF;\n\n(* 断开首周期计为0；随后十个扫描间隔构成200 ms。 *)\nIF NOT EStop_NC THEN\n    OffTicks := 0;\nELSIF PreviousDirection <> 0 THEN\n    OffTicks := 0;\nELSIF OffTicks < 10 THEN\n    OffTicks := OffTicks + 1;\nEND_IF;\n\n(* 双按钮仲裁使用上一扫描输出，避免同周期赋值影响判定。 *)\nRequestedDirection := 0;\nIF FwdBtn AND RevBtn THEN\n    IF PreviousDirection = 2 THEN\n        RequestedDirection := 2;\n    ELSE\n        RequestedDirection := 1;\n    END_IF;\nELSIF FwdBtn THEN\n    RequestedDirection := 1;\nELSIF RevBtn THEN\n    RequestedDirection := 2;\nEND_IF;\n\nMotorFwd := FALSE;\nMotorRev := FALSE;\nStatus := WORD#16#0000;\n\n(* 急停优先于检修；保留最后运行方向，不以复位绕过换向保护。 *)\nIF NOT EStop_NC THEN\n    Status := WORD#16#8202;\nELSIF MaintKey THEN\n    Status := WORD#16#8201;\nELSIF StartupScans < 2 THEN\n    (* C10：初始闭区间[0,1]内禁止两个方向输出。 *)\nELSIF RequestedDirection <> 0 THEN\n    IF (LastDirection <> 0)\n       AND (RequestedDirection <> LastDirection)\n       AND (OffTicks < 10) THEN\n        Status := WORD#16#8203;\n    ELSE\n        IF RequestedDirection = 1 THEN\n            MotorFwd := TRUE;\n        ELSE\n            MotorRev := TRUE;\n        END_IF;\n        LastDirection := RequestedDirection;\n        OffTicks := 0;\n    END_IF;\nEND_IF;\n\nIF StartupScans < 2 THEN\n    StartupScans := StartupScans + 1;\nEND_IF;\n\n(* 检修灯独立于急停状态：亮500 ms、灭500 ms，周期1 s。 *)\nIF MaintKey THEN\n    RunLamp := BlinkTicks < 25;\n    IF BlinkTicks < 49 THEN\n        BlinkTicks := BlinkTicks + 1;\n    ELSE\n        BlinkTicks := 0;\n    END_IF;\nELSE\n    BlinkTicks := 0;\n    RunLamp := MotorFwd OR MotorRev;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 80,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_S02_1_42\\tools\\candidate_1\\fast\\source.st:80-1..80-5: error: invalid statement list in 'ELSEIF' statement of ST 'IF' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_S02_1_42\\tools\\candidate_1\\fast\\source.st:80-1..80-5: error: invalid statement list in 'ELSEIF' statement of ST 'IF' statement."
+        }
+      ],
+      "elapsed_s": 0.156,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 22.984,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 2,
+    "passed_ids": [
+      "S02-03",
+      "S02-05"
+    ],
+    "failures": [
+      {
+        "case_id": "S02-01",
+        "cycle": 1,
+        "signal": "MotorFwd",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S02-02",
+        "cycle": 1,
+        "signal": "MotorFwd",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S02-04",
+        "cycle": 1,
+        "signal": "MotorFwd",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S02-06",
+        "cycle": 1,
+        "signal": "MotorFwd",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 2971,
+  "tag": "candidate_1"
+}

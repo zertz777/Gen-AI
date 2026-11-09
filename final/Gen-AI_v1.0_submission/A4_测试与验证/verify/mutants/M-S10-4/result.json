@@ -1,0 +1,9 @@
+{
+  "mutant_id": "M-S10-4",
+  "status": "killed",
+  "killed_by": "S10-02@1",
+  "passed": 1,
+  "failed": 5,
+  "error": 0,
+  "total": 6
+}

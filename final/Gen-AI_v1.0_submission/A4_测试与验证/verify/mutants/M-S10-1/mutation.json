@@ -1,0 +1,14 @@
+{
+  "mutant_id": "M-S10-1",
+  "task_id": "S10",
+  "operator": "条件取反",
+  "description": "重故障判据反相：IsHeavyFault 取 NOT",
+  "base_source": "03_程序案例/E1_S10_1_42/final.st",
+  "patches": [
+    {
+      "from": "IsHeavyFault := (VFDFaultCode = 16#0002) OR (VFDFaultCode = 16#0003);",
+      "to": "IsHeavyFault := NOT ((VFDFaultCode = 16#0002) OR (VFDFaultCode = 16#0003));"
+    }
+  ],
+  "expect_killer": "任一 code=0 的用例（例如 S10-01 第 1 拍）"
+}

@@ -1,0 +1,89 @@
+{
+  "task_id": "P06",
+  "title": "Aeration Blower Delayed Start",
+  "difficulty": "easy",
+  "category": "A",
+  "requirement": "Control a wastewater-treatment aeration blower with a low-dissolved-oxygen demand, a 5-second start delay, emergency-stop priority and start-cycle counting.\n\n1. Start delay timing when both DO_LOW and AERATION_E_STOP_NC are TRUE. Allow BLOWER_RUN to become TRUE only after these conditions have remained satisfied for 5 seconds.\n2. If DO_LOW becomes FALSE or an emergency stop occurs, immediately disable BLOWER_RUN and reset the start timer, whether timing is incomplete or complete. A new demand must wait the full 5 seconds again.\n3. Increment AERATION_BLOWER_CYCLE_COUNT once on each FALSE-to-TRUE transition of BLOWER_RUN. Do not count repeatedly during continuous operation.\n4. At power-up, initialize the blower to OFF and the start count to zero. The start delay gates a BOOL enable; no continuous speed ramp is required.\n\n中文摘要：曝气风机延时启动：溶解氧偏低且无急停持续 5 秒才启动，条件消失立即停机并复位计时，按启动次数计数。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）",
+  "io_table": [
+    {
+      "direction": "IN",
+      "name": "DO_LOW",
+      "data_type": "BOOL",
+      "description": "Dissolved oxygen is below its threshold and aeration is needed."
+    },
+    {
+      "direction": "IN",
+      "name": "AERATION_E_STOP_NC",
+      "data_type": "BOOL",
+      "description": "TRUE means the emergency stop is inactive; FALSE means it is active."
+    },
+    {
+      "direction": "OUT",
+      "name": "BLOWER_RUN",
+      "data_type": "BOOL",
+      "description": "Blower motor-contactor run command."
+    },
+    {
+      "direction": "OUT",
+      "name": "AERATION_BLOWER_CYCLE_COUNT",
+      "data_type": "UINT",
+      "description": "Count of actual blower starts."
+    }
+  ],
+  "initial_state": "BLOWER_RUN = FALSE；AERATION_BLOWER_CYCLE_COUNT = 0；启动延时计时器清零。",
+  "constraints": [
+    "K1 延时计时只在 DO_LOW = TRUE 且 AERATION_E_STOP_NC = TRUE 时进行。",
+    "K2 上述两个条件同时满足并持续满 5 s 后才允许 BLOWER_RUN = TRUE。",
+    "K3 DO_LOW 变 FALSE 或急停发生时，BLOWER_RUN 立即 FALSE、启动计时复位；下次需求须重新计满 5 s。",
+    "K4 AERATION_BLOWER_CYCLE_COUNT 只在 BLOWER_RUN 的 FALSE→TRUE 沿加 1，连续运行期间不得重复计数。"
+  ],
+  "provenance": "课程公共题库 P06（Aeration Blower Delayed Start）；原文导入、变量名与需求未做任何改动；来源与审核记录见 data/provenance.csv 第 7 行",
+  "spec_ref": "data/specs/P06.ltl",
+  "error_examples": [
+    "错误实现：用 TON 但条件失效时不复位。症状——DO_LOW 抖动两次后累计「凑够」5 秒，风机提前启动。",
+    "错误实现：在 BLOWER_RUN 为 TRUE 的每个周期都加计数。症状——运行 10 分钟计数涨到几万。"
+  ],
+  "notes": "",
+  "spec_text": "# task: P06\n# meta: easy / A 开关量联锁\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(!AERATION_E_STOP_NC -> !BLOWER_RUN)    -- 急停当周期风机必须停（K1/K3）\nC2: G(BLOWER_RUN -> (DO_LOW && AERATION_E_STOP_NC))    -- 风机运行的双许可：溶解氧偏低且无急停（K2）\nC3: G(!DO_LOW -> X(!BLOWER_RUN))    -- 溶解氧恢复后下一周期必须停机并复位启动计时（K3）\nC6: G(BLOWER_RUN -> (BLOWER_RUN W !DO_LOW))    -- 需求持续期间风机保持运行，不因单周期抖动反复启停（K2/K3）\nC10: G[0,1](!BLOWER_RUN)    -- 上电首周期风机不运行（需先计满 5 s）（K1）\n",
+  "spec_sha256": "6ee93bcec68c0bca5b49e3e866619ac08d3457885b6b43f3bb3b94afe52d01bd",
+  "task_version": "74cd2bd4",
+  "task_sha256": "74cd2bd4f44b353a09127c3e80b3f42dc2fe8e62d014d4e617a391989ff25415",
+  "source_path": "data/tasks/P06.yaml",
+  "degraded": false,
+  "missing_fields": [],
+  "warnings": [],
+  "semantic_warnings": [],
+  "interface_io_table": [
+    {
+      "direction": "IN",
+      "name": "DO_LOW",
+      "data_type": "BOOL",
+      "description": "Dissolved oxygen is below its threshold and aeration is needed."
+    },
+    {
+      "direction": "IN",
+      "name": "AERATION_E_STOP_NC",
+      "data_type": "BOOL",
+      "description": "TRUE means the emergency stop is inactive; FALSE means it is active."
+    },
+    {
+      "direction": "OUT",
+      "name": "BLOWER_RUN",
+      "data_type": "BOOL",
+      "description": "Blower motor-contactor run command."
+    },
+    {
+      "direction": "OUT",
+      "name": "AERATION_BLOWER_CYCLE_COUNT",
+      "data_type": "UINT",
+      "description": "Count of actual blower starts."
+    }
+  ],
+  "type_declarations": "",
+  "type_origins": {},
+  "pou_name": "FB_P06",
+  "pou_kind": "FUNCTION_BLOCK",
+  "dialect_requirements": [],
+  "skeleton_compiled": false,
+  "scan_cycle_ms": 20
+}

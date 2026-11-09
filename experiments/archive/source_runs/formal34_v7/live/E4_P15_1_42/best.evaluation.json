@@ -1,0 +1,195 @@
+{
+  "source": "FUNCTION_BLOCK FB_P15\nVAR_INPUT\n    estop : BOOL;\n    opeMode : BOOL;\n    valveAStart : BOOL;\n    valveBStart : BOOL;\n    valveCStart : BOOL;\n    valveDStart : BOOL;\n    mixMotorStart : BOOL;\n    autoStart : BOOL;\n    processMode : BOOL;\n    levelSensor : INT;\n    mixMotorComplete : BOOL;\nEND_VAR\nVAR_OUTPUT\n    valveARun : BOOL := FALSE;\n    valveBRun : BOOL := FALSE;\n    valveCRun : BOOL := FALSE;\n    valveDRun : BOOL := FALSE;\n    mixMotorRun : BOOL := FALSE;\nEND_VAR\nVAR\n    startupScans : INT := 0;\n    previousMode : BOOL := FALSE;\n    emergencySeen : BOOL := FALSE;\n\n    previousA : BOOL := FALSE;\n    previousB : BOOL := FALSE;\n    previousC : BOOL := FALSE;\n    previousD : BOOL := FALSE;\n    previousMotor : BOOL := FALSE;\n    previousAuto : BOOL := FALSE;\n\n    edgeA : BOOL;\n    edgeB : BOOL;\n    edgeC : BOOL;\n    edgeD : BOOL;\n    edgeMotor : BOOL;\n    edgeAuto : BOOL;\n\n    (* 0: idle; 1: A; 2: B; 3: C; 4: mixing; 5: discharge. *)\n    step : INT := 0;\nEND_VAR\n\n(*\n    Scan period: 20 ms. No timing library is required.\n\n    REQUIREMENT CONFLICTS -- PENDING REVIEW:\n    1. C2 states mixMotorRun -> NOT estop. The interface defines\n       estop=FALSE as emergency stop. Together with C1, literal C2\n       prohibits mixing in every condition. This implementation uses\n       the interface definition and K1; literal C2 is not satisfied.\n    2. Unconditional C6 conflicts with emergency stopping and manual\n       motor toggle-off before completion. Emergency stop and manual\n       start/stop requirements take precedence here; unconditional C6\n       is not satisfied.\n    3. Unrestricted independent manual valve toggles conflict with C4\n       when discharge and proportioning are requested together.\n       C4 is enforced: opening a proportioning valve closes D;\n       opening D closes A/B/C. A simultaneous opening request for D\n       takes priority.\n    4. K4 is implemented by preserving the automatic step during\n       emergency stop, then clearing it on recovery. Restart requires\n       a fresh autoStart rising edge.\n\n    C10's inclusive interval [0,1] is implemented as two inhibited\n    startup scans. Button histories are sampled even while inhibited,\n    so held buttons do not cause an automatic restart.\n\n    Compilation and cycle-by-cycle verification have not been performed.\n*)\n\nedgeA := valveAStart AND NOT previousA;\nedgeB := valveBStart AND NOT previousB;\nedgeC := valveCStart AND NOT previousC;\nedgeD := valveDStart AND NOT previousD;\nedgeMotor := mixMotorStart AND NOT previousMotor;\nedgeAuto := autoStart AND NOT previousAuto;\n\npreviousA := valveAStart;\npreviousB := valveBStart;\npreviousC := valveCStart;\npreviousD := valveDStart;\npreviousMotor := mixMotorStart;\npreviousAuto := autoStart;\n\nIF NOT estop THEN\n    (* Highest priority: stop outputs without advancing the sequence. *)\n    valveARun := FALSE;\n    valveBRun := FALSE;\n    valveCRun := FALSE;\n    valveDRun := FALSE;\n    mixMotorRun := FALSE;\n    emergencySeen := TRUE;\n\n    IF startupScans < 2 THEN\n        startupScans := startupScans + 1;\n    END_IF;\n\nELSIF startupScans < 2 THEN\n    valveARun := FALSE;\n    valveBRun := FALSE;\n    valveCRun := FALSE;\n    valveDRun := FALSE;\n    mixMotorRun := FALSE;\n    step := 0;\n    startupScans := startupScans + 1;\n\nELSIF emergencySeen THEN\n    (* Recovery is a safe reset, never continuation of the old step. *)\n    valveARun := FALSE;\n    valveBRun := FALSE;\n    valveCRun := FALSE;\n    valveDRun := FALSE;\n    mixMotorRun := FALSE;\n    step := 0;\n    emergencySeen := FALSE;\n    previousMode := opeMode;\n\nELSIF opeMode <> previousMode THEN\n    (* Mode changes cancel retained manual commands and automatic work. *)\n    valveARun := FALSE;\n    valveBRun := FALSE;\n    valveCRun := FALSE;\n    valveDRun := FALSE;\n    mixMotorRun := FALSE;\n    step := 0;\n    previousMode := opeMode;\n\nELSIF NOT opeMode THEN\n    step := 0;\n\n    IF edgeA THEN\n        valveARun := NOT valveARun;\n        IF valveARun THEN\n            valveDRun := FALSE;\n        END_IF;\n    END_IF;\n\n    IF edgeB THEN\n        valveBRun := NOT valveBRun;\n        IF valveBRun THEN\n            valveDRun := FALSE;\n        END_IF;\n    END_IF;\n\n    IF edgeC THEN\n        valveCRun := NOT valveCRun;\n        IF valveCRun THEN\n            valveDRun := FALSE;\n        END_IF;\n    END_IF;\n\n    IF edgeD THEN\n        valveDRun := NOT valveDRun;\n        IF valveDRun THEN\n            valveARun := FALSE;\n            valveBRun := FALSE;\n            valveCRun := FALSE;\n        END_IF;\n    END_IF;\n\n    IF edgeMotor THEN\n        mixMotorRun := NOT mixMotorRun;\n    END_IF;\n\nELSE\n    (* All automatic commands are decoded from a single sequence step. *)\n    valveARun := FALSE;\n    valveBRun := FALSE;\n    valveCRun := FALSE;\n    valveDRun := FALSE;\n    mixMotorRun := FALSE;\n\n    CASE step OF\n        0:\n            IF edgeAuto THEN\n                step := 1;\n            END_IF;\n\n        1:\n            IF levelSensor >= 50 THEN\n                step := 2;\n            END_IF;\n\n        2:\n            IF levelSensor >= 80 THEN\n                IF processMode THEN\n                    step := 3;\n                ELSE\n                    step := 4;\n                END_IF;\n            END_IF;\n\n        3:\n            IF levelSensor >= 100 THEN\n                step := 4;\n            END_IF;\n\n        4:\n            IF mixMotorComplete THEN\n                step := 5;\n            END_IF;\n\n        5:\n            (* No discharge-complete input exists: D remains open\n               until a new cycle, mode change, or emergency stop. *)\n            IF edgeAuto THEN\n                step := 1;\n            END_IF;\n\n    ELSE\n        step := 0;\n    END_CASE;\n\n    CASE step OF\n        1:\n            valveARun := TRUE;\n        2:\n            valveBRun := TRUE;\n        3:\n            valveCRun := TRUE;\n        4:\n            mixMotorRun := TRUE;\n        5:\n            valveDRun := TRUE;\n    END_CASE;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 42,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:42-5..42-19: error: invalid variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:42-5..42-19: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 106,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:106-5..106-8: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:106-5..106-8: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 116,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:116-5..116-8: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:116-5..116-8: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 127,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:127-5..127-8: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:127-5..127-8: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 131,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:131-5..131-8: error: invalid statement list in 'ELSEIF' statement of ST 'IF' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:131-5..131-8: error: invalid statement list in 'ELSEIF' statement of ST 'IF' statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 98,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:98-11..131-8: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:98-11..131-8: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 178,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:178-17..178-20: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:178-17..178-20: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 183,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:183-17..183-20: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:183-17..183-20: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 189,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:189-21..189-24: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:189-21..189-24: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 191,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:191-21..191-24: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:191-21..191-24: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 197,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:197-17..197-20: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:197-17..197-20: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 202,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:202-17..202-20: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:202-17..202-20: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 209,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:209-17..209-20: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:209-17..209-20: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 213,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:213-9..213-12: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:213-9..213-12: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 175,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:175-10..175-13: error: invalid test expression defined for ST 'CASE' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:175-10..175-13: error: invalid test expression defined for ST 'CASE' statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 216,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:216-10..216-13: error: invalid test expression defined for ST 'CASE' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_2\\fast\\source.st:216-10..216-13: error: invalid test expression defined for ST 'CASE' statement."
+        }
+      ],
+      "elapsed_s": 0.156,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.703,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 7,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "P15-01",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P15-02",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P15-03",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P15-04",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P15-05",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P15-06",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P15-07",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 4010,
+  "tag": "candidate_2"
+}

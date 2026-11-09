@@ -1,0 +1,11 @@
+# task: S14
+# meta: medium / B 模拟量处理
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(Pressure > 160.0 -> X(!LowPump && !HighPump && ReliefValve))    -- 过压当周期卸荷并停泵（K1）
+C2: G(Pressure < 120.0 && PumpEnable && !AlarmLamp -> X(LowPump))    -- 低压加载条件成立时一周期内投泵（K2）
+C4: G(!(ReliefValve && LowPump) && !(ReliefValve && HighPump))    -- 卸荷阀与泵不得同时为 TRUE（K5）
+C6: G((Pressure < 0.5 || Pressure > 250.0) -> F[0,10] AlarmLamp)    -- 传感器越界 200 ms 内报警（10 周期）（K4）
+C7: G(HighPump && Pressure >= 100.0 && Pressure < 140.0 -> X(HighPump))    -- 滞回带内保持高压泵状态，不抖动（K3）
+C10: G[0,1](!LowPump && !HighPump && !ReliefValve && !AlarmLamp && Status == 16#0000)    -- 上电首周期不加载、无报警（初态）

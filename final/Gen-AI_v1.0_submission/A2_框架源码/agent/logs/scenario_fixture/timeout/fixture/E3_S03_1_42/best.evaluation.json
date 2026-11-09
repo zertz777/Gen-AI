@@ -1,0 +1,55 @@
+{
+  "source": "FUNCTION_BLOCK FB_S03\nVAR_INPUT\n    DoorSwitch : BOOL;\n    ZoneAOccupied : BOOL;\n    ZoneBOccupied : BOOL;\n    ResetBtn : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    DriveA_Run : BOOL;\n    DriveB_Run : BOOL;\n    AlarmLamp : BOOL;\n    Status : WORD;\nEND_VAR\n(* Add a VAR block for internal state/timers before the implementation, if needed. *)\n(* SKELETON ONLY: replace this RETURN with scan logic and required initial state. *)\nRETURN;\nEND_FUNCTION_BLOCK\n\n(* FIXTURE_TIMEOUT *)\n",
+  "compile": {
+    "status": "timeout",
+    "fast": {
+      "status": "timeout",
+      "errors": [
+        {
+          "code": "E_TIMEOUT",
+          "severity": "error",
+          "line": null,
+          "message": "FIXTURE ONLY: simulated timeout",
+          "raw": "FIXTURE ONLY: simulated timeout"
+        }
+      ],
+      "elapsed_s": 0.0,
+      "evidence_kind": "fixture"
+    },
+    "authoritative": {
+      "status": "timeout",
+      "errors": [
+        {
+          "code": "E_TIMEOUT",
+          "severity": "error",
+          "line": null,
+          "message": "FIXTURE ONLY: simulated timeout",
+          "raw": "FIXTURE ONLY: simulated timeout"
+        }
+      ],
+      "elapsed_s": 0.0,
+      "evidence_kind": "fixture"
+    },
+    "errors": [
+      {
+        "code": "E_TIMEOUT",
+        "severity": "error",
+        "line": null,
+        "message": "FIXTURE ONLY: simulated timeout",
+        "raw": "FIXTURE ONLY: simulated timeout"
+      }
+    ],
+    "authoritative_available": false,
+    "evidence_kind": "fixture"
+  },
+  "test": {
+    "status": "skipped",
+    "total": 0,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": []
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "candidate_1"
+}

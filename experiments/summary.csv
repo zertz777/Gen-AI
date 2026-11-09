@@ -1,0 +1,5 @@
+﻿setting_id,framework,model,tasks,passed,strict_pass_rate,compile_pass,compile_rate,test_cases_entered,test_cases_passed,test_case_pass_rate,avg_repair_rounds,median_latency_s,p95_latency_s,known_tokens_in,known_tokens_out,unknown_usage_runs,status_counts_json
+E1,baseline,deepseek-v4.1-flash,34,18,0.5294,32,0.9412,197,155,0.7868,0.00,553.0,830.4,537229,987897,8,"{""abandoned:timeout"": 2, ""best-effort:test_fail"": 13, ""best-effort:tool_error"": 1, ""passed"": 18}"
+E2,baseline,gpt-6.1-sol,34,16,0.4706,32,0.9412,203,147,0.7241,0.00,299.7,594.7,1026727,180806,1,"{""abandoned:compile_fail"": 1, ""abandoned:timeout"": 1, ""best-effort:test_fail"": 16, ""passed"": 16}"
+E3,self,deepseek-v4.1-flash,34,8,0.2353,28,0.8235,175,72,0.4114,0.00,357.1,540.5,103954,943390,0,"{""abandoned:budget"": 5, ""abandoned:timeout"": 1, ""best-effort:budget"": 19, ""best-effort:timeout"": 1, ""passed"": 8}"
+E4,self,gpt-6.1-sol,34,7,0.2059,33,0.9706,209,94,0.4498,1.56,268.8,636.4,211195,121692,1,"{""abandoned:compile_fail"": 1, ""best-effort:test_fail"": 25, ""best-effort:timeout"": 1, ""passed"": 7}"

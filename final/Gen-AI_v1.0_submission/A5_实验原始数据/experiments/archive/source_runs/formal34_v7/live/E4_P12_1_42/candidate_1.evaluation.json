@@ -1,0 +1,218 @@
+{
+  "source": "FUNCTION_BLOCK FB_P12\nVAR_INPUT\n    THICKNESS_FAULT : BOOL;\n    THICKNESS_SIGNAL_VALID : BOOL;\n    CUTTING_RUN : BOOL;\n    FaultTimestamp : DINT;\n    CycleTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    THICKNESS_ALARM : BOOL;\n    Slab_Fault_Counter : UINT;\n    Slab_Runtime_Accumulator : LTIME;\n    Slab_Fault_History : ARRAY[0..4] OF DINT;\nEND_VAR\nVAR\n    Initialized : BOOL := FALSE;\n    PreviousValidFault : BOOL := FALSE;\n    CurrentValidFault : BOOL := FALSE;\n    FaultRising : BOOL := FALSE;\n    AlarmState : BOOL := FALSE;\n    HoldScansRemaining : UINT := UINT#0;\n\n    CounterState : UINT := UINT#0;\n    RuntimeState : LTIME := LTIME#0s;\n    HistoryState : ARRAY[0..4] OF DINT;\n\n    RuntimeIncrement : LTIME := LTIME#0s;\n    Index : INT;\nEND_VAR\nVAR CONSTANT\n    RuntimeMaximum : LTIME :=\n        LTIME#106751d23h47m16s854ms775us807ns;\nEND_VAR\n\n(*\n    每次调用为一个20 ms扫描；500 ms保持使用25个扫描间隔。\n    CycleTime仅用于正常切割运行时间累计。\n\n    待审语义冲突：\n    1. 上电不报警/C10与上电输入已为有效故障时立即报警冲突。\n       本实现首调用仅初始化并保持报警关闭，后续扫描立即响应。\n       若G[0,1]按两个闭区间采样点解释，本实现不额外屏蔽第二次调用。\n    2. 无效信号立即清报警优先于500 ms最低保持及故障持续保持。\n       C6未以信号有效性限定持续保持，不能保证与失效清除同时成立。\n       C6本身也不能推出500 ms最低保持。\n    3. C8无条件约束下一周期关闭；若下一周期信号恢复且发生故障，\n       它与立即报警冲突。本实现恢复后立即响应有效故障。\n\n    数值边界：\n    UINT计数达到65535后饱和，但仍记录新故障历史；\n    超出UINT范围的精确“每次加1”无法由既定接口表示，需审定。\n    正运行时间增量在LTIME上限处饱和；非正CycleTime不累计。\n\n    历史和统计由内部状态维护，每扫描重新发布输出，\n    不接受外部对输出的修改作为内部状态。\n    VAR_OUTPUT本身不能在所有IEC环境中强制调用者只读，\n    外部写访问限制需要工程访问配置，不改变本接口。\n\n    TIME_TO_LTIME、LTIME及其长时间字面量须由目标编译profile验证。\n    本源码未声称经过编译或逐周期功能验证。\n*)\n\nIF NOT Initialized THEN\n    AlarmState := FALSE;\n    HoldScansRemaining := UINT#0;\n    PreviousValidFault := FALSE;\n    CurrentValidFault := FALSE;\n    FaultRising := FALSE;\n\n    CounterState := UINT#0;\n    RuntimeState := LTIME#0s;\n    RuntimeIncrement := LTIME#0s;\n\n    FOR Index := 0 TO 4 DO\n        HistoryState[Index] := DINT#0;\n    END_FOR;\n\n    Initialized := TRUE;\nELSE\n    IF NOT THICKNESS_SIGNAL_VALID THEN\n        AlarmState := FALSE;\n        HoldScansRemaining := UINT#0;\n        PreviousValidFault := FALSE;\n        CurrentValidFault := FALSE;\n        FaultRising := FALSE;\n        RuntimeIncrement := LTIME#0s;\n    ELSE\n        CurrentValidFault := THICKNESS_FAULT;\n        FaultRising := CurrentValidFault AND NOT PreviousValidFault;\n\n        (* 先消耗自上一调用以来的一个20 ms间隔。 *)\n        IF HoldScansRemaining > UINT#0 THEN\n            HoldScansRemaining := HoldScansRemaining - UINT#1;\n        END_IF;\n\n        IF FaultRising THEN\n            (* 每个新故障重新获得完整500 ms最低保持。 *)\n            HoldScansRemaining := UINT#25;\n\n            IF CounterState < UINT#65535 THEN\n                CounterState := CounterState + UINT#1;\n            END_IF;\n\n            FOR Index := 4 TO 1 BY -1 DO\n                HistoryState[Index] := HistoryState[Index - 1];\n            END_FOR;\n            HistoryState[0] := FaultTimestamp;\n        END_IF;\n\n        AlarmState :=\n            CurrentValidFault OR (HoldScansRemaining > UINT#0);\n\n        RuntimeIncrement := LTIME#0s;\n        IF CUTTING_RUN AND NOT CurrentValidFault THEN\n            IF CycleTime > T#0ms THEN\n                RuntimeIncrement := TIME_TO_LTIME(CycleTime);\n\n                IF RuntimeIncrement > LTIME#0s THEN\n                    IF RuntimeState >\n                       (RuntimeMaximum - RuntimeIncrement) THEN\n                        RuntimeState := RuntimeMaximum;\n                    ELSE\n                        RuntimeState := RuntimeState + RuntimeIncrement;\n                    END_IF;\n                END_IF;\n            END_IF;\n        END_IF;\n\n        PreviousValidFault := CurrentValidFault;\n    END_IF;\nEND_IF;\n\nTHICKNESS_ALARM := AlarmState;\nSlab_Fault_Counter := CounterState;\nSlab_Runtime_Accumulator := RuntimeState;\n\nFOR Index := 0 TO 4 DO\n    Slab_Fault_History[Index] := HistoryState[Index];\nEND_FOR;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 12,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:12-32..12-36: error: invalid specification in variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:12-32..12-36: error: invalid specification in variable declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 24,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:24-20..24-24: error: invalid specification in variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:24-20..24-24: error: invalid specification in variable declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 24,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:24-24..24-26: error: ';' missing at end of variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:24-24..24-26: error: ';' missing at end of variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 24,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:24-26..24-37: error: invalid variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:24-26..24-37: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 27,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:27-24..27-28: error: invalid specification in variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:27-24..27-28: error: invalid specification in variable declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 27,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:27-28..27-30: error: ';' missing at end of variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:27-28..27-30: error: ';' missing at end of variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 27,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:27-30..27-41: error: invalid variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:27-30..27-41: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 31,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:31-22..31-26: error: invalid specification in variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:31-22..31-26: error: invalid specification in variable declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 31,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:31-28..32-46: error: invalid located variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:31-28..32-46: error: invalid located variable declaration."
+        },
+        {
+          "code": "E_SYNTAX",
+          "severity": "error",
+          "line": 31,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:31-5..31-29: error: unexpected token after 'CONSTANT' in constant located variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:31-5..31-29: error: unexpected token after 'CONSTANT' in constant located variable(s) declaration."
+        },
+        {
+          "code": "E_SYNTAX",
+          "severity": "error",
+          "line": 30,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:30-1..33-7: error: unexpected located variable(s) declaration in function block declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:30-1..33-7: error: unexpected located variable(s) declaration in function block declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 71,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:71-25..71-26: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:71-25..71-26: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 71,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:71-26..71-29: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:71-26..71-29: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 72,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:72-29..72-30: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:72-29..72-30: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 72,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:72-30..72-33: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:72-30..72-33: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 86,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:86-33..86-34: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:86-33..86-34: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 86,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:86-34..86-37: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:86-34..86-37: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 113,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:113-33..113-34: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:113-33..113-34: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 113,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:113-34..113-37: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:113-34..113-37: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 116,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:116-49..116-50: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:116-49..116-50: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 116,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:116-50..116-60: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P12_1_42\\tools\\candidate_1\\fast\\source.st:116-50..116-60: error: invalid statement in ST statement."
+        }
+      ],
+      "elapsed_s": 1.719,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.312,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 1,
+    "passed_ids": [
+      "P12-03"
+    ],
+    "failures": [
+      {
+        "case_id": "P12-01",
+        "cycle": 1,
+        "signal": "THICKNESS_ALARM",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P12-02",
+        "cycle": 1,
+        "signal": "Slab_Fault_Counter",
+        "expected": 1,
+        "actual": 0
+      },
+      {
+        "case_id": "P12-04",
+        "cycle": 1,
+        "signal": "Slab_Runtime_Accumulator",
+        "expected": 1000.0,
+        "actual": 0.0
+      },
+      {
+        "case_id": "P12-05",
+        "cycle": 1,
+        "signal": "THICKNESS_ALARM",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P12-06",
+        "cycle": 1,
+        "signal": "THICKNESS_ALARM",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3521,
+  "tag": "candidate_1"
+}

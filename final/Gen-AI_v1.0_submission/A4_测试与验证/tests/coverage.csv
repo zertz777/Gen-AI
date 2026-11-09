@@ -1,0 +1,144 @@
+﻿task_id,k_id,k_text,ltl_clauses,cases,status
+P01,K1,四道工序只能按 清洗→灌装→封盖→包装 的顺序推进，前一步的完成确认是后一步启动的必要条件。,C3,P01-01;P01-02;P01-08,已覆盖
+P01,K2,同一时刻只允许一个执行器输出为 TRUE（Pump_Motor/Filling_Valve/Capping_Machine/Packing_Machine 两两互斥）。,C4,P01-01;P01-03;P01-08,已覆盖
+P01,K3,清洗泵只在 bottleSensor 检测到瓶子且当前工步为 0 时启动；泵运行期间再次检测到瓶子不得重复触发。,C2,P01-04;P01-06;P01-07,已覆盖
+P01,K4,finishedButton 有效后回到工步 0，并熄灭 Completion_Light。,C1;C6,P01-01;P01-05;P01-06,已覆盖
+P02,K1,每个扫描周期只做一次比较，比较对象是本周期的 value 与上一周期保存的 value。,C2;C7,P02-01;P02-04,已覆盖
+P02,K2,risingBits 只在 0→1 的位上置 1，fallingBits 只在 1→0 的位上置 1，其余位为 0。,,P02-01;P02-02;P02-06,已覆盖
+P02,K3,noOfRisingBits 必须等于 risingBits 中 1 的个数，noOfFallingBits 同理。,C8,P02-01;P02-02;P02-03;P02-06,已覆盖
+P02,K4,上电后的第一个周期没有「上一周期」，hasChanged/hasRisingEdges/hasFallingEdges 一律为 FALSE，避免上电误报。,C2b;C10,P02-05,已覆盖
+P03,K1,若 loLevel >= hiLevel，置 error=TRUE、status=16#8001，并立即退出程序（不执行后续报警逻辑）。,C1;C2,P03-04,已覆盖
+P03,K2,若 hystWindow >= (hiLevel - loLevel)，置 error=TRUE、status=16#8002，同样退出程序。,C1;C2,P03-05,已覆盖
+P03,K3,高报：Value > hiLevel 时置位；Value < hiLevel - hystWindow 时复位；两者之间保持原状态。,C4;C7,P03-01;P03-02;P03-06,已覆盖
+P03,K4,低报：Value < loLevel 时置位；Value > loLevel + hystWindow 时复位；两者之间保持原状态。,C4;C7b,P03-01;P03-03,已覆盖
+P04,K1,PASTE_E_STOP_NC = FALSE 时 VFD_RUN 立即变为 FALSE，并清除未完成的去抖计时。,C1,P04-02;P04-06,已覆盖
+P04,K2,VISCOSITY_OK 必须连续为 TRUE 达 DebounceTime，粘度条件才算有效；输入一旦变 FALSE 立即作废。,C7,P04-01;P04-06;P04-07,已覆盖
+P04,K3,VFD_RUN 为 TRUE 的必要条件是 PASTE_E_STOP_NC = TRUE 且粘度条件有效，二者缺一不可。,C2;C7,P04-01;P04-03;P04-06;P04-07,已覆盖
+P04,K4,仅在 VFD_RUN = TRUE 时按 CycleTime 累加 PUMP_RUNTIME_ACC；泵停期间累计值保持不变。,,P04-04,已覆盖
+P04,K5,累计到 500 小时后置 PUMP_MAINT_DUE；该提示只作信息输出，不得反过来影响 VFD_RUN 或安全允许。,C8,P04-05,已覆盖
+P05,K1,上电后进入 5 s 初始化抑制期，期间 Weld_Soft_Start_Active = TRUE、Operator_Alert = FALSE，且去抖计时不累计。,C10,P05-01,已覆盖
+P05,K2,抑制期结束后恢复监视：Gap_Exceeded 连续为 TRUE 达 DebounceTime 才置 Operator_Alert。,C9,P05-01;P05-02;P05-05;P05-06,已覆盖
+P05,K3,Gap_Exceeded 变 FALSE 时立即复位 Operator_Alert 并清去抖计时。,C6,P05-02;P05-05,已覆盖
+P05,K4,Weld_E_Stop_NC = FALSE 时急停优先于抑制期与正常监视：Operator_Alert 立即 FALSE，未完成的去抖计时清除。,C1;C2,P05-03;P05-04,已覆盖
+P06,K1,延时计时只在 DO_LOW = TRUE 且 AERATION_E_STOP_NC = TRUE 时进行。,C1;C10,P06-01;P06-03;P06-06,已覆盖
+P06,K2,上述两个条件同时满足并持续满 5 s 后才允许 BLOWER_RUN = TRUE。,C2;C6,P06-01;P06-05;P06-06,已覆盖
+P06,K3,DO_LOW 变 FALSE 或急停发生时，BLOWER_RUN 立即 FALSE、启动计时复位；下次需求须重新计满 5 s。,C1;C3;C6,P06-02;P06-03;P06-05;P06-06,已覆盖
+P06,K4,AERATION_BLOWER_CYCLE_COUNT 只在 BLOWER_RUN 的 FALSE→TRUE 沿加 1，连续运行期间不得重复计数。,,P06-01;P06-04,已覆盖
+P07,K1,mode 决定工作模式，手动与自动互斥，同一时刻只有一种模式的动作生效。,C6,P07-01;P07-02;P07-05,已覆盖
+P07,K2,自动模式下同时运行的泵数恰为 3 台，其余 2 台作为备用。,,P07-01;P07-02;P07-06;P07-07,已覆盖
+P07,K3,自动模式下按优先级选出运行泵：优先级高者先启，优先级相同时按泵号升序，保证结果确定。,,P07-01;P07-03;P07-06;P07-07,已覆盖
+P07,K4,stop 信号优先于 start：停止请求有效时不得因 start 或自动需求而启动任何泵。,C1;C2;C4,P07-04,已覆盖
+P08,K1,只处理从两个数组各自下界开始的前 count 个通道；count 必须落在 0 到两数组长度较小者之间。,C1;C2;C2b,P08-01;P08-02;P08-03;P08-05;P08-06,已覆盖
+P08,K2,只读 analogValues 与配置字段，仅写 retVal 与 outputValue，不得就地修改输入数组。,,P08-05,已覆盖
+P08,K3,measuringMode = 0 时做线性标定：bipolar = FALSE 把 0..27648 映射到 loLIM..hiLIM，bipolar = TRUE 把 -27648..27648 映射到同一区间。,,P08-01;P08-02,已覆盖
+P08,K4,measuringMode = 1 时输出为原始值的 1/10，measuringMode = 2 时输出为原始值的 1/100。,,P08-03,已覆盖
+P08,K5,count 越界或模式非法时置错误码并停止处理后续通道，已处理的通道结果保持有效。,C1;C2;C6,P08-04,已覆盖
+P09,K1,cyclicExecution = TRUE 时每个扫描周期读入一个新数据并更新 average。,,P09-01;P09-06,已覆盖
+P09,K2,trigger 的每个上升沿读入一个新数据并更新 average（与周期模式二选一，不重复计数）。,,P09-02,已覆盖
+P09,K3,windowSize 不在 1..100 时置 error = TRUE、status = 16#8200，且不更新 average。,C3;C3b;C2,P09-03;P09-05;P09-06,已覆盖
+P09,K4,reset = TRUE 时清空窗口、把 windowSizeReached 置 FALSE，其优先级高于 cyclicExecution 与 trigger。,C1,P09-04,已覆盖
+P10,K1,TemperatureSensorInput < SetTemperature 时 HeaterOutput = TRUE，> SetTemperature 时 HeaterOutput = FALSE。,,P10-01;P10-05,已覆盖
+P10,K2,加热连续运行超过 5 s 触发 OverheatProtection，并强制 HeaterOutput = FALSE。,C1;C2,P10-02,已覆盖
+P10,K3,过热保护触发后必须保持至少 3 s 才能解除，解除前不得重新加热。,C9,P10-03,已覆盖
+P10,K4,TemperatureSensorInput < 0 或 > 100 判为传感器故障，此时不得继续加热。,C7;C7b,P10-04;P10-05,已覆盖
+P11,K1,手动模式下 MotorForward 与 MotorReverse 互斥，任一为 TRUE 时另一个必须为 FALSE。,C4;C2,P11-01;P11-05;P11-07,已覆盖
+P11,K2,自动模式下产品必须依次经过 A、B、C 三站，不得跳站或回流。,C3,P11-02;P11-03;P11-06,已覆盖
+P11,K3,每站推进的条件是「该站到位（SensorX）+ 该站完成按钮（ButtonX）」，缺一不可。,,P11-02;P11-03;P11-06,已覆盖
+P11,K4,产品在 C 站完成加工后置 CompletionLight = TRUE。,C3;C6,P11-02;P11-04,已覆盖
+P12,K1,只在 THICKNESS_SIGNAL_VALID = TRUE 时判定 THICKNESS_FAULT，信号无效期间不报警、不计数、不累计运行时间。,C2;C8,P12-03;P12-05,已覆盖
+P12,K2,故障上升沿时 Slab_Fault_Counter 加 1，并把 FaultTimestamp 写入历史元素 0，原有记录向高索引移位，只保留最近 5 条。,,P12-02,已覆盖
+P12,K3,THICKNESS_ALARM 一旦置位至少保持 500 ms；故障持续期间保持为 TRUE。,C5;C6,P12-01;P12-06,已覆盖
+P12,K4,仅当 CUTTING_RUN = TRUE、信号有效且无厚度故障时，按 CycleTime 累加 Slab_Runtime_Accumulator；否则保持不变。,,P12-04,已覆盖
+P13,K1,只有「检测到占用且未选夜间模式」时才开始 30 s 启动延时；条件保持满 30 s 后 SUPPLY_FAN_RUN 才为 TRUE。,C2,P13-01;P13-03;P13-05,已覆盖
+P13,K2,占用丢失或切到夜间模式时立即停风机并复位延时；条件恢复后必须重新计满 30 s。,C2;C3;C6,P13-02,已覆盖
+P13,K3,温度修正按模式取值：自动 0/+3（节能）/+2（标准）、舒适 0/+1、经济 0/+4、夜间恒 +4；节能开关只影响自动模式。,,P13-03;P13-04;P13-05;P13-06,已覆盖
+P13,K4,TEMP_SETPOINT_ADJUST 必须限制在 ±4 °C 之内。,C4,P13-04;P13-06,已覆盖
+P14,K1,输入必须是四段、段间以点分隔、每段非空且全部为十进制数字。,,P14-03;P14-04;P14-06,已覆盖
+P14,K2,每段数值必须在 0—255 之间（含端点）。,,P14-02;P14-04,已覆盖
+P14,K3,按网络字节序组装：第 1 段占最高 8 位，第 4 段占最低 8 位。,C2,P14-01,已覆盖
+P14,K4,段数不对、含非数字字符、任一段越界时一律输出 ipValue = 0（合法地址 0.0.0.0 也输出 0，测试需靠返回状态区分）。,,P14-03;P14-04;P14-05;P14-06,已覆盖
+P15,K1,estop = FALSE 时立即停止全部设备（四个阀门与搅拌电机输出全为 FALSE），其优先级高于手动与自动模式。,C1;C2,P15-02;P15-05;P15-07,已覆盖
+P15,K2,手动模式下各启动按钮按上升沿切换对应设备（按一次启动，再按一次停止），不得按电平持续翻转。,,P15-01;P15-05,已覆盖
+P15,K3,自动模式按工艺顺序执行：先按配比开启 A/B/C 阀门，达到设定后停阀并启动搅拌，搅拌完成后开 D 阀出料。,C4;C6,P15-03;P15-04;P15-06,已覆盖
+P15,K4,急停期间所有自动步序被冻结；急停恢复后从安全步重新开始，不得从中断处直接续跑。,,P15-02,已覆盖
+P16,K1,每件工件的前 processLength 个工位号来自 processSequence，按数组顺序依次加工，不得跳过或乱序。,,P16-01;P16-02;P16-08,已覆盖
+P16,K2,conveyorLeft 与 conveyorRight 互斥，任何时刻不得同时为 TRUE。,C4;C2;C9,P16-01;P16-02;P16-07,已覆盖
+P16,K3,只有目标工位的到位传感器为 TRUE 且该工位加工完成信号有效时，才允许启动下一段输送。,,P16-04;P16-07,已覆盖
+P16,K4,processLength 超出数组范围或工位号不在 1—5 时置错误状态并停止输送。,C1,P16-03;P16-05;P16-06;P16-08,已覆盖
+P17,K1,配方库容量 10 条，recipeID = 0 表示空位；写入时只能落到空位。,C4,P17-03;P17-07;P17-08,已覆盖
+P17,K2,新增时若库中已存在相同 recipeID，拒绝写入并置 status = 16#8002（编号重复）。,C1;C2;C6,P17-03;P17-04,已覆盖
+P17,K3,删除、修改、查询时若 recipeID 不存在，置 status = 16#8001（配方不存在），库内容保持不变。,C1;C6,P17-01;P17-02;P17-05,已覆盖
+P17,K4,新增时若库已满（无 recipeID = 0 的空位），置 status = 16#8003（无空位）。,C1;C6,P17-06;P17-08,已覆盖
+P18,K1,reset = TRUE 时清空队列并把 elementCount 置 0，其优先级高于同一周期的入队与出队请求。,C1;C4;C9,P18-03;P18-04,已覆盖
+P18,K2,enqueue 的每个上升沿在队列未满时把 item 追加到队尾；dequeue 的每个上升沿在队列非空时取出队首并写回 item。,,P18-01;P18-06,已覆盖
+P18,K3,队列满时入队被拒绝、队列空时出队被拒绝，队列内容与 item 均保持不变，并通过 status 报告原因。,C2,P18-02;P18-05;P18-06;P18-07;P18-08,已覆盖
+P18,K4,elementCount 必须等于当前有效元素数：0 表示空，等于缓冲区长度表示满。,C2,P18-01;P18-02;P18-06;P18-07;P18-08,已覆盖
+P19,K1,手动模式下只有「按下了该方向按钮且尚未到达该方向限位」时才输出该动作；松开按钮或到达限位立即停止该动作。,C2;C4;C7,P19-01;P19-06;P19-08,已覆盖
+P19,K2,四种模式（Manual/SingleStep/SingleCycle/Continuous）互斥，同一时刻只有一种模式的动作生效。,,P19-07,已覆盖
+P19,K3,单步模式每完成一个动作必须等待操作员确认后才执行下一个动作。,,P19-02;P19-09,已覆盖
+P19,K4,EmergencyStop = TRUE 时六路动作输出全部为 FALSE，且不允许任何模式继续推进。,C1,P19-03;P19-04;P19-05;P19-08,已覆盖
+P19,K5,抓取/释放动作必须以 GripLimitSwitch/ReleaseLimitSwitch 为到位判据，到位后不得持续输出。,C4;C6,P19-02;P19-03;P19-06,已覆盖
+P20,K1,手动模式下 MotorForward 与 MotorReverse 互斥。,C4,P20-01,已覆盖
+P20,K2,自动模式下产品依次经过上料、清洗、称重、烧成、成品 5 个工位，不得跳站。,,P20-02;P20-03;P20-04;P20-05,已覆盖
+P20,K3,每个工位的完成信号（washComplete/weightComplete/firingComplete）是推进的必要条件，且必须与对应到位传感器一致。,,P20-02;P20-03;P20-04;P20-05;P20-07;P20-08,已覆盖
+P20,K4,成品站完成出料动作（kick）后点亮 CompletionLight。,C2;C1;C6,P20-06,已覆盖
+S01,K1,ClampLeft 与 ClampRight 不得同时为 TRUE（互斥）。,C4,S01-02;S01-05,已覆盖
+S01,K2,只有在对应工位零件到位且急停正常时，才允许该侧夹紧。,C2;C2b,S01-01;S01-02;S01-03;S01-05,已覆盖
+S01,K3,夹紧由 StartBtn 上升沿触发一次，按住不放不得重复触发。,,S01-01;S01-06,已覆盖
+S01,K4,EStop_NC = FALSE 时两侧输出立即清零，忙标志清除。,C1,S01-04,已覆盖
+S02,K1,MotorFwd 与 MotorRev 不得同时为 TRUE。,C4,S02-01;S02-05,已覆盖
+S02,K2,换向必须先两侧全 FALSE 并经过 200 ms 死区，才允许另一方向启动。,C9,S02-02;S02-06,已覆盖
+S02,K3,MaintKey = TRUE 时两个方向输出恒为 FALSE。,C2;C2b,S02-03,已覆盖
+S02,K4,EStop_NC = FALSE 时立即停机并清死区计时。,C1,S02-04,已覆盖
+S03,K1,DoorSwitch 由 FALSE 变 TRUE 时，DriveA_Run 必须在同一周期内变为 FALSE。,C1b,S03-01,已覆盖
+S03,K2,DriveB_Run 在门开后最多再保持 500 ms（或提前因动作完成而停）。,C5,S03-02,已覆盖
+S03,K3,门关闭后必须经过 ResetBtn 上升沿，两个区才允许重新启动。,C1;C2,S03-03,已覆盖
+S03,K4,EStop_NC = FALSE 时两个区都立即停止，且优先于 500 ms 延时。,C6,S03-04,已覆盖
+S04,K1,ZeroOffset 只在 ZeroBtn 上升沿更新，按住或松开时保持不变。,,S04-02;S04-03,已覆盖
+S04,K2,CompensatedWeight 每周期按 (RawWeight - ZeroOffset) * 0.01 计算，不使用上一周期的结果。,C4,S04-01;S04-02,已覆盖
+S04,K3,漂移判据带 50 单位滞回：超过 ±200 置位，回到 ±150 内复位。,C2;C6;C7,S04-04;S04-05;S04-06,已覆盖
+S04,K4,上电后未标定前 ZeroOffset 必须为 0，不得沿用断电前的值。,C10,S04-01,已覆盖
+S05,K1,只在 FlowPulse 的上升沿累加，不得按电平累加。,C2,S05-01;S05-06,已覆盖
+S05,K2,ShiftReset 上升沿清 ShiftVolume 与 PulseCount，TotalVolume 严格不减。,C6,S05-02;S05-03;S05-04;S05-06,已覆盖
+S05,K3,TotalVolume 达到 1000000.0 后保持不再增长，并置 OverflowFlag。,C1;C8;C8b,S05-04,已覆盖
+S05,K4,单个扫描周期内检测到两次以上脉冲上升沿时置 Status = 16#8501，本周期只计 1 个。,,S05-05,已覆盖
+S06,K1,目标温度 = SetTemp × (0.5 / 0.8 / 1.0)，随 Segment 切换。,C8,S06-01;S06-03,已覆盖
+S06,K2,加热判据带 ±5 ℃ 死区，避免在目标值附近高频通断。,,S06-01;S06-02,已覆盖
+S06,K3,超温 +10 ℃ 置降载，回落 -3 ℃ 才撤销（迟滞不小于 13 ℃）。,C1;C4;C7,S06-04;S06-05,已覆盖
+S06,K4,HeatOn 为 TRUE 时 FanOn 必须为 TRUE（联锁）。,C2,S06-01;S06-05,已覆盖
+S07,K1,工步只能按 0→1→2→3→0 推进，不得跳步或回退（除急停复位）。,,S07-01;S07-05,已覆盖
+S07,K2,每一步必须在收到对应完成信号后才推进到下一步。,C2;C6,S07-01;S07-04;S07-06,已覆盖
+S07,K3,单步超过 5 s 未完成时置 16#8701、关闭该步输出、保持步号不变。,C9,S07-02;S07-06,已覆盖
+S07,K4,Conveyor/FillValve/CapMotor/PackCyl 同一时刻最多一个为 TRUE。,C4,S07-01,已覆盖
+S07,K5,EStop_NC = FALSE 时全部输出 FALSE、Step 归 0、立即返回。,C1,S07-03,已覆盖
+S08,K1,Busy = TRUE 期间 SortLeft 与 SortRight 均为 FALSE。,C1,S08-02,已覆盖
+S08,K2,只有在无料且非忙时才允许切换配方。,C9,S08-02;S08-04,已覆盖
+S08,K3,RecipeSelect 非法（不在 1—3）时 ActiveRecipe 不变，仅置错误码。,,S08-03;S08-05,已覆盖
+S08,K4,分拣两路互斥，且同一产品只能分到一条支线。,C2;C4,S08-01,已覆盖
+S09,K1,步序只能 0→1→2→3→0，不得跳步。,C5,S09-01;S09-05;S09-06,已覆盖
+S09,K2,同一步内三个阀门互斥，最多一个为 TRUE。,C4,S09-04,已覆盖
+S09,K3,PumpRun 为 TRUE 时至少有一个阀门为 TRUE（无空转）。,C2,S09-04,已覆盖
+S09,K4,每步时长 30/60/30 s，StepDone 上升沿可提前结束当前步。,,S09-01;S09-02;S09-06,已覆盖
+S09,K5,急停时全部输出 FALSE、StepNo 归 0。,C1,S09-03,已覆盖
+S10,K1,重故障必须在同一周期内置 TripOutput。,C7,S10-01;S10-02,已覆盖
+S10,K2,重故障锁存，故障码消失后不自动复位。,C2,S10-03;S10-06,已覆盖
+S10,K3,复位只在 ResetBtn 上升沿且当前无故障时生效。,C6,S10-03;S10-05;S10-06,已覆盖
+S10,K4,VFDRun = TRUE 且故障码非零时 TripOutput 立即为 TRUE。,C1,S10-04,已覆盖
+S11,K1,断线判据用 3.6 mA 与 21 mA，恢复判据用 3.8 mA 与 20.5 mA（进出阈值不同，构成滞回）。,C4,S11-01;S11-05,已覆盖
+S11,K2,断线持续 2 s 才进入降级，避免瞬时干扰导致切换。,C2,S11-02;S11-04,已覆盖
+S11,K3,恢复持续 3 s 才退出降级，退出前 ControlValue 继续使用 FallbackValue。,C9,S11-03,已覆盖
+S11,K4,DegradedMode = TRUE 期间 ControlValue 必须等于 FallbackValue。,C1,S11-02,已覆盖
+S12,K1,EStop_NC = FALSE 时 MachineRun 必须为 FALSE。,C1;C4,S12-01;S12-05,已覆盖
+S12,K2,重启必须依次满足「门关 → 复位上升沿 → 启动上升沿」，缺一不可。,C2;C3,S12-02,已覆盖
+S12,K3,门在复位后再次打开时，已复位标志失效，必须重新复位。,C3,S12-03,已覆盖
+S12,K4,急停期间 ShiftCount 保持不变；运行满 60 s 加 1。,,S12-04;S12-05,已覆盖
+S13,K1,LineRun = FALSE 时两台电机必须为 FALSE。,C1,S13-01,已覆盖
+S13,K2,PartAtMerge = TRUE 时 MergeMotor 不得为 TRUE（防撞互锁）。,C4,S13-01;S13-02,已覆盖
+S13,K3,JamSensor 连续 2 s 为 TRUE 必须在 2 s 内报警并停机，Status = 16#8C01；报警锁存到复位。,C5;C6,S13-03,已覆盖
+S13,K4,复位需要 JamSensor = FALSE 且 ResetBtn 上升沿，复位后需重新 LineRun 上升沿。,C6,S13-04,已覆盖
+S13,K5,有料 3 s 切高速、无料 5 s 回落低速，中间区间保持原档位（不抖动）。,C7,S13-05;S13-06,已覆盖
+S14,K1,Pressure > 160.0 bar 时必须在同一周期卸荷并停泵。,C1,S14-04;S14-06,已覆盖
+S14,K2,Pressure < 120.0 bar 且 PumpEnable 时必须加载低压泵（允许一个扫描周期延迟）。,C2,S14-01;S14-06,已覆盖
+S14,K3,高压泵在 100.0—140.0 bar 之间保持原状态，构成 40 bar 滞回带。,C7,S14-02;S14-03,已覆盖
+S14,K4,传感器越界（< 0.5 或 > 250.0 bar）必须在 200 ms 内停机报警，Status = 16#8D01。,C6,S14-05,已覆盖
+S14,K5,卸荷阀与任一台泵不得同时为 TRUE。,C4,S14-04,已覆盖

@@ -1,0 +1,61 @@
+{
+  "source": "FUNCTION_BLOCK FB_S03\nVAR_INPUT\n    DoorSwitch : BOOL;\n    ZoneAOccupied : BOOL;\n    ZoneBOccupied : BOOL;\n    ResetBtn : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    DriveA_Run : BOOL := FALSE;\n    DriveB_Run : BOOL := FALSE;\n    AlarmLamp : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    FirstScan : BOOL := TRUE;\n    ResetPrevious : BOOL := FALSE;\n    ResetRising : BOOL := FALSE;\n    ResetConfirmed : BOOL := TRUE;\n    BStopPending : BOOL := FALSE;\n    BDelayScans : UINT := UINT#0;\nEND_VAR\n\n(*\n需求原文：\n设备分 A、B 两个危险区，安全门打开时需要分级停机：\nA 区（靠近门）立即停，B 区（远端）允许走完当前动作再停。\n1. DoorSwitch = TRUE 时，DriveA_Run 立即变为 FALSE；\n   DriveB_Run 继续保持，直到 500 ms 延时到或 B 区动作完成。\n2. 门关闭后，必须由 ResetBtn 的上升沿确认，\n   才允许重新启动两个区。\n3. EStop_NC = FALSE 时 A、B 两区同时立即停止，\n   不受 500 ms 延时影响。\n4. 门打开或急停期间 AlarmLamp = TRUE。\n5. 未复位前按启动按钮无效，Status 保持 16#8301 待复位。\n6. Status：16#0000 正常、16#8301 待复位、\n   16#8302 门开、16#8303 急停。\n扫描周期：20 ms。\n\n待审事项（不新增或替换接口）：\n- 接口没有启动按钮，也没有 B 区动作完成信号。\n  ZoneAOccupied、ZoneBOccupied 仅表示有人，不能据此推导\n  启动请求或动作完成。因此不生成运行启动命令，不将复位\n  等同于启动；本实现从规定初态出发，两驱动保持停止。\n  已实现复位授权、运行保持限制和分级停止状态机，\n  但启动及动作完成提前停止部分仍需需求补全。\n- C10 要求初始有界区间无报警，与该区间内门开或急停\n  必须报警的要求冲突。这里保留并报告冲突：\n  驱动初始停止，报警服从当前危险输入，不屏蔽初始报警。\n- 门开、急停与待复位状态码重叠时，采用安全事件优先：\n  急停 > 门开 > 待复位 > 正常。\n- 源码未经过真实编译器或逐周期测试验证。\n*)\n\nResetRising := ResetBtn AND NOT ResetPrevious;\nResetPrevious := ResetBtn;\n\nIF FirstScan THEN\n    DriveA_Run := FALSE;\n    DriveB_Run := FALSE;\n    BStopPending := FALSE;\n    BDelayScans := UINT#0;\n    FirstScan := FALSE;\nEND_IF;\n\n(* 危险输入使复位授权失效；危险期间的复位沿不予接受。 *)\nIF (NOT EStop_NC) OR DoorSwitch THEN\n    ResetConfirmed := FALSE;\nELSIF ResetRising THEN\n    ResetConfirmed := TRUE;\nEND_IF;\n\n(* 急停当周期覆盖所有延时及运行保持。 *)\nIF NOT EStop_NC THEN\n    DriveA_Run := FALSE;\n    DriveB_Run := FALSE;\n    BStopPending := FALSE;\n    BDelayScans := UINT#0;\nELSE\n    (* A 区无延时停止。 *)\n    IF DoorSwitch OR NOT ResetConfirmed THEN\n        DriveA_Run := FALSE;\n    END_IF;\n\n    (*\n    B 区仅保持已经存在的运行状态，不因门开而启动。\n    触发扫描记为 0，之后每扫描累加 20 ms；\n    第 25 个后续扫描达到 500 ms 并停止。\n    门提前关闭不会取消已经触发的停止过程。\n    *)\n    IF DoorSwitch AND DriveB_Run AND NOT BStopPending THEN\n        BStopPending := TRUE;\n        BDelayScans := UINT#0;\n    ELSIF BStopPending THEN\n        IF BDelayScans < UINT#25 THEN\n            BDelayScans := BDelayScans + UINT#1;\n        END_IF;\n\n        IF BDelayScans >= UINT#25 THEN\n            DriveB_Run := FALSE;\n            BStopPending := FALSE;\n            BDelayScans := UINT#0;\n        END_IF;\n    END_IF;\n\n    IF NOT DriveB_Run THEN\n        BStopPending := FALSE;\n        BDelayScans := UINT#0;\n    ELSIF (NOT ResetConfirmed) AND (NOT BStopPending) THEN\n        DriveB_Run := FALSE;\n    END_IF;\nEND_IF;\n\n(* 门开期间报警不撤销；急停同样直接点亮报警。 *)\nAlarmLamp := DoorSwitch OR NOT EStop_NC;\n\nIF NOT EStop_NC THEN\n    Status := WORD#16#8303;\nELSIF DoorSwitch THEN\n    Status := WORD#16#8302;\nELSIF NOT ResetConfirmed THEN\n    Status := WORD#16#8301;\nELSE\n    Status := WORD#16#0000;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 25.312,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 4,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "S03-01",
+        "cycle": 1,
+        "signal": "DriveA_Run",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S03-02",
+        "cycle": 1,
+        "signal": "DriveA_Run",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S03-03",
+        "cycle": 1,
+        "signal": "DriveA_Run",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S03-04",
+        "cycle": 1,
+        "signal": "DriveA_Run",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3292,
+  "tag": "candidate_2"
+}

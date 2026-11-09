@@ -1,0 +1,17 @@
+# task: P08
+# meta: medium / B 模拟量与数据处理
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+#
+# 命题映射（I/O 名 -> 派生命题）：
+# alias: chEn := channels[].enable
+# alias: chOut := channels[].outputValue
+# alias: chRet := channels[].retVal
+#
+# note: 本题为数组批量处理，逐通道结果由 tests/cases/P08.csv 逐周期比对；规约只约束与通道状态无关的全局性质（未使能不输出、越界不处理、上电清零）。
+
+C1: G(!chEn -> chOut == 0.0)    -- 未使能的通道不得输出非零工程量（安全默认）（K1/K5）
+C2: G(count < 0 -> !chEn)    -- 通道计数为负时不得使能任何通道（越界不处理）（K1/K5）
+C2b: G(count == 0 -> !chEn)    -- 通道数为 0 时不得使能任何通道（题面 initial_state：count = 0 时不做任何通道）（K1）
+C6: G(chRet != 16#0000 -> (chRet != 16#0000 W chEn))    -- 错误码保持到该通道重新使能，不得自行消失（K5）
+C10: G[0,1](chOut == 0.0)    -- 上电首周期不输出任何工程量（初态）

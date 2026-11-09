@@ -39,3 +39,21 @@ P01、P08、P13、P14、P17、P18、P19、S11 在判据修订后各补跑四组�
 - 实验没有向模型请求发送 seed；运行目录中的 42 只是本地标识。
 - 本目录没有 API Key。需要检查底层编译或仿真日志时，应使用小组保存的完整版原始提交包。
 
+## 成员5规范路径
+
+为满足任务书的 run_id 目录规范和统一复算要求，成员5在保留上述成员3原始目录的同时增加：
+
+- `runs/E1` 至 `runs/E4`：136 个最终 run 的规范副本。
+- `archive/source_runs`：成员3两个原始批次。
+- `per_task.csv`、`34_task_matrix.csv`、`summary.csv`：仓库统一统计文件。
+- `configs/E1.yaml` 至 `E4.yaml`：四组冻结配置。
+
+`reproduction/` 是仓库自带 ST 解释器的独立离线重放，`evidence_kind=independent_replay`，不冒充 CODESYS 原始 actual。132 个有 `final.st` 的 run 中完成 72 个；60 个受解释器未支持的 ST 方言限制；4 个 abandoned run 没有源码。
+
+统一复算入口：
+
+```bash
+python tools/stats.py
+python experiments/verify_package.py
+python tools/reproduce_runs.py
+```

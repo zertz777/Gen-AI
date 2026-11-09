@@ -1,0 +1,125 @@
+{
+  "source": "TYPE ST_Pump :\nSTRUCT\n    priority : INT;\n    selection : BOOL;\n    RunComd : BOOL;\nEND_STRUCT\nEND_TYPE\n\nFUNCTION_BLOCK FB_P07\nVAR_INPUT\n    mode : BOOL;\n    start : BOOL;\n    stop : BOOL;\nEND_VAR\nVAR_IN_OUT\n    pumpGroup : ARRAY[1..5] OF ST_Pump;\nEND_VAR\nVAR\n    firstScan : BOOL := TRUE;\n    startTrig : R_TRIG;\n    runLatch : ARRAY[1..5] OF BOOL;\n    selected : ARRAY[1..5] OF BOOL;\n    i : INT;\n    k : INT;\n    currentCount : INT;\n    bestIndex : INT;\n    bestPriority : INT;\n    manualFound : BOOL;\nEND_VAR\n\n(*\n  语义冲突报告（保留，不自行新增接口）：\n  1) C6 要求 RunComd 保持到 stop 出现为止；题目又要求手动按 selection 单泵启停、\n     自动按优先级三用两备。若 selection/priority/mode 改变时允许自行停止或切换，\n     会与 C6 冲突。本实现按 C1/C2/C4/C6/C10 的安全保持语义执行：\n     stop 是唯一清除所有 RunComd 的请求，运行后不因 selection、priority、mode 改变而自行掉线。\n  2) 手动模式下若多个 pumpGroup[i].selection 同时为 TRUE，题目未定义唯一选择规则。\n     本实现为确定性只启动泵号最小的被选中泵，且不无 stop 停止其他已保持运行泵。\n  3) 自动模式启动时在未运行泵中按优先级高者先启、同优先级泵号升序补足到 3 台。\n     若历史保持或外部初态使已运行泵超过 3 台，则在不出现 stop 时不能自行停泵，\n     因此无法同时满足 C6 与 K2“恰为 3 台”；该冲突按 C6 优先保留。\n*)\n\nIF firstScan THEN\n    (* C10: 上电首周期无运行命令 *)\n    FOR i := 1 TO 5 DO\n        runLatch[i] := FALSE;\n        pumpGroup[i].RunComd := FALSE;\n    END_FOR;\n    firstScan := FALSE;\nELSE\n    IF stop THEN\n        (* C1/C2/C4: stop 优先，当周期清除所有运行命令；start 同时有效也不启动 *)\n        FOR i := 1 TO 5 DO\n            runLatch[i] := FALSE;\n            pumpGroup[i].RunComd := FALSE;\n        END_FOR;\n        startTrig(CLK := start);\n    ELSE\n        startTrig(CLK := start);\n\n        IF startTrig.Q THEN\n            IF mode THEN\n                (* 自动模式：从当前未运行泵中补足到 3 台；已运行泵按 C6 保持 *)\n                currentCount := 0;\n                FOR i := 1 TO 5 DO\n                    selected[i] := runLatch[i];\n                    IF runLatch[i] THEN\n                        currentCount := currentCount + 1;\n                    END_IF;\n                END_FOR;\n\n                FOR k := 1 TO 3 DO\n                    IF currentCount < 3 THEN\n                        bestIndex := 0;\n                        bestPriority := 0;\n                        FOR i := 1 TO 5 DO\n                            IF NOT selected[i] THEN\n                                IF bestIndex = 0 THEN\n                                    bestIndex := i;\n                                    bestPriority := pumpGroup[i].priority;\n                                ELSE\n                                    IF (pumpGroup[i].priority > bestPriority) OR\n                                       ((pumpGroup[i].priority = bestPriority) AND (i < bestIndex)) THEN\n                                        bestIndex := i;\n                                        bestPriority := pumpGroup[i].priority;\n                                    END_IF;\n                                END_IF;\n                            END_IF;\n                        END_FOR;\n\n                        IF bestIndex > 0 THEN\n                            runLatch[bestIndex] := TRUE;\n                            selected[bestIndex] := TRUE;\n                            currentCount := currentCount + 1;\n                        END_IF;\n                    END_IF;\n                END_FOR;\n            ELSE\n                (* 手动模式：启动泵号最小的被选中泵；不做无 stop 的自行停止 *)\n                manualFound := FALSE;\n                FOR i := 1 TO 5 DO\n                    IF (NOT manualFound) AND pumpGroup[i].selection THEN\n                        runLatch[i] := TRUE;\n                        manualFound := TRUE;\n                    END_IF;\n                END_FOR;\n            END_IF;\n        END_IF;\n\n        (* 无 stop 时输出保持状态；每周期重写 RunComd，保证 C6 不自行掉线 *)\n        FOR i := 1 TO 5 DO\n            pumpGroup[i].RunComd := runLatch[i];\n        END_FOR;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "fail",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 6,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_P07_1_42\\tools\\candidate_1\\fast\\source.st:6-10..7-1: error: ';' missing at end of data type declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v6\\live\\E3_P07_1_42\\tools\\candidate_1\\fast\\source.st:6-10..7-1: error: ';' missing at end of data type declaration."
+        }
+      ],
+      "elapsed_s": 0.156,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 20,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 58,
+          "message": "需要程序名、函数或功能块实例替代 'startTrig'",
+          "raw": "需要程序名、函数或功能块实例替代 'startTrig'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 60,
+          "message": "需要程序名、函数或功能块实例替代 'startTrig'",
+          "raw": "需要程序名、函数或功能块实例替代 'startTrig'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 62,
+          "message": "此处需要有类型 'BOOL'的表达式",
+          "raw": "此处需要有类型 'BOOL'的表达式"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 62,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 62,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        }
+      ],
+      "elapsed_s": 47.297,
+      "evidence_kind": "live"
+    },
+    "errors": [
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 20,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 58,
+        "message": "需要程序名、函数或功能块实例替代 'startTrig'",
+        "raw": "需要程序名、函数或功能块实例替代 'startTrig'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 60,
+        "message": "需要程序名、函数或功能块实例替代 'startTrig'",
+        "raw": "需要程序名、函数或功能块实例替代 'startTrig'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 62,
+        "message": "此处需要有类型 'BOOL'的表达式",
+        "raw": "此处需要有类型 'BOOL'的表达式"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 62,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 62,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      }
+    ],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "skipped",
+    "total": 0,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": []
+  },
+  "repair_rounds": 0,
+  "token_count": 15764,
+  "tag": "candidate_1"
+}

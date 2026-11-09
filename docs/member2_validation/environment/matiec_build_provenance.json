@@ -1,0 +1,22 @@
+{
+  "repository": "https://github.com/beremiz/matiec",
+  "commit": "3a41303bcb4e50403417bc39c63f88981d7d961e",
+  "source_url": "https://codeload.github.com/beremiz/matiec/tar.gz/3a41303bcb4e50403417bc39c63f88981d7d961e",
+  "source_sha256": "21d249d9c65ff1a26404cfe0969a14a0c12d05e53871e26d77bdd4e8fd0a89a2",
+  "source_bytes": 738502,
+  "build_elapsed_s": 33.53,
+  "compiler": "C:/msys64/ucrt64/bin/g++.exe",
+  "command_flags": [
+    "-std=gnu++11",
+    "-O1",
+    "-w",
+    "-fpermissive",
+    "-Istage3",
+    "-DYY_BUF_SIZE=65536",
+    "-DDEFAULT_LIBDIR=\"<MATIEC_INSTALL>/lib\"",
+    "-DHGVERSION=\"3a41303bcb4e50403417bc39c63f88981d7d961e\""
+  ],
+  "runtime_linking": "static",
+  "bootstrap": "direct compilation from official Makefile.am lists; no source logic edits",
+  "version_stdout": "matiec version 0.1\nchangeset id: 3a41303bcb4e50403417bc39c63f88981d7d961e\n"
+}

@@ -1,0 +1,64 @@
+{
+  "source": "(*\n S04 称重零点漂移补偿\n 扫描周期：20 ms\n\n 冲突/不可达报告：\n 1) C2 要求 G(DriftAlarm -> driftOut)，即报警时偏差必须超过 ±200；\n    但控制要求 K3 与 C6/C7 采用 ±150 滞回保持，允许偏差在 151..199 区间继续报警。\n    本实现按 K3/C6/C7 的滞回语义执行，因此 C2 不能同时满足。\n 2) Status 16#8402 要求 RawWeight 超出 -32768..32767 的可用段；\n    但 RawWeight 的外部类型为 INT，IEC INT 的可表示范围即 -32768..32767。\n    该超量程条件在本接口下不可由输入触发/不可检测，代码保留分支但无实际可触发路径。\n 3) C10 要求首周期 CompensatedWeight=0.0，而 C4 要求每周期\n    CompensatedWeight=(RawWeight-ZeroOffset)*0.01；当首周期 RawWeight 非零时二者不能同时满足。\n    本实现按 C4 每周期更新，上电初态由变量默认初始化满足。\n*)\nFUNCTION_BLOCK FB_S04\nVAR_INPUT\n    RawWeight : INT;\n    ZeroBtn : BOOL;\n    CalibWeight : REAL;\nEND_VAR\nVAR_OUTPUT\n    CompensatedWeight : REAL;\n    ZeroOffset : INT;\n    DriftAlarm : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    ZeroBtnLast : BOOL := FALSE;\n    delta : DINT;\nEND_VAR\n\n(* CalibWeight 仅作显示，不参与控制逻辑 *)\n\n(* ZeroBtn 上升沿：采样当前 RawWeight 为零点，并清漂移报警 *)\nIF ZeroBtn AND NOT ZeroBtnLast THEN\n    ZeroOffset := RawWeight;\n    DriftAlarm := FALSE;\nEND_IF;\nZeroBtnLast := ZeroBtn;\n\n(* 每扫描周期按当前 RawWeight 和 ZeroOffset 计算补偿重量，单位 kg *)\nCompensatedWeight := (INT_TO_REAL(RawWeight) - INT_TO_REAL(ZeroOffset)) * 0.01;\n\n(* 漂移判据：±200 置位，回到 ±150 以内复位，形成 50 单位滞回 *)\ndelta := INT_TO_DINT(RawWeight) - INT_TO_DINT(ZeroOffset);\nIF (delta >= 200) OR (delta <= -200) THEN\n    DriftAlarm := TRUE;\nELSIF DriftAlarm AND (delta <= 150) AND (delta >= -150) THEN\n    DriftAlarm := FALSE;\nEND_IF;\n\n(* 状态码：超量程优先于零点漂移 *)\nIF (INT_TO_DINT(RawWeight) < -32768) OR (INT_TO_DINT(RawWeight) > 32767) THEN\n    Status := WORD#16#8402;\nELSIF DriftAlarm THEN\n    Status := WORD#16#8401;\nELSE\n    Status := WORD#16#0000;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.234,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.203,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 2,
+    "passed_ids": [
+      "S04-04",
+      "S04-05"
+    ],
+    "failures": [
+      {
+        "case_id": "S04-01",
+        "cycle": 1,
+        "signal": "DriftAlarm",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S04-02",
+        "cycle": 2,
+        "signal": "DriftAlarm",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S04-03",
+        "cycle": 2,
+        "signal": "DriftAlarm",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S04-06",
+        "cycle": 1,
+        "signal": "DriftAlarm",
+        "expected": false,
+        "actual": true
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 16051,
+  "tag": "candidate_1"
+}

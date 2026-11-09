@@ -1,0 +1,6 @@
+case_id,cycle,CurrentTemperature,SetTempDisplay,HeaterStatus,OverheatProtection,HeaterOutput
+P10-01,1,20.0,30.0,FALSE,FALSE,FALSE
+P10-01,2,25.0,30.0,FALSE,FALSE,FALSE
+P10-01,3,30.5,30.0,FALSE,FALSE,FALSE
+P10-01,4,29.0,30.0,TRUE,FALSE,TRUE
+P10-01,5,31.0,30.0,FALSE,FALSE,FALSE

@@ -1,0 +1,4 @@
+.\validation\matiec_live_r2\task_P14_skeleton\source.st:3-19..3-20: error: ';' missing at end of input variable(s) declaration.
+.\validation\matiec_live_r2\task_P14_skeleton\source.st:3-20..3-24: error: invalid input variable(s) declaration.
+
+2 error(s) found. Bailing out!

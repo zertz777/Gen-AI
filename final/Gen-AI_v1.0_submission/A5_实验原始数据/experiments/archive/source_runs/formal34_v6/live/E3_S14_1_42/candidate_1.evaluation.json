@@ -1,0 +1,75 @@
+{
+  "source": "FUNCTION_BLOCK FB_S14\nVAR_INPUT\n    Pressure : REAL;\n    PumpEnable : BOOL;\n    ResetBtn : BOOL;\nEND_VAR\nVAR_OUTPUT\n    LowPump : BOOL;\n    HighPump : BOOL;\n    ReliefValve : BOOL;\n    AlarmLamp : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    HighPumpLatched : BOOL := FALSE;\n    LowPumpLatched : BOOL := FALSE;\n    ReliefValveLatched : BOOL := FALSE;\n    ResetBtnLast : BOOL := FALSE;\n    PendingReset : BOOL := FALSE;\n    FirstScan : BOOL := TRUE;\n    sensorInvalid : BOOL;\n    ResetEdge : BOOL;\nEND_VAR\n\n(* 复位按钮上升沿检测 *)\nResetEdge := ResetBtn AND NOT ResetBtnLast;\n\nIF FirstScan THEN\n    (* 上电首周期初态：不加载、无报警 *)\n    LowPump := FALSE;\n    HighPump := FALSE;\n    ReliefValve := FALSE;\n    AlarmLamp := FALSE;\n    Status := 16#0000;\n    HighPumpLatched := FALSE;\n    LowPumpLatched := FALSE;\n    ReliefValveLatched := FALSE;\n    PendingReset := FALSE;\n    FirstScan := FALSE;\n    ResetBtnLast := ResetBtn;\nELSE\n    (* 传感器越界检测：断线/短路 *)\n    sensorInvalid := (Pressure < 0.5) OR (Pressure > 250.0);\n\n    IF sensorInvalid THEN\n        (* 传感器故障：立即停泵报警，记录待复位 *)\n        PendingReset := TRUE;\n        AlarmLamp := TRUE;\n        Status := 16#8D01;\n        LowPump := FALSE;\n        HighPump := FALSE;\n        LowPumpLatched := FALSE;\n        HighPumpLatched := FALSE;\n\n        (* 卸荷阀按压力滞回，过压时打开 *)\n        IF Pressure > 160.0 THEN\n            ReliefValveLatched := TRUE;\n        ELSIF Pressure < 150.0 THEN\n            ReliefValveLatched := FALSE;\n        END_IF;\n        ReliefValve := ReliefValveLatched;\n\n        (* 确保互斥 *)\n        IF ReliefValve THEN\n            LowPump := FALSE;\n            HighPump := FALSE;\n        END_IF;\n\n    ELSIF PendingReset THEN\n        (* 故障消失后待复位：泵停、报警保持、Status=8D02 *)\n        AlarmLamp := TRUE;\n        Status := 16#8D02;\n        LowPump := FALSE;\n        HighPump := FALSE;\n        LowPumpLatched := FALSE;\n        HighPumpLatched := FALSE;\n\n        (* 卸荷阀仍按压力滞回 *)\n        IF Pressure > 160.0 THEN\n            ReliefValveLatched := TRUE;\n        ELSIF Pressure < 150.0 THEN\n            ReliefValveLatched := FALSE;\n        END_IF;\n        ReliefValve := ReliefValveLatched;\n\n        IF ReliefValve THEN\n            LowPump := FALSE;\n            HighPump := FALSE;\n        END_IF;\n\n        (* ResetBtn 上升沿复位 *)\n        IF ResetEdge THEN\n            PendingReset := FALSE;\n            AlarmLamp := FALSE;\n            Status := 16#0000;\n            (* 本周期不加载，下一周期恢复正常 *)\n        END_IF;\n\n    ELSE\n        (* 正常状态 *)\n        AlarmLamp := FALSE;\n        Status := 16#0000;\n\n        (* 卸荷阀滞回：>160 开，<150 关，150~160 保持 *)\n        IF Pressure > 160.0 THEN\n            ReliefValveLatched := TRUE;\n        ELSIF Pressure < 150.0 THEN\n            ReliefValveLatched := FALSE;\n        END_IF;\n        ReliefValve := ReliefValveLatched;\n\n        IF ReliefValve THEN\n            (* 卸荷与泵互斥：卸荷时强制停泵并清除泵锁存 *)\n            LowPump := FALSE;\n            HighPump := FALSE;\n            LowPumpLatched := FALSE;\n            HighPumpLatched := FALSE;\n        ELSE\n            IF PumpEnable THEN\n                (* 高压泵滞回：>=140 投入；<100 断开；100~140 保持 *)\n                IF Pressure >= 140.0 THEN\n                    HighPumpLatched := TRUE;\n                ELSIF Pressure < 100.0 THEN\n                    HighPumpLatched := FALSE;\n                END_IF;\n\n                (* 低压泵：<120 启动；启动后保持，直至卸荷/禁用/故障 *)\n                IF Pressure < 120.0 THEN\n                    LowPumpLatched := TRUE;\n                END_IF;\n\n                LowPump := LowPumpLatched;\n                HighPump := HighPumpLatched;\n            ELSE\n                (* 未允许加载：停泵并清除锁存 *)\n                LowPump := FALSE;\n                HighPump := FALSE;\n                LowPumpLatched := FALSE;\n                HighPumpLatched := FALSE;\n            END_IF;\n        END_IF;\n    END_IF;\n\n    ResetBtnLast := ResetBtn;\nEND_IF;\n\n(* 最终安全互斥：卸荷阀与泵不得同时为 TRUE *)\nIF ReliefValve THEN\n    LowPump := FALSE;\n    HighPump := FALSE;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.265,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 22.891,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "S14-01",
+        "cycle": 3,
+        "signal": "LowPump",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S14-02",
+        "cycle": 1,
+        "signal": "HighPump",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S14-03",
+        "cycle": 1,
+        "signal": "HighPump",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S14-04",
+        "cycle": 1,
+        "signal": "ReliefValve",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S14-05",
+        "cycle": 2,
+        "signal": "ReliefValve",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S14-06",
+        "cycle": 1,
+        "signal": "LowPump",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 20665,
+  "tag": "candidate_1"
+}

@@ -1,0 +1,65 @@
+{
+  "task_id": "S07",
+  "io": [
+    {
+      "name": "BottleIn",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "FillDone",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "CapDone",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "PackDone",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "StartBtn",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "EStop_NC",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "Conveyor",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "FillValve",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "CapMotor",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "PackCyl",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "CycleCount",
+      "direction": "OUT",
+      "type": "UINT"
+    },
+    {
+      "name": "Status",
+      "direction": "OUT",
+      "type": "WORD"
+    }
+  ]
+}

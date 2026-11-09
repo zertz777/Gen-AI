@@ -1,0 +1,187 @@
+{
+  "source": "FUNCTION_BLOCK FB_P05\nVAR_INPUT\n    Gap_Exceeded : BOOL;\n    Weld_E_Stop_NC : BOOL;\n    DebounceTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    Operator_Alert : BOOL;\n    Weld_Soft_Start_Active : BOOL;\nEND_VAR\nVAR\n    InitTimer : TON;\n    DebounceTimer : TON;\nEND_VAR\n\n(*\n    语义冲突保留报告：\n    1) K3 要求 Gap_Exceeded 变 FALSE 时立即复位 Operator_Alert 并清去抖计时；\n       C9 要求 Operator_Alert 一旦置位至少保持 500 ms（25 个扫描周期）。\n       两者在报警置位后 Gap_Exceeded 于 500 ms 内变 FALSE 时冲突。\n       本实现按任务卡 K3 执行：立即复位，不额外增加保持计时接口。\n    2) C1 允许急停当周期清除 Operator_Alert；\n       无条件 C6 要求 Operator_Alert 保持到 Gap_Exceeded 为 FALSE。\n       若急停发生在 Gap_Exceeded 仍为 TRUE 时，C1 与 C6 冲突。\n       本实现按任务卡 K4 执行：急停优先。\n    编译通过不代表功能正确；功能正确性需由逐周期测试判定。\n*)\n\n(* 上电初始化抑制：固定 5 秒，仅上电后一次 *)\nInitTimer(IN := TRUE, PT := T#5s);\nWeld_Soft_Start_Active := NOT InitTimer.Q;\n\n(* 间隙去抖计时：仅正常监视、无急停、间隙超限时累计 *)\nDebounceTimer(\n    IN := Weld_E_Stop_NC AND NOT Weld_Soft_Start_Active AND Gap_Exceeded,\n    PT := DebounceTime\n);\n\n(* 报警优先级：急停 > 初始化抑制 > 正常监视去抖 *)\nIF NOT Weld_E_Stop_NC THEN\n    (* K4：急停有效，立即清报警，去抖通过 TON 的 IN=FALSE 清零 *)\n    Operator_Alert := FALSE;\nELSIF Weld_Soft_Start_Active THEN\n    (* K1：初始化抑制期内不报警，去抖不累计 *)\n    Operator_Alert := FALSE;\nELSE\n    (* K2/K3：初始化结束后正常监视 *)\n    IF NOT Gap_Exceeded THEN\n        (* K3：间隙恢复 FALSE，立即复位报警并清去抖计时 *)\n        Operator_Alert := FALSE;\n    ELSIF DebounceTimer.Q THEN\n        (* K2：Gap_Exceeded 连续为 TRUE 达 DebounceTime 后置位报警 *)\n        Operator_Alert := TRUE;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "fail",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 12,
+          "message": "未知的类型: 'TON'",
+          "raw": "未知的类型: 'TON'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 13,
+          "message": "未知的类型: 'TON'",
+          "raw": "未知的类型: 'TON'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 30,
+          "message": "需要程序名、函数或功能块实例替代 'InitTimer'",
+          "raw": "需要程序名、函数或功能块实例替代 'InitTimer'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 31,
+          "message": "不能将类型 '未知的类型: 'NOT(InitTimer.Q)'' 转换为类型'BOOL'",
+          "raw": "不能将类型 '未知的类型: 'NOT(InitTimer.Q)'' 转换为类型'BOOL'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 31,
+          "message": "未知的类型: 'InitTimer.Q'",
+          "raw": "未知的类型: 'InitTimer.Q'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 31,
+          "message": "未知的类型: 'TON'",
+          "raw": "未知的类型: 'TON'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 31,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 34,
+          "message": "需要程序名、函数或功能块实例替代 'DebounceTimer'",
+          "raw": "需要程序名、函数或功能块实例替代 'DebounceTimer'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 51,
+          "message": "此处需要有类型 'BOOL'的表达式",
+          "raw": "此处需要有类型 'BOOL'的表达式"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 51,
+          "message": "未知的类型: 'TON'",
+          "raw": "未知的类型: 'TON'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 51,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        }
+      ],
+      "elapsed_s": 23.031,
+      "evidence_kind": "live"
+    },
+    "errors": [
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 12,
+        "message": "未知的类型: 'TON'",
+        "raw": "未知的类型: 'TON'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 13,
+        "message": "未知的类型: 'TON'",
+        "raw": "未知的类型: 'TON'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 30,
+        "message": "需要程序名、函数或功能块实例替代 'InitTimer'",
+        "raw": "需要程序名、函数或功能块实例替代 'InitTimer'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 31,
+        "message": "不能将类型 '未知的类型: 'NOT(InitTimer.Q)'' 转换为类型'BOOL'",
+        "raw": "不能将类型 '未知的类型: 'NOT(InitTimer.Q)'' 转换为类型'BOOL'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 31,
+        "message": "未知的类型: 'InitTimer.Q'",
+        "raw": "未知的类型: 'InitTimer.Q'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 31,
+        "message": "未知的类型: 'TON'",
+        "raw": "未知的类型: 'TON'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 31,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 34,
+        "message": "需要程序名、函数或功能块实例替代 'DebounceTimer'",
+        "raw": "需要程序名、函数或功能块实例替代 'DebounceTimer'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 51,
+        "message": "此处需要有类型 'BOOL'的表达式",
+        "raw": "此处需要有类型 'BOOL'的表达式"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 51,
+        "message": "未知的类型: 'TON'",
+        "raw": "未知的类型: 'TON'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 51,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      }
+    ],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "skipped",
+    "total": 0,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": []
+  },
+  "repair_rounds": 0,
+  "token_count": 9260,
+  "tag": "candidate_1"
+}

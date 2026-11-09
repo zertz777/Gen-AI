@@ -1,0 +1,45 @@
+{
+  "task_id": "P02",
+  "io": [
+    {
+      "name": "value",
+      "direction": "IN",
+      "type": "DWORD"
+    },
+    {
+      "name": "hasChanged",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "hasRisingEdges",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "risingBits",
+      "direction": "OUT",
+      "type": "DWORD"
+    },
+    {
+      "name": "noOfRisingBits",
+      "direction": "OUT",
+      "type": "USINT"
+    },
+    {
+      "name": "hasFallingEdges",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "fallingBits",
+      "direction": "OUT",
+      "type": "DWORD"
+    },
+    {
+      "name": "noOfFallingBits",
+      "direction": "OUT",
+      "type": "USINT"
+    }
+  ]
+}

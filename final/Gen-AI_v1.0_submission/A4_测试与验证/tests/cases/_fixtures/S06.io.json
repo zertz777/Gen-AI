@@ -1,0 +1,50 @@
+{
+  "task_id": "S06",
+  "io": [
+    {
+      "name": "TempPV",
+      "direction": "IN",
+      "type": "REAL"
+    },
+    {
+      "name": "SetTemp",
+      "direction": "IN",
+      "type": "REAL"
+    },
+    {
+      "name": "Segment",
+      "direction": "IN",
+      "type": "INT"
+    },
+    {
+      "name": "LoadReduceReq",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "HeatOn",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "FanOn",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "OverTempAlarm",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "LoadReduce",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "Status",
+      "direction": "OUT",
+      "type": "WORD"
+    }
+  ]
+}

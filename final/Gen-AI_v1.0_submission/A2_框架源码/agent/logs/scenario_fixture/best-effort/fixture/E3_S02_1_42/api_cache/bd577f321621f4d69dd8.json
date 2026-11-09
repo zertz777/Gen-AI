@@ -1,0 +1,14 @@
+{
+  "choices": [
+    {
+      "message": {
+        "content": "{\"patches\": [{\"old\": \"FIXTURE_TEST_FAIL\", \"new\": \"FIXTURE_TEST_FAIL\"}]}"
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0
+  },
+  "fixture": true
+}

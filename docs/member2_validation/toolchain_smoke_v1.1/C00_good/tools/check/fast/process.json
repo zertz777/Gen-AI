@@ -1,0 +1,7 @@
+{
+  "status": "pass",
+  "returncode": 0,
+  "stdout": "POUS.c\nPOUS.h\nLOCATED_VARIABLES.h\nGLOBALS.h\n",
+  "stderr": "",
+  "elapsed_s": 0.187
+}

@@ -219,6 +219,17 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-experiments/runs/
 agent/logs/
 local/
+runs/
+tmp/
+*.tmp
+*.bak
+*.swp
+
+# Generated report QA renders
+docs/report/rendered/
+docs/report/rendered_*/
+docs/report/template_render.pdf
+*.pdf.pages/
+work_scratch/

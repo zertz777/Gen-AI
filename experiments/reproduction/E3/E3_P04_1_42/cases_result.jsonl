@@ -1,0 +1,7 @@
+{"task_id": "P04", "case_id": "P04-01", "status": "fail", "mismatch": {"cycle": 3, "variable": "VFD_RUN", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "P04", "case_id": "P04-02", "status": "fail", "mismatch": {"cycle": 3, "variable": "VFD_RUN", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "P04", "case_id": "P04-03", "status": "pass", "mismatch": null, "latency_s": 0.001}
+{"task_id": "P04", "case_id": "P04-04", "status": "fail", "mismatch": {"cycle": 1, "variable": "VFD_RUN", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "P04", "case_id": "P04-05", "status": "fail", "mismatch": {"cycle": 1, "variable": "VFD_RUN", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "P04", "case_id": "P04-06", "status": "pass", "mismatch": null, "latency_s": 0.001}
+{"task_id": "P04", "case_id": "P04-07", "status": "fail", "mismatch": {"cycle": 1, "variable": "VFD_RUN", "expected": true, "actual": false}, "latency_s": 0.001}

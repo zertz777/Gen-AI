@@ -1,0 +1,78 @@
+{
+  "source": "FUNCTION_BLOCK FB_P12\nVAR_INPUT\n    THICKNESS_FAULT : BOOL;\n    THICKNESS_SIGNAL_VALID : BOOL;\n    CUTTING_RUN : BOOL;\n    FaultTimestamp : DINT;\n    CycleTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    THICKNESS_ALARM : BOOL;\n    Slab_Fault_Counter : UINT;\n    Slab_Runtime_Accumulator : LTIME;\n    Slab_Fault_History : ARRAY[0..4] OF DINT;\nEND_VAR\nVAR\n    Initialized : BOOL := FALSE;\n    PreviousValidFault : BOOL := FALSE;\n    FaultRising : BOOL := FALSE;\n    HoldRemaining : TIME := T#0ms;\n    InternalAlarm : BOOL := FALSE;\n    InternalCounter : UINT := UINT#0;\n    InternalRuntime : LTIME := LTIME#0ns;\n    InternalHistory : ARRAY[0..4] OF DINT;\n    RuntimeIncrement : LTIME := LTIME#0ns;\n    Index : INT;\nEND_VAR\nVAR CONSTANT\n    ScanInterval : TIME := T#20ms;\n    MinimumHold : TIME := T#500ms;\n    MaximumCounter : UINT := UINT#65535;\n    MaximumRuntime : LTIME := LTIME#9223372036854775807ns;\nEND_VAR\n\n(*\n    待审语义冲突，不宣称规约已全部满足：\n    1. 上电不报警 / C10 与上电输入已经有效且故障为 TRUE 时\n       “立即报警”冲突。本实现首调用只初始化，后续调用执行监测。\n       C10 的 G[0,1] 若包含两个执行后状态，则本实现不额外抑制第二扫描。\n    2. 信号无效立即清报警优先于最少保持 500 ms。\n       若无效期间原始 THICKNESS_FAULT 仍为 TRUE，C6 的无条件保持\n       与 C2 的禁止报警冲突；本实现按有效信号限定故障保持。\n    3. C6 本身不能推出最少保持 500 ms；本实现另设保持状态。\n    4. C8 若禁止信号恢复后下一扫描立即报警，则与立即报警要求冲突；\n       本实现信号无效时当扫描清除，恢复有效后重新检测故障上升沿。\n    5. UINT 无法无限计数，LTIME 无法无限累计。本实现到上限饱和，\n       上限之后严格“加 1 / 按 CycleTime 累加”不可由指定类型表达。\n    6. VAR_OUTPUT 无法跨所有 IEC 平台声明为调用者不可写。\n       私有历史为权威数据，每扫描覆盖输出镜像；调用者必须遵守只读约定。\n\n    每调用为 20 ms，报警保持使用固定扫描间隔。\n    正常运行累计使用正值 CycleTime；非正值不累计。\n    LTIME、TIME_TO_LTIME 和长时间字面量需目标编译 profile 验证。\n    源码未声称经过编译或逐周期功能验证。\n*)\n\nIF NOT Initialized THEN\n    InternalAlarm := FALSE;\n    InternalCounter := UINT#0;\n    InternalRuntime := LTIME#0ns;\n    HoldRemaining := T#0ms;\n    PreviousValidFault := FALSE;\n    FaultRising := FALSE;\n    RuntimeIncrement := LTIME#0ns;\n\n    FOR Index := 0 TO 4 DO\n        InternalHistory[Index] := DINT#0;\n    END_FOR;\n\n    Initialized := TRUE;\nELSE\n    FaultRising := FALSE;\n\n    IF NOT THICKNESS_SIGNAL_VALID THEN\n        InternalAlarm := FALSE;\n        HoldRemaining := T#0ms;\n        PreviousValidFault := FALSE;\n    ELSE\n        (* 已有保持状态对应前次扫描至本次扫描的经过时间。 *)\n        IF HoldRemaining > ScanInterval THEN\n            HoldRemaining := HoldRemaining - ScanInterval;\n        ELSE\n            HoldRemaining := T#0ms;\n        END_IF;\n\n        FaultRising := THICKNESS_FAULT AND NOT PreviousValidFault;\n\n        IF FaultRising THEN\n            IF InternalCounter < MaximumCounter THEN\n                InternalCounter := InternalCounter + UINT#1;\n            END_IF;\n\n            FOR Index := 4 TO 1 BY -1 DO\n                InternalHistory[Index] := InternalHistory[Index - 1];\n            END_FOR;\n            InternalHistory[0] := FaultTimestamp;\n\n            (* 每个新故障均从当前扫描重新保证至少 500 ms。 *)\n            HoldRemaining := MinimumHold;\n        END_IF;\n\n        InternalAlarm := THICKNESS_FAULT OR (HoldRemaining > T#0ms);\n        PreviousValidFault := THICKNESS_FAULT;\n\n        (* 报警保持期间若实际故障已消失，仍可累计正常运行时间。 *)\n        IF CUTTING_RUN AND NOT THICKNESS_FAULT AND (CycleTime > T#0ms) THEN\n            RuntimeIncrement := TIME_TO_LTIME(CycleTime);\n\n            IF RuntimeIncrement > LTIME#0ns THEN\n                IF InternalRuntime <= MaximumRuntime - RuntimeIncrement THEN\n                    InternalRuntime := InternalRuntime + RuntimeIncrement;\n                ELSE\n                    InternalRuntime := MaximumRuntime;\n                END_IF;\n            END_IF;\n        END_IF;\n    END_IF;\nEND_IF;\n\n(* 仅输出观测数据，不生成或修改切割设备运行许可。 *)\nTHICKNESS_ALARM := InternalAlarm;\nSlab_Fault_Counter := InternalCounter;\nSlab_Runtime_Accumulator := InternalRuntime;\n\nFOR Index := 0 TO 4 DO\n    Slab_Fault_History[Index] := InternalHistory[Index];\nEND_FOR;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": null,
+          "message": "Fast compiler exited nonzero; inspect stdout.txt/stderr.txt",
+          "raw": "Fast compiler exited nonzero; inspect stdout.txt/stderr.txt"
+        }
+      ],
+      "elapsed_s": 1.703,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.297,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 1,
+    "passed_ids": [
+      "P12-03"
+    ],
+    "failures": [
+      {
+        "case_id": "P12-01",
+        "cycle": 1,
+        "signal": "THICKNESS_ALARM",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P12-02",
+        "cycle": 1,
+        "signal": "Slab_Fault_Counter",
+        "expected": 1,
+        "actual": 0
+      },
+      {
+        "case_id": "P12-04",
+        "cycle": 1,
+        "signal": "Slab_Runtime_Accumulator",
+        "expected": 1000.0,
+        "actual": 0.0
+      },
+      {
+        "case_id": "P12-05",
+        "cycle": 1,
+        "signal": "THICKNESS_ALARM",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P12-06",
+        "cycle": 1,
+        "signal": "THICKNESS_ALARM",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3514,
+  "tag": "candidate_3"
+}

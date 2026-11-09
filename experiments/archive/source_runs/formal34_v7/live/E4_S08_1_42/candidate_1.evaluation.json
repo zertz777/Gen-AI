@@ -1,0 +1,68 @@
+{
+  "source": "FUNCTION_BLOCK FB_S08\nVAR_INPUT\n    RecipeSelect : INT;\n    ChangeoverReq : BOOL;\n    PartHeight : REAL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    ActiveRecipe : INT := 1;\n    SortLeft : BOOL := FALSE;\n    SortRight : BOOL := FALSE;\n    Busy : BOOL := FALSE;\n    Status : WORD := 16#0000;\nEND_VAR\nVAR\n    ChangeoverReqLast : BOOL := FALSE;\n    ChangeoverRise : BOOL := FALSE;\n    StartupScans : INT := 0;\n    BusyScans : INT := 0;\n    LeftThreshold : REAL := 30.0;\n    RightThreshold : REAL := 60.0;\n    RecipeValid : BOOL := FALSE;\n    BusyAtScanStart : BOOL := FALSE;\nEND_VAR\n\n(*\n需求原文：\n分拣线按产品高度分到左右两条支线，阈值来自配方。\n切换配方必须在线上无料时进行。\n1. 配方1：左30 / 右60 mm；配方2：左50 / 右90 mm；\n   配方3：左70 / 右120 mm。\n2. ChangeoverReq上升沿且非忙、PartHeight=0.0时切换，\n   Busy保持2 s后自动清除。\n3. Busy期间禁止两路分拣。\n4. 非法RecipeSelect拒绝切换，ActiveRecipe保持，Status=16#8801。\n5. 低于左阈值分左；左阈值至右阈值之间分右；\n   超过右阈值不动作，Status=16#8802。\n6. 上电ActiveRecipe=1，Busy=FALSE。\n\n待审语义冲突及边界：\n- C9为G(Busy -> G[0,100](Busy))。其全局滚动约束意味着\n  Busy一旦为TRUE便不能再次清除，与原文2 s自动清除矛盾。\n  本实现保留原文的有限2 s计时，不能同时满足C9。\n- C10的闭区间[0,1]要求前两次调用保持初态；原文未明确\n  上电调用中的有效请求是否可立即处理。本实现采用C10，\n  前两次调用禁止分拣和切换，并持续采样请求边沿。\n- PartHeight恰等于右阈值时，原文既不属于右分拣区间，\n  也不满足“超过右阈值”。本实现不动作且不报超规格，\n  此边界仍待需求确认。\n- EStop_NC的状态码、复位及计时行为未规定。本实现急停时\n  禁止分拣和新切换，不改配方，已启动的2 s计时继续。\n- 无料或非正高度不分拣；非法配方错误优先于超规格错误。\n- 固定20 ms扫描计数实现2 s；启动扫描计数为0，\n  其后第100次调用清除Busy。未声称已编译或逐周期验证。\n*)\n\nChangeoverRise := ChangeoverReq AND NOT ChangeoverReqLast;\nChangeoverReqLast := ChangeoverReq;\nRecipeValid := (RecipeSelect >= 1) AND (RecipeSelect <= 3);\n\nSortLeft := FALSE;\nSortRight := FALSE;\nStatus := 16#0000;\n\nIF StartupScans < 2 THEN\n    ActiveRecipe := 1;\n    Busy := FALSE;\n    BusyScans := 0;\n    StartupScans := StartupScans + 1;\nELSE\n    BusyAtScanStart := Busy;\n\n    (* 先推进既有切换；完成扫描不接受新的切换请求。 *)\n    IF BusyAtScanStart THEN\n        IF BusyScans < 100 THEN\n            BusyScans := BusyScans + 1;\n        END_IF;\n        IF BusyScans >= 100 THEN\n            Busy := FALSE;\n            BusyScans := 0;\n        END_IF;\n    END_IF;\n\n    IF NOT RecipeValid THEN\n        Status := 16#8801;\n    END_IF;\n\n    IF EStop_NC\n       AND ChangeoverRise\n       AND RecipeValid\n       AND NOT BusyAtScanStart\n       AND (PartHeight = 0.0) THEN\n        ActiveRecipe := RecipeSelect;\n        Busy := TRUE;\n        BusyScans := 0;\n    END_IF;\n\n    CASE ActiveRecipe OF\n        1:\n            LeftThreshold := 30.0;\n            RightThreshold := 60.0;\n        2:\n            LeftThreshold := 50.0;\n            RightThreshold := 90.0;\n        3:\n            LeftThreshold := 70.0;\n            RightThreshold := 120.0;\n    END_CASE;\n\n    IF EStop_NC AND NOT Busy AND (PartHeight > 0.0) THEN\n        IF PartHeight < LeftThreshold THEN\n            SortLeft := TRUE;\n        ELSIF PartHeight < RightThreshold THEN\n            SortRight := TRUE;\n        ELSIF PartHeight > RightThreshold THEN\n            IF RecipeValid THEN\n                Status := 16#8802;\n            END_IF;\n        END_IF;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 22.813,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 5,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "S08-01",
+        "cycle": 1,
+        "signal": "SortLeft",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S08-02",
+        "cycle": 1,
+        "signal": "Busy",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S08-03",
+        "cycle": 1,
+        "signal": "Status",
+        "expected": 34817,
+        "actual": 0
+      },
+      {
+        "case_id": "S08-04",
+        "cycle": 1,
+        "signal": "SortLeft",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S08-05",
+        "cycle": 1,
+        "signal": "Status",
+        "expected": 34817,
+        "actual": 0
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3061,
+  "tag": "candidate_1"
+}

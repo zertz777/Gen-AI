@@ -1,0 +1,2 @@
+{"ts": "2026-10-31T12:11:46.314575+00:00", "event": "evaluation", "tag": "candidate_1", "compile_status": "pass", "test_status": "fail", "test_passed": 0, "test_total": 6}
+{"ts": "2026-10-31T12:15:46.418017+00:00", "event": "stop", "reason": "timeout"}

@@ -1,0 +1,4 @@
+{"ts": "2026-11-01T05:58:40.424436+00:00", "event": "evaluation", "tag": "candidate_1", "compile_status": "fail", "test_status": "skipped", "test_passed": 0, "test_total": 0}
+{"ts": "2026-11-01T05:59:49.720725+00:00", "event": "invalid_generation", "candidate": 2, "message": "Model response contains no ST POU"}
+{"ts": "2026-11-01T06:02:15.486301+00:00", "event": "evaluation", "tag": "candidate_3", "compile_status": "fail", "test_status": "skipped", "test_passed": 0, "test_total": 0}
+{"ts": "2026-11-01T06:02:15.487898+00:00", "event": "stop", "reason": "budget"}

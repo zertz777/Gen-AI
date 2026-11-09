@@ -1,0 +1,124 @@
+{
+  "source": "(*\n需要修改：替换占位 RETURN，实现报警保持、有效故障上升沿统计、\n最近五条历史和正常切割运行时间累计，保持外部接口不变。\n\n需求原文：\nMonitor slab-thickness faults on a stone-cutting line, including minimum alarm holding, fault counting, normal-cutting runtime accumulation and a history of the five most recent faults.\n\n1. When THICKNESS_SIGNAL_VALID is TRUE, THICKNESS_FAULT indicates that thickness deviation exceeds tolerance. Activate THICKNESS_ALARM immediately when the fault becomes TRUE, and hold each triggered alarm for at least 500 ms. Keep the alarm active while the fault persists.\n2. On each FALSE-to-TRUE transition of a valid fault signal, increment Slab_Fault_Counter and store the current FaultTimestamp in element 0 of Slab_Fault_History. Shift older entries toward higher indices, retaining only the five most recent entries.\n3. Accumulate Slab_Runtime_Accumulator using CycleTime only while CUTTING_RUN is TRUE, the thickness signal is valid and no thickness fault is present. Otherwise preserve the accumulated value.\n4. At power-up or whenever THICKNESS_SIGNAL_VALID is FALSE, switch off the alarm and clear its holding state. Do not add fault records or accumulate normal runtime while the signal is invalid.\n5. At power-up, initialize the fault count, accumulated runtime and all five history entries to zero. Statistics and history are for observation and maintenance only; they must not alter the cutting equipment's operating permissive, and external callers must not modify history entries.\n\n中文摘要：板坯厚度故障：信号有效时判故障、报警至少保持 500 ms、\n故障上升沿计数并保留最近 5 条历史，正常运行时间按周期累计。\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）\n\n接口、初态、约束与数据告警：\n{\n  \"task_id\": \"P12\",\n  \"title\": \"Slab Thickness Alarm and Fault History\",\n  \"io_table\": [\n    {\n      \"direction\": \"IN\",\n      \"name\": \"THICKNESS_FAULT\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Thickness deviation exceeds the permitted tolerance.\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"THICKNESS_SIGNAL_VALID\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Thickness-signal validity; FALSE means the signal is lost or unavailable.\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"CUTTING_RUN\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Actual cutting-equipment running status.\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"FaultTimestamp\",\n      \"data_type\": \"DINT\",\n      \"description\": \"Current timestamp in seconds, used as the fault-record identifier.\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"CycleTime\",\n      \"data_type\": \"TIME\",\n      \"description\": \"Actual elapsed interval represented by this invocation; must be positive.\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"THICKNESS_ALARM\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Thickness alarm with a minimum 500 ms hold duration.\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"Slab_Fault_Counter\",\n      \"data_type\": \"UINT\",\n      \"description\": \"Number of valid thickness-fault occurrences.\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"Slab_Runtime_Accumulator\",\n      \"data_type\": \"LTIME\",\n      \"description\": \"Accumulated normal-cutting runtime.\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"Slab_Fault_History\",\n      \"data_type\": \"ARRAY[0..4] OF DINT\",\n      \"description\": \"Five most recent fault timestamps; index 0 is newest; read-only to callers.\"\n    }\n  ],\n  \"initial_state\": \"THICKNESS_ALARM = FALSE；Slab_Fault_Counter = 0；Slab_Runtime_Accumulator = T#0s；Slab_Fault_History[0..4] 全为 0；保持计时器清零。\",\n  \"constraints\": [\n    \"K1 只在 THICKNESS_SIGNAL_VALID = TRUE 时判定 THICKNESS_FAULT，信号无效期间不报警、不计数、不累计运行时间。\",\n    \"K2 故障上升沿时 Slab_Fault_Counter 加 1，并把 FaultTimestamp 写入历史元素 0，原有记录向高索引移位，只保留最近 5 条。\",\n    \"K3 THICKNESS_ALARM 一旦置位至少保持 500 ms；故障持续期间保持为 TRUE。\",\n    \"K4 仅当 CUTTING_RUN = TRUE、信号有效且无厚度故障时，按 CycleTime 累加 Slab_Runtime_Accumulator；否则保持不变。\"\n  ],\n  \"semantic_warnings\": [],\n  \"warnings\": [],\n  \"missing_fields\": [],\n  \"dialect_requirements\": [\n    \"LTIME需要编译profile支持长时间类型\"\n  ],\n  \"type_origins\": {}\n}\n\n完整形式化规约；有界时序以扫描周期计：\n# task: P12\n# meta: medium / D 故障与安全\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n#\n# note: 本题只给了品质信号与切割运行信号，没有急停，因此 C1 以「信号无效即不报警」的形式归入 C2/C8。\n\nC2: G(THICKNESS_ALARM -> THICKNESS_SIGNAL_VALID)    -- 信号无效期间不得报警（报警的前提是信号有效）（K1）\nC5: G(THICKNESS_FAULT && THICKNESS_SIGNAL_VALID -> F[0,25](THICKNESS_ALARM))    -- 故障出现后 500 ms 内必须报警（响应时限）（K3）\nC6: G(THICKNESS_ALARM -> (THICKNESS_ALARM W !THICKNESS_FAULT))    -- 故障持续期间报警保持（至少 500 ms 由此推出）（K3）\nC8: G(!THICKNESS_SIGNAL_VALID -> X(!THICKNESS_ALARM))    -- 信号失效后下一周期清报警，不保留陈旧报警（K1）\nC10: G[0,1](!THICKNESS_ALARM)    -- 上电首周期不报警（初态）\n\n语义冲突与实现边界：\n1. 信号无效时立即清报警，优先于无条件的 500 ms 保持。\n   若无效时 THICKNESS_FAULT 仍为 TRUE，C2 与 C6 可以冲突。\n2. C6 的弱直到并不能推出 500 ms 最短保持；本实现单独计时。\n3. C8 的 X 要求无效扫描之后一帧也不报警；若下一帧恢复有效且\n   存在故障，这与需求 1 的立即报警冲突。本实现按当前扫描有效性处理。\n4. C10 的 [0,1] 与“首周期”注释不完全一致；初始输入即有效故障时，\n   其禁止报警的要求又与需求 1 冲突。本实现初始化为零后执行首帧逻辑，\n   有效故障在首帧即报警，因此不声称满足 C10。\n5. 有效故障定义为 THICKNESS_SIGNAL_VALID AND THICKNESS_FAULT。\n   无效扫描清除上升沿记忆，恢复有效且故障为 TRUE 时记录新故障。\n6. UINT 不能表示无限故障次数。计数达到 65535 后饱和，历史仍更新；\n   此边界不满足无限次逐次加一要求，且不增加接口。\n7. 历史由内部状态保存，每次调用重新发布全部输出，避免外部写入\n   改变内部历史；固定 VAR_OUTPUT 接口无法从语言层禁止调用方写入。\n8. CycleTime 必须为正；非正值不累计。累计值须处于 LTIME 可表示范围。\n9. 保持时间按固定 20 ms 扫描推进，运行时间按 CycleTime 累计。\n   不使用依赖真实时钟的厂商定时器。\n10. 编译 profile 必须支持 LTIME、LTIME 字面量和 TIME_TO_LTIME。\n    未使用 VARIANT、开放数组或替代类型。\n11. 当前聊天没有可执行工具、编译 profile 或已配置测试命令，\n    因此未运行编译和逐周期测试，不声称已经验证正确。\n    应逐周期检查首帧故障、25 个间隔保持、保持期间再触发、\n    信号丢失及恢复、历史移位、计数饱和与运行时间累计。\n*)\n\nFUNCTION_BLOCK FB_P12\nVAR_INPUT\n    THICKNESS_FAULT : BOOL;\n    THICKNESS_SIGNAL_VALID : BOOL;\n    CUTTING_RUN : BOOL;\n    FaultTimestamp : DINT;\n    CycleTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    THICKNESS_ALARM : BOOL := FALSE;\n    Slab_Fault_Counter : UINT := UINT#0;\n    Slab_Runtime_Accumulator : LTIME := LTIME#0s;\n    Slab_Fault_History : ARRAY[0..4] OF DINT :=\n        [DINT#0, DINT#0, DINT#0, DINT#0, DINT#0];\nEND_VAR\nVAR\n    Initialized : BOOL := FALSE;\n    PreviousValidFault : BOOL := FALSE;\n    CurrentValidFault : BOOL := FALSE;\n    HoldRemaining : TIME := T#0ms;\n    FaultCountState : UINT := UINT#0;\n    RuntimeState : LTIME := LTIME#0s;\n    HistoryState : ARRAY[0..4] OF DINT :=\n        [DINT#0, DINT#0, DINT#0, DINT#0, DINT#0];\nEND_VAR\n\n(* 内部状态应采用非保持实例；冷启动恢复声明初值。 *)\nIF NOT Initialized THEN\n    PreviousValidFault := FALSE;\n    CurrentValidFault := FALSE;\n    HoldRemaining := T#0ms;\n    FaultCountState := UINT#0;\n    RuntimeState := LTIME#0s;\n    HistoryState[0] := DINT#0;\n    HistoryState[1] := DINT#0;\n    HistoryState[2] := DINT#0;\n    HistoryState[3] := DINT#0;\n    HistoryState[4] := DINT#0;\n\n    THICKNESS_ALARM := FALSE;\n    Slab_Fault_Counter := UINT#0;\n    Slab_Runtime_Accumulator := LTIME#0s;\n    Slab_Fault_History[0] := DINT#0;\n    Slab_Fault_History[1] := DINT#0;\n    Slab_Fault_History[2] := DINT#0;\n    Slab_Fault_History[3] := DINT#0;\n    Slab_Fault_History[4] := DINT#0;\n    Initialized := TRUE;\nEND_IF;\n\nCurrentValidFault := THICKNESS_SIGNAL_VALID AND THICKNESS_FAULT;\n\nIF NOT THICKNESS_SIGNAL_VALID THEN\n    THICKNESS_ALARM := FALSE;\n    HoldRemaining := T#0ms;\n    PreviousValidFault := FALSE;\nELSE\n    (* 先推进上一扫描留下的保持时间，再处理本扫描新触发。\n       触发扫描不扣减；第 25 个后续扫描才允许撤销报警。 *)\n    IF HoldRemaining > T#20ms THEN\n        HoldRemaining := HoldRemaining - T#20ms;\n    ELSE\n        HoldRemaining := T#0ms;\n    END_IF;\n\n    IF CurrentValidFault AND NOT PreviousValidFault THEN\n        HoldRemaining := T#500ms;\n\n        IF FaultCountState < UINT#65535 THEN\n            FaultCountState := FaultCountState + UINT#1;\n        END_IF;\n\n        HistoryState[4] := HistoryState[3];\n        HistoryState[3] := HistoryState[2];\n        HistoryState[2] := HistoryState[1];\n        HistoryState[1] := HistoryState[0];\n        HistoryState[0] := FaultTimestamp;\n    END_IF;\n\n    THICKNESS_ALARM :=\n        CurrentValidFault OR (HoldRemaining > T#0ms);\n\n    IF CUTTING_RUN AND NOT CurrentValidFault THEN\n        IF CycleTime > T#0ms THEN\n            RuntimeState := RuntimeState + TIME_TO_LTIME(CycleTime);\n        END_IF;\n    END_IF;\n\n    PreviousValidFault := CurrentValidFault;\nEND_IF;\n\n(* 输出仅为观测数据，不生成或改变设备运行许可。 *)\nSlab_Fault_Counter := FaultCountState;\nSlab_Runtime_Accumulator := RuntimeState;\nSlab_Fault_History[0] := HistoryState[0];\nSlab_Fault_History[1] := HistoryState[1];\nSlab_Fault_History[2] := HistoryState[2];\nSlab_Fault_History[3] := HistoryState[3];\nSlab_Fault_History[4] := HistoryState[4];\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 145,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:145-32..145-36: error: invalid specification in variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:145-32..145-36: error: invalid specification in variable declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 145,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:145-36..145-38: error: ';' missing at end of variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:145-36..145-38: error: ';' missing at end of variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 145,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:145-38..145-49: error: invalid variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:145-38..145-49: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 155,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:155-20..155-24: error: invalid specification in variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:155-20..155-24: error: invalid specification in variable declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 155,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:155-24..155-26: error: ';' missing at end of variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:155-24..155-26: error: ';' missing at end of variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 155,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:155-26..155-37: error: invalid variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:155-26..155-37: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 166,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:166-25..166-26: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:166-25..166-26: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 166,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:166-26..166-29: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:166-26..166-29: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 175,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:175-37..175-38: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:175-37..175-38: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 175,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:175-38..175-41: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:175-38..175-41: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 218,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:218-56..218-57: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:218-56..218-57: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 218,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:218-57..218-67: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E2_P12_1_42\\tools\\baseline\\fast\\source.st:218-57..218-67: error: invalid statement in ST statement."
+        }
+      ],
+      "elapsed_s": 0.156,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 22.359,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P12-01",
+      "P12-02",
+      "P12-03",
+      "P12-04",
+      "P12-05",
+      "P12-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

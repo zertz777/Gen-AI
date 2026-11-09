@@ -1,0 +1,60 @@
+{
+  "source": "FUNCTION_BLOCK FB_P16\nVAR_INPUT\n    processLength : USINT;\n    sensor1 : BOOL;\n    sensor2 : BOOL;\n    sensor3 : BOOL;\n    sensor4 : BOOL;\n    sensor5 : BOOL;\n    station1Start : BOOL;\n    station2Complete : BOOL;\n    station3Complete : BOOL;\n    station4Complete : BOOL;\n    processSequence : ARRAY[1..8] OF USINT;\nEND_VAR\nVAR_OUTPUT\n    conveyorLeft : BOOL;\n    conveyorRight : BOOL;\nEND_VAR\nVAR\n    (* --- internal state --- *)\n    state : INT := 0;           (* 0=IDLE 1=MOVING 2=WAIT_COMPLETE 3=DONE 4=ERROR   *)\n    stepIdx : INT := 0;         (* index into processSequence for the active work piece  *)\n    currentStation : INT := 0;  (* station where the work piece currently is           *)\n    targetStation : INT := 0;   (* commanded destination station                       *)\n    dir : INT := 0;             (* -1 = left, 0 = stop, +1 = right (this scan)         *)\n    cd : INT := 0;              (* C9 dead band: block a right run after a left run    *)\n    sensorAtTarget : BOOL := FALSE;\n    completionSignal : BOOL := FALSE;\n    zeroNow : BOOL := FALSE;\n    lenI : INT := 0;            (* processLength expressed as INT for comparisons      *)\nEND_VAR\n\n(* ============================================================================\n   FB_P16  Flexible Processing Control           scan cycle = 20 ms\n   ----------------------------------------------------------------------------\n   Direction convention (derived, not an interface): stations are numbered\n   1#..5# left to right, so a move towards a HIGHER station number is\n   conveyorRight and a move towards a LOWER station number is conveyorLeft.\n\n   Output model: the conveyor outputs are DIRECT (combinationally derived from\n   the direction command computed in the SAME scan). The start condition is\n   therefore effective in the scan in which it appears, and an arrival stops\n   the belt in the scan in which the target sensor is seen; the next segment is\n   issued in the scan in which the station completion signal is seen (K3), with\n   no artificial extra delay.\n\n   C9 (no left->right switch inside 200 ms) is realised as an OUTPUT-LEVEL\n   suppression of conveyorRight for 10 scans after a left command, so that it\n   never delays a legitimately requested right move that is not a reversal.\n\n   Reported semantic conflict (kept, not silently resolved):\n     * K4  => processLength outside the array range means ERROR + stop.\n     * C1  => processLength = 0 means \"empty process\": the conveyor must not run.\n   Implementation: processLength = 0  -> no start and outputs forced off (C1);\n                   processLength > 8  -> ERROR state, conveyor stopped (K4).\n   ============================================================================ *)\n\n(* --- 1) normalise processLength to INT to keep comparisons type-safe --- *)\nlenI := USINT_TO_INT(processLength);\n\n(* --- 2) empty-process flag (C1) --- *)\nzeroNow := (lenI = 0);\n\n(* --- 3) current target sensor --- *)\nsensorAtTarget := FALSE;\nCASE targetStation OF\n    1: sensorAtTarget := sensor1;\n    2: sensorAtTarget := sensor2;\n    3: sensorAtTarget := sensor3;\n    4: sensorAtTarget := sensor4;\n    5: sensorAtTarget := sensor5;\nELSE\n    sensorAtTarget := FALSE;\nEND_CASE;\n\n(* --- 4) completion signal of the station currently occupied --- *)\ncompletionSignal := FALSE;\nCASE currentStation OF\n    2: completionSignal := station2Complete;\n    3: completionSignal := station3Complete;\n    4: completionSignal := station4Complete;\nELSE\n    completionSignal := FALSE;\nEND_CASE;\n\n(* --- 5) state machine --- *)\ndir := 0;\n\nCASE state OF\n\n    0: (* ---------------- IDLE ---------------- *)\n        IF lenI > 8 THEN\n            state := 4;                                  (* K4 *)\n        ELSIF (lenI >= 1) AND station1Start AND sensor1 THEN\n            stepIdx := 1;\n            currentStation := 1;\n            targetStation := USINT_TO_INT(processSequence[1]);\n            IF (targetStation < 1) OR (targetStation > 5) THEN\n                state := 4;                              (* K4: bad station number *)\n            ELSE\n                IF targetStation > currentStation THEN\n                    dir := 1;\n                ELSIF targetStation < currentStation THEN\n                    dir := -1;\n                ELSE\n                    dir := 0;\n                END_IF;\n                state := 1;\n            END_IF;\n        END_IF;\n\n    1: (* ---------------- MOVING ---------------- *)\n        IF sensorAtTarget THEN\n            dir := 0;\n            currentStation := targetStation;\n            IF currentStation = 5 THEN\n                state := 3;                              (* delivered to 5# *)\n            ELSE\n                state := 2;                              (* wait for processing *)\n            END_IF;\n        ELSIF targetStation > currentStation THEN\n            dir := 1;\n        ELSIF targetStation < currentStation THEN\n            dir := -1;\n        ELSE\n            dir := 0;\n        END_IF;\n\n    2: (* ------------- WAIT COMPLETE ------------ *)\n        dir := 0;\n        (* K3: arrival sensor of the station AND its completion signal *)\n        IF sensorAtTarget AND completionSignal THEN\n            stepIdx := stepIdx + 1;\n            IF (stepIdx < 1) OR (stepIdx > 8) OR (stepIdx > lenI) THEN\n                state := 4;                              (* sequence exhausted / K1+K4 *)\n            ELSE\n                targetStation := USINT_TO_INT(processSequence[stepIdx]);\n                IF (targetStation < 1) OR (targetStation > 5) THEN\n                    state := 4;                          (* K4 *)\n                ELSE\n                    IF targetStation > currentStation THEN\n                        dir := 1;\n                    ELSIF targetStation < currentStation THEN\n                        dir := -1;\n                    ELSE\n                        dir := 0;\n                    END_IF;\n                    state := 1;\n                END_IF;\n            END_IF;\n        END_IF;\n\n    3: (* ---------------- DONE ----------------- *)\n        dir := 0;\n        stepIdx := 0;\n        currentStation := 0;\n        state := 0;\n\n    4: (* ---------------- ERROR ---------------- *)\n        dir := 0;\n        stepIdx := 0;\n        currentStation := 0;\n        IF (lenI >= 1) AND (lenI <= 8) THEN\n            state := 0;                                  (* recover when input is sane *)\n        END_IF;\n\nELSE\n    dir := 0;\n    state := 0;\n\nEND_CASE;\n\n(* --- 6) empty process must not drive the conveyor (C1) --- *)\nIF zeroNow THEN\n    dir := 0;\nEND_IF;\n\n(* --- 7) C9 dead band: after a left command, forbid right for 10 scans --- *)\nIF dir = -1 THEN\n    cd := 10;\nELSIF cd > 0 THEN\n    cd := cd - 1;\nEND_IF;\n\n(* --- 8) mutually exclusive outputs (C2, C4) with the C9 guard --- *)\nconveyorLeft  := (dir = -1);\nconveyorRight := (dir =  1) AND (cd = 0);\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.234,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 18.406,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 8,
+    "passed": 5,
+    "passed_ids": [
+      "P16-01",
+      "P16-02",
+      "P16-03",
+      "P16-04",
+      "P16-05"
+    ],
+    "failures": [
+      {
+        "case_id": "P16-06",
+        "cycle": 1,
+        "signal": "conveyorRight",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "P16-07",
+        "cycle": 2,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P16-08",
+        "cycle": 1,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

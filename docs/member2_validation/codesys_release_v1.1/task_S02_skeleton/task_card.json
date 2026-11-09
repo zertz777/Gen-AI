@@ -1,0 +1,137 @@
+{
+  "task_id": "S02",
+  "title": "输送线正反转与检修锁",
+  "difficulty": "easy",
+  "category": "A",
+  "requirement": "输送线由一台可正反转的电机驱动，用于把工件送进和送出工位。\n\n控制要求：\n1. FwdBtn 有效且无反转输出时，MotorFwd = TRUE；RevBtn 有效且无正转输出时，MotorRev = TRUE。\n2. 正转切换到反转（或反之）时，必须先关断当前方向，等待 200 ms 死区后才能启动另一方向。\n3. MaintKey = TRUE（检修钥匙插入）时，MotorFwd 与 MotorRev 均不得为 TRUE；RunLamp 以 1 Hz 闪烁提示检修态。\n4. EStop_NC = FALSE 时立即停止两个方向，并清空死区计时。\n5. 任何时刻 MotorFwd 与 MotorRev 不得同时为 TRUE。\n6. Status：16#0000 正常、16#8201 检修锁定、16#8202 急停、16#8203 换向死区中。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）",
+  "io_table": [
+    {
+      "direction": "IN",
+      "name": "FwdBtn",
+      "data_type": "BOOL",
+      "description": "正转按钮"
+    },
+    {
+      "direction": "IN",
+      "name": "RevBtn",
+      "data_type": "BOOL",
+      "description": "反转按钮"
+    },
+    {
+      "direction": "IN",
+      "name": "MaintKey",
+      "data_type": "BOOL",
+      "description": "检修钥匙，TRUE = 检修态"
+    },
+    {
+      "direction": "IN",
+      "name": "EStop_NC",
+      "data_type": "BOOL",
+      "description": "急停常闭触点，TRUE = 正常"
+    },
+    {
+      "direction": "OUT",
+      "name": "MotorFwd",
+      "data_type": "BOOL",
+      "description": "电机正转"
+    },
+    {
+      "direction": "OUT",
+      "name": "MotorRev",
+      "data_type": "BOOL",
+      "description": "电机反转"
+    },
+    {
+      "direction": "OUT",
+      "name": "RunLamp",
+      "data_type": "BOOL",
+      "description": "运行指示灯（检修态闪烁）"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "状态码"
+    }
+  ],
+  "initial_state": "MotorFwd = FALSE；MotorRev = FALSE；RunLamp = FALSE；Status = 16#0000；死区计时器 = 0。",
+  "constraints": [
+    "K1 MotorFwd 与 MotorRev 不得同时为 TRUE。",
+    "K2 换向必须先两侧全 FALSE 并经过 200 ms 死区，才允许另一方向启动。",
+    "K3 MaintKey = TRUE 时两个方向输出恒为 FALSE。",
+    "K4 EStop_NC = FALSE 时立即停机并清死区计时。"
+  ],
+  "provenance": "自拟（参照 P11 Automated Production Line Control 的手动正反转段落）；改编点：把 P11 的手动模式单独抽出成一道题，加入换向死区与检修钥匙两个真实约束；为什么这样改：原题的手动部分只要求互锁，未涉及换向死区与检修态，这两条是现场调试中最容易漏写的安全逻辑；来源与审核记录见 data/provenance.csv 第 23 行",
+  "spec_ref": "data/specs/S02.ltl",
+  "error_examples": [
+    "错误实现：MotorFwd := FwdBtn AND NOT MotorRev；MotorRev := RevBtn AND NOT MotorFwd。症状——两个按钮同时按下时互锁互相否决，电机反复启停。",
+    "错误实现：换向时直接反接（无死区）。症状——接触器在换向瞬间同时拉弧，机械传动受冲击。"
+  ],
+  "notes": "",
+  "spec_text": "# task: S02\n# meta: easy / A 开关量联锁\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(!EStop_NC -> (!MotorFwd && !MotorRev))    -- 急停当周期两个方向都必须断开（K4）\nC2: G(MotorFwd -> !MaintKey)    -- 检修钥匙插入时禁止正转（K3）\nC2b: G(MotorRev -> !MaintKey)    -- 检修钥匙插入时禁止反转（K3）\nC4: G(!(MotorFwd && MotorRev))    -- 正反转互斥（K1）\nC9: G(MotorFwd && !MotorRev -> G[0,10](!MotorRev))    -- 正转期间 200 ms 内不得出现反转（换向死区）（K2）\nC10: G[0,1](!MotorFwd && !MotorRev)    -- 上电首周期两个方向都不输出（初态）\n",
+  "spec_sha256": "8b73a29c72a82cc74b3f369d498ff815060dffc103c7a31a93be73c9f9625497",
+  "task_version": "d645e96a",
+  "task_sha256": "d645e96aedd7344a722e3a6b1331cd2035308237e5c534335032837370903e0b",
+  "source_path": "data/tasks/S02.yaml",
+  "degraded": false,
+  "missing_fields": [],
+  "warnings": [],
+  "semantic_warnings": [],
+  "interface_io_table": [
+    {
+      "direction": "IN",
+      "name": "FwdBtn",
+      "data_type": "BOOL",
+      "description": "正转按钮"
+    },
+    {
+      "direction": "IN",
+      "name": "RevBtn",
+      "data_type": "BOOL",
+      "description": "反转按钮"
+    },
+    {
+      "direction": "IN",
+      "name": "MaintKey",
+      "data_type": "BOOL",
+      "description": "检修钥匙，TRUE = 检修态"
+    },
+    {
+      "direction": "IN",
+      "name": "EStop_NC",
+      "data_type": "BOOL",
+      "description": "急停常闭触点，TRUE = 正常"
+    },
+    {
+      "direction": "OUT",
+      "name": "MotorFwd",
+      "data_type": "BOOL",
+      "description": "电机正转"
+    },
+    {
+      "direction": "OUT",
+      "name": "MotorRev",
+      "data_type": "BOOL",
+      "description": "电机反转"
+    },
+    {
+      "direction": "OUT",
+      "name": "RunLamp",
+      "data_type": "BOOL",
+      "description": "运行指示灯（检修态闪烁）"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "状态码"
+    }
+  ],
+  "type_declarations": "",
+  "type_origins": {},
+  "pou_name": "FB_S02",
+  "pou_kind": "FUNCTION_BLOCK",
+  "dialect_requirements": [],
+  "skeleton_compiled": false,
+  "scan_cycle_ms": 20
+}

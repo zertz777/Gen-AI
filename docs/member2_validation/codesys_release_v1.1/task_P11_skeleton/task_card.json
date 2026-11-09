@@ -1,0 +1,185 @@
+{
+  "task_id": "P11",
+  "title": "Automated Production Line Control",
+  "difficulty": "medium",
+  "category": "C",
+  "requirement": "A simple automated production line consists of three workstations: Workstation A, Workstation B, and Workstation C. The product needs to go through these three stations in sequence to be considered fully completed. There is a motor in the production line that is responsible for moving the product from one workstation to the next. The sequence of the line is from Workstation A to Workstation B, and then to Workstation C. Each workstation has a sensor (used to detect if the product has arrived) and a button (used to trigger the signal that the station's processing is complete).\nControl requirements:\n1. Mode Switching: The mode switch (Mode) is used to switch between manual and automatic modes of the production line.\n2. Manual Mode: In manual mode, the forward rotation button (ForwardButton) controls the forward rotation of the motor, and the reverse rotation button (ReverseButton) controls the reverse rotation of the motor. Forward and reverse rotation operations need to be interlocked and cannot be performed simultaneously.\n3. Automatic Mode:\n   - When the product arrives at Workstation A, SensorA detects the product, and after the operator triggers the processing complete signal via ButtonA, the motor starts forward rotation to move the product to Workstation B.\n   - When the product arrives at Workstation B, SensorB detects the product, the motor stops, and after the operator triggers the processing complete signal via ButtonB, the motor starts forward rotation to move the product to Workstation C.\n   - When the product arrives at Workstation C, SensorC detects the product, the motor stops, and after the operator triggers the processing complete signal via ButtonC, the completion indicator light (CompletionLight) turns on, indicating that the product processing is complete. When the product is taken away, i.e., SensorC no longer detects the product, the completion indicator light (CompletionLight) turns off.\n\n中文摘要：三工位生产线：手动模式正反转互锁，自动模式按 A→B→C 顺序推进，每站需到位信号与完成按钮，C 站完成后点亮完成灯。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）",
+  "io_table": [
+    {
+      "direction": "IN",
+      "name": "Mode",
+      "data_type": "BOOL",
+      "description": "Used to switch the production line between manual and automatic modes, 0=manual mode, 1=automatic mode"
+    },
+    {
+      "direction": "IN",
+      "name": "ForwardButton",
+      "data_type": "BOOL",
+      "description": "Forward rotation button"
+    },
+    {
+      "direction": "IN",
+      "name": "ReverseButton",
+      "data_type": "BOOL",
+      "description": "Reverse rotation button"
+    },
+    {
+      "direction": "IN",
+      "name": "SensorA",
+      "data_type": "BOOL",
+      "description": "Sensor A"
+    },
+    {
+      "direction": "IN",
+      "name": "SensorB",
+      "data_type": "BOOL",
+      "description": "Sensor B"
+    },
+    {
+      "direction": "IN",
+      "name": "SensorC",
+      "data_type": "BOOL",
+      "description": "Sensor C"
+    },
+    {
+      "direction": "IN",
+      "name": "ButtonA",
+      "data_type": "BOOL",
+      "description": "Button A"
+    },
+    {
+      "direction": "IN",
+      "name": "ButtonB",
+      "data_type": "BOOL",
+      "description": "Button B"
+    },
+    {
+      "direction": "IN",
+      "name": "ButtonC",
+      "data_type": "BOOL",
+      "description": "Button C"
+    },
+    {
+      "direction": "OUT",
+      "name": "MotorForward",
+      "data_type": "BOOL",
+      "description": "Motor forward rotation output"
+    },
+    {
+      "direction": "OUT",
+      "name": "MotorReverse",
+      "data_type": "BOOL",
+      "description": "Motor reverse rotation output"
+    },
+    {
+      "direction": "OUT",
+      "name": "CompletionLight",
+      "data_type": "BOOL",
+      "description": "Indicator light for product processing completion"
+    }
+  ],
+  "initial_state": "MotorForward = FALSE；MotorReverse = FALSE；CompletionLight = FALSE；工位状态 = IDLE；当前站 = A。",
+  "constraints": [
+    "K1 手动模式下 MotorForward 与 MotorReverse 互斥，任一为 TRUE 时另一个必须为 FALSE。",
+    "K2 自动模式下产品必须依次经过 A、B、C 三站，不得跳站或回流。",
+    "K3 每站推进的条件是「该站到位（SensorX）+ 该站完成按钮（ButtonX）」，缺一不可。",
+    "K4 产品在 C 站完成加工后置 CompletionLight = TRUE。"
+  ],
+  "provenance": "课程公共题库 P11（Automated Production Line Control）；原文导入、变量名与需求未做任何改动；来源与审核记录见 data/provenance.csv 第 12 行",
+  "spec_ref": "data/specs/P11.ltl",
+  "error_examples": [
+    "错误实现：自动模式只看完成按钮不看到位信号。症状——产品未到站就被判加工完成，三站节拍错位。",
+    "错误实现：正反转互锁只在手动模式下做。症状——模式切换瞬间两个接触器同时吸合。"
+  ],
+  "notes": "",
+  "spec_text": "# task: P11\n# meta: medium / C 状态机与节拍\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n#\n# note: 题库未提供急停信号，C1 无法写成可判定的公式；停止语义由 C4（正反转互斥）与 C6（完成灯保持）覆盖，急停行为由 tests/cases/P11.csv 的异常用例验证。\n\nC4: G(!(MotorForward && MotorReverse))    -- 正转与反转互斥（手动模式下的硬约束）（K1）\nC2: G(MotorForward -> !MotorReverse)    -- 正转的许可是反转未动作（K1）\nC3: G(CompletionLight -> SensorC)    -- 完成灯只在 C 站到位后点亮（顺序推进的必要条件）（K2/K4）\nC6: G(CompletionLight -> (CompletionLight W !SensorC))    -- 完成灯保持到产品离开 C 站（K4）\nC10: G[0,1](!MotorForward && !MotorReverse && !CompletionLight)    -- 上电首周期无正反转、完成灯灭（初态）\n",
+  "spec_sha256": "70eab463970102e26b97f3e90e7df823edc1d1758944447e6121dd3382fdf2ba",
+  "task_version": "0124a688",
+  "task_sha256": "0124a688d91164992dcbc02f33eb5ed71ef15b8d6f42823f6dc276abe3fea560",
+  "source_path": "data/tasks/P11.yaml",
+  "degraded": false,
+  "missing_fields": [],
+  "warnings": [],
+  "semantic_warnings": [],
+  "interface_io_table": [
+    {
+      "direction": "IN",
+      "name": "Mode",
+      "data_type": "BOOL",
+      "description": "Used to switch the production line between manual and automatic modes, 0=manual mode, 1=automatic mode"
+    },
+    {
+      "direction": "IN",
+      "name": "ForwardButton",
+      "data_type": "BOOL",
+      "description": "Forward rotation button"
+    },
+    {
+      "direction": "IN",
+      "name": "ReverseButton",
+      "data_type": "BOOL",
+      "description": "Reverse rotation button"
+    },
+    {
+      "direction": "IN",
+      "name": "SensorA",
+      "data_type": "BOOL",
+      "description": "Sensor A"
+    },
+    {
+      "direction": "IN",
+      "name": "SensorB",
+      "data_type": "BOOL",
+      "description": "Sensor B"
+    },
+    {
+      "direction": "IN",
+      "name": "SensorC",
+      "data_type": "BOOL",
+      "description": "Sensor C"
+    },
+    {
+      "direction": "IN",
+      "name": "ButtonA",
+      "data_type": "BOOL",
+      "description": "Button A"
+    },
+    {
+      "direction": "IN",
+      "name": "ButtonB",
+      "data_type": "BOOL",
+      "description": "Button B"
+    },
+    {
+      "direction": "IN",
+      "name": "ButtonC",
+      "data_type": "BOOL",
+      "description": "Button C"
+    },
+    {
+      "direction": "OUT",
+      "name": "MotorForward",
+      "data_type": "BOOL",
+      "description": "Motor forward rotation output"
+    },
+    {
+      "direction": "OUT",
+      "name": "MotorReverse",
+      "data_type": "BOOL",
+      "description": "Motor reverse rotation output"
+    },
+    {
+      "direction": "OUT",
+      "name": "CompletionLight",
+      "data_type": "BOOL",
+      "description": "Indicator light for product processing completion"
+    }
+  ],
+  "type_declarations": "",
+  "type_origins": {},
+  "pou_name": "FB_P11",
+  "pou_kind": "FUNCTION_BLOCK",
+  "dialect_requirements": [],
+  "skeleton_compiled": false,
+  "scan_cycle_ms": 20
+}

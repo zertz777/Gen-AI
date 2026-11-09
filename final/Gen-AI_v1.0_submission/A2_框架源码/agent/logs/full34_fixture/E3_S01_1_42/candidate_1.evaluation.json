@@ -1,0 +1,55 @@
+{
+  "source": "FUNCTION_BLOCK FB_S01\nVAR_INPUT\n    StartBtn : BOOL;\n    LeftPartPresent : BOOL;\n    RightPartPresent : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    ClampLeft : BOOL;\n    ClampRight : BOOL;\n    Busy : BOOL;\n    Status : WORD;\nEND_VAR\n(* Add a VAR block for internal state/timers before the implementation, if needed. *)\n(* SKELETON ONLY: replace this RETURN with scan logic and required initial state. *)\nRETURN;\nEND_FUNCTION_BLOCK\n\n(* FIXTURE_COMPILE_FAIL *)\n",
+  "compile": {
+    "status": "fail",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_SYNTAX",
+          "severity": "error",
+          "line": null,
+          "message": "FIXTURE ONLY: simulated fail",
+          "raw": "FIXTURE ONLY: simulated fail"
+        }
+      ],
+      "elapsed_s": 0.0,
+      "evidence_kind": "fixture"
+    },
+    "authoritative": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_SYNTAX",
+          "severity": "error",
+          "line": null,
+          "message": "FIXTURE ONLY: simulated fail",
+          "raw": "FIXTURE ONLY: simulated fail"
+        }
+      ],
+      "elapsed_s": 0.0,
+      "evidence_kind": "fixture"
+    },
+    "errors": [
+      {
+        "code": "E_SYNTAX",
+        "severity": "error",
+        "line": null,
+        "message": "FIXTURE ONLY: simulated fail",
+        "raw": "FIXTURE ONLY: simulated fail"
+      }
+    ],
+    "authoritative_available": false,
+    "evidence_kind": "fixture"
+  },
+  "test": {
+    "status": "skipped",
+    "total": 0,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": []
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "candidate_1"
+}

@@ -1,0 +1,286 @@
+{
+  "source": "FUNCTION_BLOCK FB_P15\nVAR_INPUT\n    estop : BOOL;\n    opeMode : BOOL;\n    valveAStart : BOOL;\n    valveBStart : BOOL;\n    valveCStart : BOOL;\n    valveDStart : BOOL;\n    mixMotorStart : BOOL;\n    autoStart : BOOL;\n    processMode : BOOL;\n    levelSensor : INT;\n    mixMotorComplete : BOOL;\nEND_VAR\nVAR_OUTPUT\n    valveARun : BOOL := FALSE;\n    valveBRun : BOOL := FALSE;\n    valveCRun : BOOL := FALSE;\n    valveDRun : BOOL := FALSE;\n    mixMotorRun : BOOL := FALSE;\nEND_VAR\nVAR\n    startupScans : INT := 0;\n    step : INT := 0;\n    previousMode : BOOL := FALSE;\n    emergencySeen : BOOL := FALSE;\n\n    previousA : BOOL := FALSE;\n    previousB : BOOL := FALSE;\n    previousC : BOOL := FALSE;\n    previousD : BOOL := FALSE;\n    previousMix : BOOL := FALSE;\n    previousAuto : BOOL := FALSE;\n\n    riseA : BOOL;\n    riseB : BOOL;\n    riseC : BOOL;\n    riseD : BOOL;\n    riseMix : BOOL;\n    riseAuto : BOOL;\nEND_VAR\n\n(*\n    每次调用为一个20 ms扫描周期。\n\n    需求冲突报告，待审；不声称满足全部形式化条款：\n    1. C2原文 G(mixMotorRun -> !estop) 与 estop=TRUE表示正常、\n       C1及工艺要求冲突。保留该冲突；实现以C1/K1为安全优先级，\n       搅拌仅在estop=TRUE时允许运行。\n    2. C4原文 G(!(valveDRun AND\n       (valveARun OR valveBRun OR valveCRun))) 在自动模式成立。\n       手动独立按钮切换要求允许上述组合，与全局C4冲突；\n       手动保留K2，不擅自增加按钮仲裁或联锁。\n    3. C6原文 G(mixMotorRun -> (mixMotorRun W mixMotorComplete))\n       与急停立即停机、手动再次按键停机存在冲突；\n       自动正常运行保持至完成，急停仍立即停机。\n    4. C10原文 G[0,1](全部输出为FALSE)按扫描索引0和1处理，\n       因而前两次调用均禁止运行。\n    本源码未经过编译profile验证或逐周期功能测试。\n\n    步序：\n      0 安全待启动；1 加A；2 加B；3 加C；4 搅拌；5 出料。\n    出料没有关闭条件：完成后保持D，新的自动启动关闭D并开始加A。\n    切换运行模式清除输出和自动步序，不继承另一模式的运行命令。\n*)\n\n(* 所有周期均采样边沿，包括上电抑制和急停周期。 *)\nriseA := valveAStart AND NOT previousA;\nriseB := valveBStart AND NOT previousB;\nriseC := valveCStart AND NOT previousC;\nriseD := valveDStart AND NOT previousD;\nriseMix := mixMotorStart AND NOT previousMix;\nriseAuto := autoStart AND NOT previousAuto;\n\npreviousA := valveAStart;\npreviousB := valveBStart;\npreviousC := valveCStart;\npreviousD := valveDStart;\npreviousMix := mixMotorStart;\npreviousAuto := autoStart;\n\nIF NOT estop THEN\n    (* 急停最高优先级；不推进或改写被中断的自动步序。 *)\n    valveARun := FALSE;\n    valveBRun := FALSE;\n    valveCRun := FALSE;\n    valveDRun := FALSE;\n    mixMotorRun := FALSE;\n    emergencySeen := TRUE;\n\nELSIF emergencySeen THEN\n    (* 恢复周期回到安全步，禁止直接续跑或使用本周期按钮启动。 *)\n    valveARun := FALSE;\n    valveBRun := FALSE;\n    valveCRun := FALSE;\n    valveDRun := FALSE;\n    mixMotorRun := FALSE;\n    step := 0;\n    previousMode := opeMode;\n    emergencySeen := FALSE;\n\nELSIF startupScans < 2 THEN\n    valveARun := FALSE;\n    valveBRun := FALSE;\n    valveCRun := FALSE;\n    valveDRun := FALSE;\n    mixMotorRun := FALSE;\n    step := 0;\n    previousMode := FALSE;\n\nELSE\n    IF opeMode <> previousMode THEN\n        valveARun := FALSE;\n        valveBRun := FALSE;\n        valveCRun := FALSE;\n        valveDRun := FALSE;\n        mixMotorRun := FALSE;\n        step := 0;\n    END_IF;\n    previousMode := opeMode;\n\n    IF NOT opeMode THEN\n        step := 0;\n\n        IF riseA THEN\n            valveARun := NOT valveARun;\n        END_IF;\n        IF riseB THEN\n            valveBRun := NOT valveBRun;\n        END_IF;\n        IF riseC THEN\n            valveCRun := NOT valveCRun;\n        END_IF;\n        IF riseD THEN\n            valveDRun := NOT valveDRun;\n        END_IF;\n        IF riseMix THEN\n            mixMotorRun := NOT mixMotorRun;\n        END_IF;\n\n    ELSE\n        (* 每扫描最多执行一次工艺转移；阈值采用>=避免越过设定值。 *)\n        CASE step OF\n            0:\n                IF riseAuto THEN\n                    step := 1;\n                END_IF;\n\n            1:\n                IF levelSensor >= 50 THEN\n                    step := 2;\n                END_IF;\n\n            2:\n                IF levelSensor >= 80 THEN\n                    IF processMode THEN\n                        step := 3;\n                    ELSE\n                        step := 4;\n                    END_IF;\n                END_IF;\n\n            3:\n                IF levelSensor >= 100 THEN\n                    step := 4;\n                END_IF;\n\n            4:\n                IF mixMotorComplete THEN\n                    step := 5;\n                END_IF;\n\n            5:\n                IF riseAuto THEN\n                    step := 1;\n                END_IF;\n\n        ELSE\n            step := 0;\n        END_CASE;\n\n        (* 从同一步序统一生成输出，自动模式不继承手动命令。 *)\n        valveARun := step = 1;\n        valveBRun := step = 2;\n        valveCRun := step = 3;\n        mixMotorRun := step = 4;\n        valveDRun := step = 5;\n    END_IF;\nEND_IF;\n\n(* 启动计数饱和，不受急停保持时间影响，不存在整数累加溢出。 *)\nIF startupScans < 2 THEN\n    startupScans := startupScans + 1;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 24,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:24-5..24-19: error: invalid variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:24-5..24-19: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 98,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:98-5..98-8: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:98-5..98-8: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 108,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:108-5..108-8: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:108-5..108-8: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 118,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:118-9..118-12: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:118-9..118-12: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 123,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:123-9..123-12: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:123-9..123-12: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 146,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:146-21..146-24: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:146-21..146-24: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 151,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:151-21..151-24: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:151-21..151-24: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 157,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:157-25..157-28: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:157-25..157-28: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 159,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:159-25..159-28: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:159-25..159-28: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 165,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:165-21..165-24: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:165-21..165-24: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 170,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:170-21..170-24: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:170-21..170-24: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 175,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:175-21..175-24: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:175-21..175-24: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 179,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:179-13..179-16: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:179-13..179-16: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 143,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:143-14..143-17: error: invalid test expression defined for ST 'CASE' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:143-14..143-17: error: invalid test expression defined for ST 'CASE' statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 183,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:183-22..183-25: error: invalid expression after ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:183-22..183-25: error: invalid expression after ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 183,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:183-25..183-27: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:183-25..183-27: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 183,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:183-27..183-29: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:183-27..183-29: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 184,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:184-22..184-25: error: invalid expression after ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:184-22..184-25: error: invalid expression after ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 184,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:184-25..184-27: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:184-25..184-27: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 184,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:184-27..184-29: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:184-27..184-29: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 185,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:185-22..185-25: error: invalid expression after ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:185-22..185-25: error: invalid expression after ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 185,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:185-25..185-27: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:185-25..185-27: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 185,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:185-27..185-29: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:185-27..185-29: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 186,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:186-24..186-27: error: invalid expression after ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:186-24..186-27: error: invalid expression after ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 186,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:186-27..186-29: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:186-27..186-29: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 186,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:186-29..186-31: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:186-29..186-31: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 187,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:187-22..187-25: error: invalid expression after ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:187-22..187-25: error: invalid expression after ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 187,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:187-25..187-27: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:187-25..187-27: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 187,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:187-27..187-29: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P15_1_42\\tools\\candidate_1\\fast\\source.st:187-27..187-29: error: invalid statement in ST statement."
+        }
+      ],
+      "elapsed_s": 0.156,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 25.829,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 7,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "P15-01",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P15-02",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P15-03",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P15-04",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P15-05",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P15-06",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P15-07",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 4208,
+  "tag": "candidate_1"
+}

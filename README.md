@@ -1,104 +1,50 @@
-# Gen-AI · PLC ST 代码生成与逐周期验证
+# GenAI 赋能工业编程：PLC ST 生成与逐周期验证
 
-《GenAI 赋能工业编程》期末大作业交付仓库：34 道 PLC 题（P01—P20 公共题 + S01—S14 自编题），
-两组 Agent 框架 × 两个基座模型，四组实验，全部按 **20 ms 扫描周期逐拍**判定。
+本仓库是《GenAI 赋能工业编程》期末大作业提交件，包含 34 道 PLC Structured Text 题目、177 条 LTL 条款、自研 Agent 与 Aider 基线、214 条逐周期测试用例、四组正式实验、测试与形式化验证材料，以及 Word/PDF 报告和 A1-A7 提交包。
 
-> **仓库状态（2026-11-09）**：成员1 的题集与规约、成员2 的 Agent 框架与 Aider 适配层、成员4 的测试与验证、成员3 的正式实验材料已入库。最终打包待合并；README 由成员5 最终定稿。
-
-## 目录与状态
-
-| 目录 | 内容 | 状态 | 负责人 |
-| --- | --- | --- | --- |
-| `tests/` | 214 条用例、逐周期执行器、缺陷单、测试报告、ST 解释器 | ✅ 已入库 | 成员4 |
-| `docs/` | 成员1的题集说明与报告第2章、成员2的框架与报告第3章、成员4的判据与解释器说明、答辩问答 | ✅ 已入库 | 成员1、成员2、成员4 |
-| `examples/` | 一个完整 run 的格式样例（`actual` CSV、`task_card`） | ✅ 已入库 | 成员4 |
-| `data/` | 34 份题面 YAML（P01—P20 + S01—S14）+ 34 份 LTL 规约（177 条款）+ 来源表/多样性矩阵/评审记录/SHA256 | ✅ 已入库 | 成员1 |
-| `tools/` | 题库导入、LTL/schema 校验、元数据生成、编译环境配置与检查 | ✅ 已入库 | 成员1、成员2 |
-| `refs/` | 课程原始题库 JSON，供 `import_bank.py --check` 重放 | ✅ 已入库 | 成员1 |
-| `agent/` | 自研 Agent 七模块、统一入口、提示词、配置与 CODESYS 桥接 | ✅ 已入库 | 成员2 |
-| `baseline/` | 现成框架（Aider）适配层 | ✅ 已入库 | 成员2 |
-| `experiments/` | 136 条正式 run 摘要、四组统计、题目与用例快照、代码案例及报告分析 | ✅ 已入库，见 [说明](experiments/README.md) | 成员3 |
-| `figures/` | 4 张正式实验统计图；数据表见 `experiments/统计输出/` | ✅ 已入库 | 成员3 |
-| `final/` | A1—A7 提交包 + 检查表 | ⏳ 待成员5 打包 | 成员5 |
+正式实验口径为 P01-P20 与 S01-S14 共 34 题，两个框架乘两个模型，最终矩阵为 34 x 4 = 136 个 run。任务书早先的 32 题、128 主轮和 48 复跑数字已被当前冻结题集取代。
 
 ## 三条命令
 
-### 1）装依赖
+以下命令在仓库根目录执行，使用 Python 3.10+。第 2、3 条使用 deterministic fixture，不调用付费模型或 PLC 编译器，只验证 Agent 的解析、候选、修复、终止和日志链路。
 
 ```bash
-python -m pip install -r requirements.txt
+pip install -r requirements.txt
+python agent/run.py --framework self --model fixture --tasks data/tasks/S01.yaml --out runs/demo --mode fixture
+python agent/run.py --framework self --model fixture --tasks data/tasks --task-set all34 --out runs/all34 --mode fixture
 ```
 
-当前测试部分只依赖 Python 3.10+ 标准库（`pytest` 除外）：
+第一条安装测试、绘图和报告构建依赖。第二条运行单题。第三条运行一组 34 题的 fixture。重复运行会依据已完成记录执行 `SKIP`，不会向已有终态重复追加。
 
-```bash
-pip install pytest
-```
+## 目录与状态
 
-### 2）跑单题（今天就能跑）
+| 目录 | 内容 | 状态 |
+| --- | --- | --- |
+| `data/` | 34 份题面、34 份 LTL、来源表、多样性矩阵、评审记录和冻结哈希 | 已完成 |
+| `agent/` | 七模块自研 Agent、入口、提示词、配置、CODESYS 桥和 fixture 样例 | 已完成 |
+| `baseline/` | Aider 适配器与统一判定桥 | 已完成 |
+| `tests/` | 214 条用例、逐周期比对器、ST 解释器、缺陷单和测试报告 | 已完成 |
+| `verify/` | 变异测试与 PLCVerif 材料 | 已完成到当前可用范围 |
+| `experiments/` | 136 个最终 run、32 个修订替换 run、汇总表、统计脚本和独立重放记录 | 已完成 |
+| `figures/` | 4 张 300 dpi 实验图及其数据来源 | 已完成 |
+| `docs/` | 环境、框架、判据、问答、报告章节和 Word/PDF 成稿 | 已完成 |
+| `release/` | v1.0 源码快照与 SHA-256 清单 | 已完成 |
+| `final/` | A1-A7 提交包、README 和 12 项检查表 | 已完成 |
 
-用期望值当实际值，验证"用例 → 逐拍比对 → 四态判定"整条链路：
+## 正式实验结果摘要
 
-```bash
-python tests/run_tests.py \
-  --cases tests/cases/P03.csv \
-  --io tests/cases/_fixtures/P03.io.json \
-  --out tests/results/P03.jsonl --backend echo
-# 期望：P03: pass=6 fail=0 timeout=0 error=0
-```
+| 组别 | 框架 | 模型 | 整题通过 |
+| --- | --- | --- | ---: |
+| E1 | Aider 0.86.2 | `deepseek-v4.1-flash` | 18/34（52.94%） |
+| E2 | Aider 0.86.2 | `gpt-6.1-sol` | 16/34（47.06%） |
+| E3 | 自研 Agent | `deepseek-v4.1-flash` | 8/34（23.53%） |
+| E4 | 自研 Agent | `gpt-6.1-sol` | 7/34（20.59%） |
 
-没有真实产物时，也可以直接用仓库自带的 ST 解释器跑参考实现：
+这些数字描述冻结题集、同一实验机和当前配置下的一次运行。E3 有 24 题受预算终止影响，其中包含框架把 UTF-8 字节长度当作 token 的已知实现问题；P19、S11、S05-06 仍有判据争议。因此不能据此宣称某个框架或模型普遍更优。详细分析见 `docs/report/ch4.md` 和 `docs/统稿前审查说明.md`。
 
-```bash
-python tests/runner/interp/run.py \
-  --source tests/refimpl/P03.st \
-  --cases tests/cases/P03.csv --io tests/cases/_fixtures/P03.io.json \
-  --out-dir /tmp/P03_actual
-```
+## 数据、测试与验证
 
-### 3）离线演示 Agent 流程
-
-```bash
-python agent/run.py --framework self --model fixture --tasks data/tasks/S01.yaml --out experiments/runs/demo --mode fixture
-```
-
-将 `--tasks data/tasks/S01.yaml` 改为 `--tasks data/tasks --task-set all34` 即可演示全部 34 题。
-演示走模拟编译和测试。正式实验需配置模型凭据、权威编译器及功能测试接口，具体参数见[工具接入说明](docs/toolchain.md)。
-
-## 测试链路（成员4 部分，全部可跑）
-
-```bash
-# 全量单测（当前 71 passed）
-python -m pytest tests -q
-
-# 逐周期比对自检：故意翻转第一拍，应精确定位到 cycle=1, hiAlarm
-python tests/run_tests.py --cases tests/cases/P03.csv \
-  --io tests/cases/_fixtures/P03.io.json \
-  --out tests/results/_selftest/P03_broken.jsonl --backend broken
-
-# 接真实产物（需要 <run>/test/actual/*.csv）
-python tests/run_tests.py --cases tests/cases/P03.csv \
-  --io tests/cases/_fixtures/P03.io.json --out /tmp/P03.jsonl \
-  --backend replay --actual experiments/runs/E3/P03_r1_s42/test/actual
-
-# 从实验产物重算缺陷单（316 条，可复现）
-python tests/gen/gen_defects.py --runs <实验包>/正式实验_runs --cases tests/cases
-```
-
-关键文档：`tests/report.md`（结果与对账）、`tests/defects.md`（316 条缺陷）、
-`docs/判据与用例版本核对.md`（争议裁决）、`docs/interp.md`（解释器边界）。
-
-## GenAI大作业成员1内容
-
-- 题集：34 题（P01—P20 公共题 + S01—S14 自编题）
-- 规约：34 份 LTL，177 条条款
-- I/O：316 个变量；约束：144 条
-- 数据文件：`data/tasks/`、`data/specs/`、`data/provenance.csv`、
-  `data/diversity.md`、`data/review.md`、`data/CHANGELOG.md`、`data/sha256sums.txt`
-- 工具：`tools/` 下 9 个零依赖脚本
-- 原始题库：`refs/tiku_json/大作业题库json/大作业题库.json`
-
-数据与规约自检：
+数据自检：
 
 ```bash
 python tools/ltl_check.py --quiet
@@ -106,55 +52,63 @@ python tools/schema_check.py
 python tools/import_bank.py --check
 ```
 
-v1.7 已按成员4 的 `tests/ambiguities.md` 修订 6 处判据，并补齐 S13、S14；
-修订明细见 `docs/判据修订说明.md`，变更记录见 `data/review.md` 的 R7—R14。
+测试链路：
 
-## GenAI大作业成员2内容
-
-- 自研框架入口 [`agent/run.py`](agent/run.py)，Aider 适配入口 [`baseline/run_baseline.py`](baseline/run_baseline.py)。
-- [框架说明](docs/framework.md)、[环境配置](docs/codesys_setup.md)、[报告第3章](docs/report/ch3.md)和[答辩问答](docs/qa/member2.md)。
-- 仓库根目录的入口使用 `data/` 下的 v1.7 题集。v1.6 题集、演示日志、编译证据、框架单测和交接材料收在 [v1.1 原始交付快照](release/member2-v1.1)。
-
-## 目录约定（最终形态，见任务书 §7.2）
-
+```bash
+python -m pytest tests -q
+python tests/run_tests.py --cases tests/cases/P03.csv --io tests/cases/_fixtures/P03.io.json --out tests/results/P03.jsonl --backend echo
 ```
-data/        题面 YAML、LTL 规约、来源表、多样性矩阵
-tools/       题库导入、LTL/schema 校验、元数据与文档生成脚本
-refs/        课程原始题库 JSON（用于重放）
-agent/       自研框架：src/ 七模块、run.py、prompts/、configs/、logs/
-baseline/    现成框架适配层与调用脚本
-tests/       用例、逐周期执行器、缺陷单、测试报告
-verify/      变异测试与 PLCVerif 结果
-experiments/ 四组配置、运行记录、summary.csv
-figures/     4 图 2 表（PNG + 源文件）
-docs/        报告、PPT、讲稿、问答、环境说明
-release/     版本快照、SHA256 校验清单与交接材料
-final/       A1—A7 提交包
+
+统计复算：
+
+```bash
+python tools/stats.py
+python experiments/verify_package.py
 ```
+
+`tools/reproduce_runs.py` 会用仓库 ST 解释器对全部有源码 run 做独立重放。当前 132 个有源码 run 中完成 72 个，60 个受解释器未支持的方言限制，4 个 abandoned run 没有源码；结果标记为 `independent_replay`，不冒充 CODESYS 原始 actual。
+
+提交检查：
+
+```bash
+python tools/check_submission.py
+```
+
+## 运行真实 Agent
+
+真实运行需要 CODESYS profile、成员4测试器和模型凭据。复制 `agent/configs/default.yaml` 后，按 `docs/codesys_setup.md` 生成本机配置，并设置环境变量 `DMXAPI_API_KEY`。不要把 Key 写进配置、日志或提交包。
+
+```bash
+python agent/run.py --framework self --model <准确模型ID> --tasks data/tasks --task-set all34 --out runs/E3 --setting-id E3 --config local/codesys.local.yaml
+```
+
+Aider 基线在独立 Python 环境安装 `requirements-baseline.txt` 后运行。实际实验使用的 Aider 版本为 0.86.2。
+
+## 关键口径
+
+- 「整题通过」要求权威编译通过，且该题所有有效功能用例逐拍通过。
+- `pass / fail / timeout / error / missing` 分态统计；`timeout/error/missing` 不并入模型失败率。
+- seed 42 是本地运行标识，默认未发送给模型 API，不保证服务端逐字复现。
+- token 只累加服务商返回的已知 usage；未知用量单列，不能按零处理。
+- 34 题主轮固定使用 34 分母；补充的 32 个修订 run 替换对应旧记录，不与首轮相加。
 
 ## 常见问题
 
 1. **`pytest` 报 `ModuleNotFoundError: runner`？**
-   在仓库根目录执行 `python -m pytest tests -q`。测试脚本内部已把 `tests/` 加入 `sys.path`，
-   不要单独 `cd tests` 再跑。
+   在仓库根目录执行 `python -m pytest tests -q`，不要先进入 `tests/`。
 
-2. **没有 `test/actual/*.csv` 怎么验证执行器？**
-   用 `--backend echo`（期望值当实际值，应全 pass）或 `--backend broken`（翻第一拍，应定位到具体拍）。
-   两者都只验证链路，**不是实验结果**。
+2. **fixture 结果能算实验通过率吗？**
+   不能。fixture 只验证程序控制流，`metadata.execution_mode=fixture`，`eligible_for_experiments=false`。
 
-3. **Windows 下 `--runner-cmd` 怎么写？**
-   用 JSON 数组形式，避免路径里的反斜杠被当转义：
-   `--runner-cmd '["python","tests/runner/interp/run.py","--source","{source}", ...]'`。
+3. **为什么 P18 的声明骨架未通过 CODESYS？**
+   当前 profile 不支持题目使用的 `VARIANT`。这是环境方言限制，单列为工具/环境问题，不记为模型功能失败。
 
-4. **34 题还是 32 题？**
-   按成员1 v1.7 的 34 题（P01—P20 + S01—S14），主轮 34×4 = 136 跑，分母恒为 34。
-   任务书排期里的 32 题/128 跑已作废。
+4. **正式实验为何是 136 run？**
+   冻结题集为 34 题，2 框架 x 2 模型 x 34 = 136。32 题口径已被 `docs/tasks_note.md` 与 `data/CHANGELOG.md` 的 v1.7 记录取代。
 
-5. **改了用例或规约之后要做什么？**
-   先改 `tests/gen/gen_*.py` 里的生成器，再依次跑：本题生成器 → `gen_gap.py`（补四类缺口）→
-   `python -m pytest tests -q`（K 覆盖、四类齐、字段校验会立刻报错）。不要手改 CSV。
+5. **能不能在其他电脑直接复现 136 run？**
+   可以复算现有 136 条记录，但不能原样重放模型和 CODESYS 中间过程。换机真实运行须重新登记模型 ID、Aider、CODESYS、设备库和测试执行器，并生成新的实验批次，不能覆盖本批次。
 
-## 许可与致谢
+## 许可与引用
 
-课程作业用途。题面来自课程公共题库与中国智能制造挑战赛赛题，改编记录见 `data/provenance.csv`；
-规约与用例为小组自建，引用文献见报告。
+课程作业用途。公共题来源与改编过程见 `data/provenance.csv`；外部工具与规范引用见 `docs/report/report.md` 的参考文献。

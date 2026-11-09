@@ -1,0 +1,2 @@
+.\validation\matiec_live_r2\C02_type\source.st:5-1..5-17: error: Incompatible data types for ':=' operation.
+1 error(s) found. Bailing out!

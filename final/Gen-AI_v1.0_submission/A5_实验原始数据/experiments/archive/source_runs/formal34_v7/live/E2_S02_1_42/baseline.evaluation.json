@@ -1,0 +1,64 @@
+{
+  "source": "(*\n修改说明：\n保持 FB_S02 外部接口，替换占位 RETURN，添加初始化扫描保护、\n双向互锁、200 ms 换向死区、检修闪灯及急停处理。\n\n验证说明：\n当前对话没有可用的编译器、测试执行工具或已配置测试命令，\n因此未执行编译或逐周期测试，不声称已经验证正确。\n\n语义冲突与边界约定：\n1. 要求1的立即响应与检修、急停、死区和上电禁止输出冲突，\n   本实现保留这些要求，但安全禁止条件优先。\n2. C10 的 G[0,1] 按包含两个采样点解释，前两次调用禁止驱动。\n3. C9 从最后一个正转输出采样点起禁止随后10个采样点反转，\n   与从关断开始等待200 ms的要求共同实施，并对反向换向对称处理。\n4. 两按钮同时有效时不选择方向，两个输出均关闭。\n5. 急停优先于检修状态码；急停与检修同时有效时仍显示检修闪灯。\n6. 急停清空死区计数，但保留最后运行方向。急停释放后若请求\n   相反方向，重新执行完整200 ms死区，避免绕过C9。\n7. 检修闪灯周期50次调用，前25次亮、后25次灭；退出检修复位。\n   非检修时 RunLamp 表示任一电机方向正在输出。\n\n【必留：需求原文】\n输送线由一台可正反转的电机驱动，用于把工件送进和送出工位。\n\n控制要求：\n1. FwdBtn 有效且无反转输出时，MotorFwd = TRUE；RevBtn 有效且无正转输出时，MotorRev = TRUE。\n2. 正转切换到反转（或反之）时，必须先关断当前方向，等待 200 ms 死区后才能启动另一方向。\n3. MaintKey = TRUE（检修钥匙插入）时，MotorFwd 与 MotorRev 均不得为 TRUE；RunLamp 以 1 Hz 闪烁提示检修态。\n4. EStop_NC = FALSE 时立即停止两个方向，并清空死区计时。\n5. 任何时刻 MotorFwd 与 MotorRev 不得同时为 TRUE。\n6. Status：16#0000 正常、16#8201 检修锁定、16#8202 急停、16#8203 换向死区中。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）\n\n【必留：接口、初态、约束与数据告警】\n{\n  \"task_id\": \"S02\",\n  \"title\": \"输送线正反转与检修锁\",\n  \"io_table\": [\n    {\n      \"direction\": \"IN\",\n      \"name\": \"FwdBtn\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"正转按钮\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"RevBtn\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"反转按钮\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"MaintKey\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"检修钥匙，TRUE = 检修态\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"EStop_NC\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"急停常闭触点，TRUE = 正常\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"MotorFwd\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"电机正转\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"MotorRev\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"电机反转\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"RunLamp\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"运行指示灯（检修态闪烁）\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"Status\",\n      \"data_type\": \"WORD\",\n      \"description\": \"状态码\"\n    }\n  ],\n  \"initial_state\": \"MotorFwd = FALSE；MotorRev = FALSE；RunLamp = FALSE；Status = 16#0000；死区计时器 = 0。\",\n  \"constraints\": [\n    \"K1 MotorFwd 与 MotorRev 不得同时为 TRUE。\",\n    \"K2 换向必须先两侧全 FALSE 并经过 200 ms 死区，才允许另一方向启动。\",\n    \"K3 MaintKey = TRUE 时两个方向输出恒为 FALSE。\",\n    \"K4 EStop_NC = FALSE 时立即停机并清死区计时。\"\n  ],\n  \"semantic_warnings\": [],\n  \"warnings\": [],\n  \"missing_fields\": [],\n  \"dialect_requirements\": [],\n  \"type_origins\": {}\n}\n\n【必留：完整形式化规约；有界时序以扫描周期计】\n# task: S02\n# meta: easy / A 开关量联锁\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(!EStop_NC -> (!MotorFwd && !MotorRev))    -- 急停当周期两个方向都必须断开（K4）\nC2: G(MotorFwd -> !MaintKey)    -- 检修钥匙插入时禁止正转（K3）\nC2b: G(MotorRev -> !MaintKey)    -- 检修钥匙插入时禁止反转（K3）\nC4: G(!(MotorFwd && MotorRev))    -- 正反转互斥（K1）\nC9: G(MotorFwd && !MotorRev -> G[0,10](!MotorRev))    -- 正转期间 200 ms 内不得出现反转（换向死区）（K2）\nC10: G[0,1](!MotorFwd && !MotorRev)    -- 上电首周期两个方向都不输出（初态）\n*)\n\nFUNCTION_BLOCK FB_S02\nVAR_INPUT\n    FwdBtn : BOOL;\n    RevBtn : BOOL;\n    MaintKey : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MotorFwd : BOOL := FALSE;\n    MotorRev : BOOL := FALSE;\n    RunLamp : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    StartupScans : INT := 0;\n    StartupInhibit : BOOL := TRUE;\n    RequestedDirection : INT := 0;\n    PreviousDirection : INT := 0;\n    LastDirection : INT := 0;\n    DeadScans : INT := 0;\n    RearmAfterEStop : BOOL := FALSE;\n    BlinkScans : INT := 0;\nEND_VAR\n\n(* 保存上次调用的实际输出方向，再统一关闭输出。 *)\nPreviousDirection := 0;\nIF MotorFwd THEN\n    PreviousDirection := 1;\nELSIF MotorRev THEN\n    PreviousDirection := 2;\nEND_IF;\n\nMotorFwd := FALSE;\nMotorRev := FALSE;\nStatus := WORD#16#0000;\n\nStartupInhibit := StartupScans < 2;\nIF StartupScans < 2 THEN\n    StartupScans := StartupScans + 1;\nEND_IF;\n\nRequestedDirection := 0;\nIF FwdBtn AND NOT RevBtn THEN\n    RequestedDirection := 1;\nELSIF RevBtn AND NOT FwdBtn THEN\n    RequestedDirection := 2;\nEND_IF;\n\nIF NOT EStop_NC THEN\n    (* 急停当周期立即关闭，死区计数严格清零。 *)\n    DeadScans := 0;\n    RearmAfterEStop := LastDirection <> 0;\n    Status := WORD#16#8202;\nELSE\n    (* 关断调用不扣减；其后每次调用代表经过20 ms。 *)\n    IF DeadScans > 0 THEN\n        DeadScans := DeadScans - 1;\n    END_IF;\n\n    IF PreviousDirection <> 0 THEN\n        IF MaintKey OR StartupInhibit\n           OR (RequestedDirection <> PreviousDirection) THEN\n            (* 关断瞬间启动死区；10次后续调用才满200 ms。 *)\n            DeadScans := 10;\n            RearmAfterEStop := FALSE;\n        END_IF;\n    END_IF;\n\n    IF NOT MaintKey AND NOT StartupInhibit THEN\n        IF RequestedDirection <> 0 THEN\n            IF RearmAfterEStop\n               AND (LastDirection <> 0)\n               AND (RequestedDirection <> LastDirection) THEN\n                (* 急停不允许通过清计时绕过换向保护。 *)\n                DeadScans := 10;\n                RearmAfterEStop := FALSE;\n            END_IF;\n\n            IF DeadScans = 0 THEN\n                IF RequestedDirection = 1 THEN\n                    MotorFwd := TRUE;\n                ELSIF RequestedDirection = 2 THEN\n                    MotorRev := TRUE;\n                END_IF;\n                LastDirection := RequestedDirection;\n                RearmAfterEStop := FALSE;\n            END_IF;\n        END_IF;\n    END_IF;\n\n    IF MaintKey THEN\n        Status := WORD#16#8201;\n    ELSIF DeadScans > 0 THEN\n        Status := WORD#16#8203;\n    END_IF;\nEND_IF;\n\nIF MaintKey THEN\n    (* 每25次调用切换一次明暗，完整周期为1000 ms。 *)\n    RunLamp := BlinkScans < 25;\n    BlinkScans := BlinkScans + 1;\n    IF BlinkScans >= 50 THEN\n        BlinkScans := 0;\n    END_IF;\nELSE\n    BlinkScans := 0;\n    RunLamp := MotorFwd OR MotorRev;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 25.0,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 2,
+    "passed_ids": [
+      "S02-03",
+      "S02-05"
+    ],
+    "failures": [
+      {
+        "case_id": "S02-01",
+        "cycle": 1,
+        "signal": "MotorFwd",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S02-02",
+        "cycle": 1,
+        "signal": "MotorFwd",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S02-04",
+        "cycle": 1,
+        "signal": "MotorFwd",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S02-06",
+        "cycle": 1,
+        "signal": "MotorFwd",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

@@ -1,0 +1,50 @@
+{
+  "task_id": "S03",
+  "io": [
+    {
+      "name": "DoorSwitch",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "ZoneAOccupied",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "ZoneBOccupied",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "ResetBtn",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "EStop_NC",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "DriveA_Run",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "DriveB_Run",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "AlarmLamp",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "Status",
+      "direction": "OUT",
+      "type": "WORD"
+    }
+  ]
+}

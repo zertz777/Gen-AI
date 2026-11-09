@@ -1,0 +1,32 @@
+{
+  "run_id": "E3_P04_1_42",
+  "setting_id": "E3",
+  "framework": "self",
+  "model": "fixture",
+  "task_id": "P04",
+  "task_version": "d2fd9737",
+  "repeat_idx": 1,
+  "seed": 42,
+  "start_ts": "2026-10-31T08:28:15.262040+00:00",
+  "latency_s": 0.031,
+  "candidates": 1,
+  "repair_rounds": 0,
+  "compile_status": "fail",
+  "compile_stage": "first",
+  "compile_errors": [
+    {
+      "code": "E_TOOL_ERROR",
+      "severity": "error",
+      "line": null,
+      "message": "FIXTURE ONLY: simulated tool_error",
+      "raw": "FIXTURE ONLY: simulated tool_error"
+    }
+  ],
+  "test_total": 0,
+  "test_passed": 0,
+  "verify_status": "skipped",
+  "final_status": "abandoned:tool_error",
+  "artifact_path": "fixture/E3_P04_1_42",
+  "tokens_in": 0,
+  "tokens_out": 0
+}

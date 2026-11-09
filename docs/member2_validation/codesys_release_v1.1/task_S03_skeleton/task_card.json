@@ -1,0 +1,149 @@
+{
+  "task_id": "S03",
+  "title": "安全门分级停机",
+  "difficulty": "medium",
+  "category": "A",
+  "requirement": "设备分 A、B 两个危险区，安全门打开时需要分级停机：A 区（靠近门）立即停，B 区（远端）允许走完当前动作再停。\n\n控制要求：\n1. DoorSwitch = TRUE（门打开）时，DriveA_Run 立即变为 FALSE；DriveB_Run 继续保持，直到 500 ms 延时到或 B 区动作完成。\n2. 门关闭（DoorSwitch = FALSE）后，必须由 ResetBtn 的上升沿确认，才允许重新启动两个区。\n3. EStop_NC = FALSE 时 A、B 两区同时立即停止，不受 500 ms 延时影响。\n4. 门打开或急停期间 AlarmLamp = TRUE。\n5. 未复位前按启动按钮无效（Status 保持 16#8301 待复位）。\n6. Status：16#0000 正常、16#8301 待复位、16#8302 门开、16#8303 急停。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）",
+  "io_table": [
+    {
+      "direction": "IN",
+      "name": "DoorSwitch",
+      "data_type": "BOOL",
+      "description": "安全门，TRUE = 门开"
+    },
+    {
+      "direction": "IN",
+      "name": "ZoneAOccupied",
+      "data_type": "BOOL",
+      "description": "A 区内有人"
+    },
+    {
+      "direction": "IN",
+      "name": "ZoneBOccupied",
+      "data_type": "BOOL",
+      "description": "B 区内有人"
+    },
+    {
+      "direction": "IN",
+      "name": "ResetBtn",
+      "data_type": "BOOL",
+      "description": "复位按钮（上升沿有效）"
+    },
+    {
+      "direction": "IN",
+      "name": "EStop_NC",
+      "data_type": "BOOL",
+      "description": "急停常闭触点，TRUE = 正常"
+    },
+    {
+      "direction": "OUT",
+      "name": "DriveA_Run",
+      "data_type": "BOOL",
+      "description": "A 区驱动运行"
+    },
+    {
+      "direction": "OUT",
+      "name": "DriveB_Run",
+      "data_type": "BOOL",
+      "description": "B 区驱动运行"
+    },
+    {
+      "direction": "OUT",
+      "name": "AlarmLamp",
+      "data_type": "BOOL",
+      "description": "报警灯"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "状态码"
+    }
+  ],
+  "initial_state": "DriveA_Run = FALSE；DriveB_Run = FALSE；AlarmLamp = FALSE；Status = 16#0000；延时计时器 = 0；已复位标志 = TRUE。",
+  "constraints": [
+    "K1 DoorSwitch 由 FALSE 变 TRUE 时，DriveA_Run 必须在同一周期内变为 FALSE。",
+    "K2 DriveB_Run 在门开后最多再保持 500 ms（或提前因动作完成而停）。",
+    "K3 门关闭后必须经过 ResetBtn 上升沿，两个区才允许重新启动。",
+    "K4 EStop_NC = FALSE 时两个区都立即停止，且优先于 500 ms 延时。"
+  ],
+  "provenance": "自拟（课程作业说明 §示例（电机启停：P1 停止安全性、P2 正常启动）的分级停机思路）；改编点：把单机停止安全性扩展为两区分级停机，加入「门关 + 复位」的两步重启条件；为什么这样改：分级停机是安全等级（PL）降级的典型做法，比一刀切停机更贴近真实产线；复位条件则对应 ISO 13849 的复位要求；来源与审核记录见 data/provenance.csv 第 24 行",
+  "spec_ref": "data/specs/S03.ltl",
+  "error_examples": [
+    "错误实现：两个区都用同一个 500 ms 延时。症状——A 区在门开后 500 ms 才停，靠近门的人员已经进入危险区。",
+    "错误实现：门关闭后自动恢复运行，不需要复位。症状——操作员还在门内，设备自行启动。"
+  ],
+  "notes": "",
+  "spec_text": "# task: S03\n# meta: medium / A 开关量联锁\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(!EStop_NC -> (!DriveA_Run && !DriveB_Run))    -- 急停当周期两区都停（优先于分级延时）（K3）\nC1b: G(DoorSwitch -> F[0,1](!DriveA_Run))    -- 门打开后 A 区当周期必须停（分级停机的高等级侧）（K1）\nC5: G(DoorSwitch -> F[0,25](!DriveB_Run))    -- 门打开后 B 区 500 ms 内必须停（低等级侧允许走完当前动作）（K2）\nC2: G(DriveA_Run -> (!DoorSwitch && EStop_NC))    -- A 区运行的许可：门关闭且无急停（K3）\nC6: G(AlarmLamp -> (AlarmLamp W !DoorSwitch))    -- 门关闭后报警才允许撤销（不得随门抖动闪烁）（K4）\nC10: G[0,1](!DriveA_Run && !DriveB_Run && !AlarmLamp)    -- 上电首周期两区都不运行、无报警（初态）\n",
+  "spec_sha256": "29e87cef8fb244bd7a4f0298d9163e19bd9c45b97e5f88c182ed3640a8821322",
+  "task_version": "f7d03122",
+  "task_sha256": "f7d0312204547d8c076e93b60c7bf5b1f515009280245c12e50f3a765d8b4c23",
+  "source_path": "data/tasks/S03.yaml",
+  "degraded": false,
+  "missing_fields": [],
+  "warnings": [],
+  "semantic_warnings": [],
+  "interface_io_table": [
+    {
+      "direction": "IN",
+      "name": "DoorSwitch",
+      "data_type": "BOOL",
+      "description": "安全门，TRUE = 门开"
+    },
+    {
+      "direction": "IN",
+      "name": "ZoneAOccupied",
+      "data_type": "BOOL",
+      "description": "A 区内有人"
+    },
+    {
+      "direction": "IN",
+      "name": "ZoneBOccupied",
+      "data_type": "BOOL",
+      "description": "B 区内有人"
+    },
+    {
+      "direction": "IN",
+      "name": "ResetBtn",
+      "data_type": "BOOL",
+      "description": "复位按钮（上升沿有效）"
+    },
+    {
+      "direction": "IN",
+      "name": "EStop_NC",
+      "data_type": "BOOL",
+      "description": "急停常闭触点，TRUE = 正常"
+    },
+    {
+      "direction": "OUT",
+      "name": "DriveA_Run",
+      "data_type": "BOOL",
+      "description": "A 区驱动运行"
+    },
+    {
+      "direction": "OUT",
+      "name": "DriveB_Run",
+      "data_type": "BOOL",
+      "description": "B 区驱动运行"
+    },
+    {
+      "direction": "OUT",
+      "name": "AlarmLamp",
+      "data_type": "BOOL",
+      "description": "报警灯"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "状态码"
+    }
+  ],
+  "type_declarations": "",
+  "type_origins": {},
+  "pou_name": "FB_S03",
+  "pou_kind": "FUNCTION_BLOCK",
+  "dialect_requirements": [],
+  "skeleton_compiled": false,
+  "scan_cycle_ms": 20
+}

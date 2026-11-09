@@ -1,0 +1,50 @@
+{
+  "task_id": "P12",
+  "io": [
+    {
+      "name": "THICKNESS_FAULT",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "THICKNESS_SIGNAL_VALID",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "CUTTING_RUN",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "FaultTimestamp",
+      "direction": "IN",
+      "type": "DINT"
+    },
+    {
+      "name": "CycleTime",
+      "direction": "IN",
+      "type": "TIME"
+    },
+    {
+      "name": "THICKNESS_ALARM",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "Slab_Fault_Counter",
+      "direction": "OUT",
+      "type": "UINT"
+    },
+    {
+      "name": "Slab_Runtime_Accumulator",
+      "direction": "OUT",
+      "type": "LTIME"
+    },
+    {
+      "name": "Slab_Fault_History",
+      "direction": "OUT",
+      "type": "ARRAY[0..4] OF DINT"
+    }
+  ]
+}

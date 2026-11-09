@@ -1,0 +1,68 @@
+{
+  "source": "FUNCTION_BLOCK FB_S06\nVAR_INPUT\n    TempPV : REAL;\n    SetTemp : REAL;\n    Segment : INT;\n    LoadReduceReq : BOOL;\nEND_VAR\nVAR_OUTPUT\n    HeatOn : BOOL := FALSE;\n    FanOn : BOOL := FALSE;\n    OverTempAlarm : BOOL := FALSE;\n    LoadReduce : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    StartupScans : INT := 0;\n    TargetTemp : REAL := 0.0;\n    InvalidSegment : BOOL := FALSE;\n    PreviousInvalidSegment : BOOL := FALSE;\n    ThermalReduce : BOOL := FALSE;\n    HeatDemand : BOOL := FALSE;\n    FanWasOn : BOOL := FALSE;\nEND_VAR\n\n(*\n    每次调用为一个 20 ms 扫描周期。\n\n    待审语义冲突，不能视为已解决：\n    1. 原文要求超温先降载而不是直接断电；C1/C4 要求降载与加热互斥。\n       本实现暂按保护优先，同一扫描置降载并关闭 HeatOn。\n       接口没有负载功率档位，无法表达保持加热的实际降功率过程。\n    2. 原文降载撤销门限为分段目标温度 -3，且严格低于；\n       C7 报警保持门限使用 SetTemp -3，且允许等于。\n       分别实现降载迟滞和报警保持，不混同两个门限。\n    3. 原文要求非法段当前报错；C8 要求下一周期报错。\n       当前非法或上一周期非法均报 8601，因此恢复合法后多保持一扫描。\n       非法段错误优先于超温降载状态。\n    4. 初态描述首周期关断；C10 的闭区间 [0,1] 覆盖两个周期。\n       本实现前两次调用关断全部 BOOL 输出，此时不执行温控。\n       与启动期间立即执行超温保护存在冲突，仍待审。\n\n    风机预启动至少一个扫描；没有风机反馈，不能验证实际风机运行。\n    本源码未声明已经通过编译或逐周期功能验证。\n*)\n\nInvalidSegment := (Segment < 0) OR (Segment > 2);\n\nCASE Segment OF\n    0:\n        TargetTemp := SetTemp * REAL#0.5;\n    1:\n        TargetTemp := SetTemp * REAL#0.8;\n    2:\n        TargetTemp := SetTemp;\nELSE\n    TargetTemp := SetTemp * REAL#0.5;\nEND_CASE;\n\nIF StartupScans < 2 THEN\n    StartupScans := StartupScans + 1;\n\n    HeatOn := FALSE;\n    FanOn := FALSE;\n    OverTempAlarm := FALSE;\n    LoadReduce := FALSE;\n    ThermalReduce := FALSE;\n    HeatDemand := FALSE;\nELSE\n    FanWasOn := FanOn;\n\n    (* 超温置位优先；降载严格低于分段目标 -3 才复位。 *)\n    IF TempPV > (TargetTemp + REAL#10.0) THEN\n        ThermalReduce := TRUE;\n    ELSIF TempPV < (TargetTemp - REAL#3.0) THEN\n        ThermalReduce := FALSE;\n    END_IF;\n\n    (* 报警独立保持，采用 C7 指定的 SetTemp 复位门限。 *)\n    IF TempPV > (TargetTemp + REAL#10.0) THEN\n        OverTempAlarm := TRUE;\n    ELSIF TempPV <= (SetTemp - REAL#3.0) THEN\n        OverTempAlarm := FALSE;\n    END_IF;\n\n    (* 上位请求按电平执行，不撤销尚未复位的超温降载。 *)\n    LoadReduce := ThermalReduce OR LoadReduceReq;\n\n    (* 温控死区：边界相等时保持；保护覆盖温控需求。 *)\n    IF TempPV < (TargetTemp - REAL#5.0) THEN\n        HeatDemand := TRUE;\n    ELSIF TempPV > (TargetTemp + REAL#5.0) THEN\n        HeatDemand := FALSE;\n    END_IF;\n\n    IF LoadReduce THEN\n        HeatDemand := FALSE;\n    END_IF;\n\n    (* 降载期间保留通风；正常加热需上一扫描已打开风机。 *)\n    FanOn := HeatDemand OR LoadReduce;\n    HeatOn := HeatDemand AND FanWasOn AND FanOn AND NOT LoadReduce;\nEND_IF;\n\nIF InvalidSegment OR PreviousInvalidSegment THEN\n    Status := WORD#16#8601;\nELSIF ThermalReduce THEN\n    Status := WORD#16#8602;\nELSE\n    Status := WORD#16#0000;\nEND_IF;\n\nPreviousInvalidSegment := InvalidSegment;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 25.766,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 5,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "S06-01",
+        "cycle": 1,
+        "signal": "HeatOn",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S06-02",
+        "cycle": 1,
+        "signal": "HeatOn",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S06-03",
+        "cycle": 1,
+        "signal": "HeatOn",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S06-04",
+        "cycle": 1,
+        "signal": "OverTempAlarm",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S06-05",
+        "cycle": 1,
+        "signal": "LoadReduce",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3238,
+  "tag": "candidate_2"
+}

@@ -1,0 +1,50 @@
+{
+  "task_id": "P08",
+  "io": [
+    {
+      "name": "count",
+      "direction": "IN",
+      "type": "DINT"
+    },
+    {
+      "name": "analogValues",
+      "direction": "IN",
+      "type": "ARRAY[*] OF INT"
+    },
+    {
+      "name": "channels[].enable",
+      "direction": "IN",
+      "type": "ARRAY[*] OF BOOL"
+    },
+    {
+      "name": "channels[].hiLIM",
+      "direction": "IN",
+      "type": "ARRAY[*] OF REAL"
+    },
+    {
+      "name": "channels[].loLIM",
+      "direction": "IN",
+      "type": "ARRAY[*] OF REAL"
+    },
+    {
+      "name": "channels[].bipolar",
+      "direction": "IN",
+      "type": "ARRAY[*] OF BOOL"
+    },
+    {
+      "name": "channels[].measuringMode",
+      "direction": "IN",
+      "type": "ARRAY[*] OF INT"
+    },
+    {
+      "name": "channels[].retVal",
+      "direction": "OUT",
+      "type": "ARRAY[*] OF WORD"
+    },
+    {
+      "name": "channels[].outputValue",
+      "direction": "OUT",
+      "type": "ARRAY[*] OF REAL"
+    }
+  ]
+}

@@ -1,0 +1,137 @@
+{
+  "task_id": "P03",
+  "title": "Alarm Handling",
+  "difficulty": "easy",
+  "category": "D",
+  "requirement": "In industrial automation systems, monitoring the status of equipment is crucial. When equipment parameters exceed the normal range, the system needs to issue an alarm. To avoid frequent triggering of alarms due to minor fluctuations in parameters, an alarm management system with hysteresis function needs to be implemented.\nWhen Value is greater than hiLevel, trigger high alarm hiAlarm.\nWhen Value is less than hiLevel-hystWindow, exit high alarm hiAlarm.\nWhen Value is less than loLevel, trigger low alarm loAlarm.\nWhen Value is greater than loLevel+hystWindow, exit low alarm loAlarm.\nIf loLevel is greater than or equal to hiLevel, output error error=true, status=16#8001, and exit the program\nIf the hysteresis window value hystWindow is greater than or equal to the deviation range between hiLevel and loLevel, output error error=true, status=16#8002\n\n中文摘要：带滞回的上下限报警：超过 hiLevel 报警，回落到 hiLevel-hystWindow 才复位；参数非法时给出 16#8001/16#8002 并退出程序。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）",
+  "io_table": [
+    {
+      "direction": "IN",
+      "name": "Value",
+      "data_type": "REAL",
+      "description": "Input value"
+    },
+    {
+      "direction": "IN",
+      "name": "hiLevel",
+      "data_type": "REAL",
+      "description": "High limit alarm value"
+    },
+    {
+      "direction": "IN",
+      "name": "loLevel",
+      "data_type": "REAL",
+      "description": "Low limit alarm value"
+    },
+    {
+      "direction": "IN",
+      "name": "hystWindow",
+      "data_type": "REAL",
+      "description": "Hysteresis window"
+    },
+    {
+      "direction": "OUT",
+      "name": "hiAlarm",
+      "data_type": "BOOL",
+      "description": "High limit alarm"
+    },
+    {
+      "direction": "OUT",
+      "name": "loAlarm",
+      "data_type": "BOOL",
+      "description": "Low limit alarm"
+    },
+    {
+      "direction": "OUT",
+      "name": "error",
+      "data_type": "BOOL",
+      "description": "FALSE: No error occurred;<br>TRUE: Error occurred during execution of FB"
+    },
+    {
+      "direction": "OUT",
+      "name": "status",
+      "data_type": "WORD",
+      "description": "Status code"
+    }
+  ],
+  "initial_state": "hiAlarm = FALSE；loAlarm = FALSE；error = FALSE；status = 16#0000。",
+  "constraints": [
+    "K1 若 loLevel >= hiLevel，置 error=TRUE、status=16#8001，并立即退出程序（不执行后续报警逻辑）。",
+    "K2 若 hystWindow >= (hiLevel - loLevel)，置 error=TRUE、status=16#8002，同样退出程序。",
+    "K3 高报：Value > hiLevel 时置位；Value < hiLevel - hystWindow 时复位；两者之间保持原状态。",
+    "K4 低报：Value < loLevel 时置位；Value > loLevel + hystWindow 时复位；两者之间保持原状态。"
+  ],
+  "provenance": "课程公共题库 P03（Alarm Handling）；原文导入、变量名与需求未做任何改动；来源与审核记录见 data/provenance.csv 第 4 行",
+  "spec_ref": "data/specs/P03.ltl",
+  "error_examples": [
+    "错误实现：进入与退出用同一个阈值。症状——Value 在 hiLevel 附近抖动时 hiAlarm 每周期翻转，报警灯闪烁。",
+    "错误实现：先做报警判断再做参数合法性检查。症状——loLevel >= hiLevel 时仍可能置位 hiAlarm，且 status 被覆盖成 16#0000。"
+  ],
+  "notes": "",
+  "spec_text": "# task: P03\n# meta: easy / D 故障与安全\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n#\n# 命题映射（I/O 名 -> 派生命题）：\n# alias: paramsValid := loLevel < hiLevel && hystWindow < (hiLevel - loLevel)\n\nC1: G(error -> X(!hiAlarm && !loAlarm))    -- 参数错误时不得输出报警，且下一周期保持关断（错误优先于报警）（K1/K2）\nC2: G(hiAlarm || loAlarm -> paramsValid)    -- 任何报警都要求参数合法（无合法参数不得报警）（K1/K2）\nC4: G(!(hiAlarm && loAlarm))    -- 高报与低报互斥（同一时刻不可能既高又低）（K3/K4）\nC7: G(hiAlarm -> (hiAlarm W Value < hiLevel - hystWindow))    -- 高报只在回落到 hiLevel - hystWindow 以下才允许复位（滞回）（K3）\nC7b: G(loAlarm -> (loAlarm W Value > loLevel + hystWindow))    -- 低报只在回升到 loLevel + hystWindow 以上才允许复位（滞回）（K4）\nC10: G[0,1](!hiAlarm && !loAlarm && !error && status == 16#0000)    -- 上电首周期无报警、无错误、状态码为 0（初态）\n",
+  "spec_sha256": "3c0df75df1f4b33434acffb67f5b9db501b09c70af680da1e88365f0348cee5f",
+  "task_version": "28074ccb",
+  "task_sha256": "28074ccb8290269d16f9f5156a155e8478212ef130c6cb33d2803cdd3267e63b",
+  "source_path": "data/tasks/P03.yaml",
+  "degraded": false,
+  "missing_fields": [],
+  "warnings": [],
+  "semantic_warnings": [],
+  "interface_io_table": [
+    {
+      "direction": "IN",
+      "name": "Value",
+      "data_type": "REAL",
+      "description": "Input value"
+    },
+    {
+      "direction": "IN",
+      "name": "hiLevel",
+      "data_type": "REAL",
+      "description": "High limit alarm value"
+    },
+    {
+      "direction": "IN",
+      "name": "loLevel",
+      "data_type": "REAL",
+      "description": "Low limit alarm value"
+    },
+    {
+      "direction": "IN",
+      "name": "hystWindow",
+      "data_type": "REAL",
+      "description": "Hysteresis window"
+    },
+    {
+      "direction": "OUT",
+      "name": "hiAlarm",
+      "data_type": "BOOL",
+      "description": "High limit alarm"
+    },
+    {
+      "direction": "OUT",
+      "name": "loAlarm",
+      "data_type": "BOOL",
+      "description": "Low limit alarm"
+    },
+    {
+      "direction": "OUT",
+      "name": "error",
+      "data_type": "BOOL",
+      "description": "FALSE: No error occurred;<br>TRUE: Error occurred during execution of FB"
+    },
+    {
+      "direction": "OUT",
+      "name": "status",
+      "data_type": "WORD",
+      "description": "Status code"
+    }
+  ],
+  "type_declarations": "",
+  "type_origins": {},
+  "pou_name": "FB_P03",
+  "pou_kind": "FUNCTION_BLOCK",
+  "dialect_requirements": [],
+  "skeleton_compiled": false,
+  "scan_cycle_ms": 20
+}

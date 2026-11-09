@@ -1,0 +1,33 @@
+题面 34 份，规约 34 份，条款合计 178 条
+难度分布：easy=9，hard=11，medium=14
+类别分布：A=6，B=11，C=11，D=6
+条款覆盖：C1=29，C10=33，C2=37，C3=7，C4=22，C5=4，C6=19，C7=12，C8=6，C9=9
+I/O 合计：316 个，约束合计：143 条
+
+警告 24 条（约束由用例覆盖，不阻断）：
+  ! P02: 有 1 条约束未被 LTL 覆盖（K2），需由 tests/cases 覆盖
+  ! P04: 有 1 条约束未被 LTL 覆盖（K4），需由 tests/cases 覆盖
+  ! P06: 有 1 条约束未被 LTL 覆盖（K4），需由 tests/cases 覆盖
+  ! P07: 有 2 条约束未被 LTL 覆盖（K2、K3），需由 tests/cases 覆盖
+  ! P08: 有 3 条约束未被 LTL 覆盖（K2、K3、K4），需由 tests/cases 覆盖
+  ! P09: 有 2 条约束未被 LTL 覆盖（K1、K2），需由 tests/cases 覆盖
+  ! P10: 有 1 条约束未被 LTL 覆盖（K1），需由 tests/cases 覆盖
+  ! P11: 有 1 条约束未被 LTL 覆盖（K3），需由 tests/cases 覆盖
+  ! P12: 有 2 条约束未被 LTL 覆盖（K2、K4），需由 tests/cases 覆盖
+  ! P13: 有 1 条约束未被 LTL 覆盖（K3），需由 tests/cases 覆盖
+  ! P14: 有 3 条约束未被 LTL 覆盖（K1、K2、K4），需由 tests/cases 覆盖
+  ! P15: 有 2 条约束未被 LTL 覆盖（K2、K4），需由 tests/cases 覆盖
+  ! P16: 有 2 条约束未被 LTL 覆盖（K1、K3），需由 tests/cases 覆盖
+  ! P18: 有 1 条约束未被 LTL 覆盖（K2），需由 tests/cases 覆盖
+  ! P19: 有 2 条约束未被 LTL 覆盖（K2、K3），需由 tests/cases 覆盖
+  ! P20: 有 2 条约束未被 LTL 覆盖（K2、K3），需由 tests/cases 覆盖
+  ! S01: 有 1 条约束未被 LTL 覆盖（K3），需由 tests/cases 覆盖
+  ! S04: 有 1 条约束未被 LTL 覆盖（K1），需由 tests/cases 覆盖
+  ! S05: 有 1 条约束未被 LTL 覆盖（K4），需由 tests/cases 覆盖
+  ! S06: 有 1 条约束未被 LTL 覆盖（K2），需由 tests/cases 覆盖
+  ! S07: 有 1 条约束未被 LTL 覆盖（K1），需由 tests/cases 覆盖
+  ! S08: 有 1 条约束未被 LTL 覆盖（K3），需由 tests/cases 覆盖
+  ! S09: 有 1 条约束未被 LTL 覆盖（K4），需由 tests/cases 覆盖
+  ! S12: 有 1 条约束未被 LTL 覆盖（K4），需由 tests/cases 覆盖
+
+schema_check 通过：字段、I/O、规约映射、K 编号、来源表全部一致。

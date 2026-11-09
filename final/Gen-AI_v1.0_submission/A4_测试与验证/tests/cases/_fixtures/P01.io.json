@@ -1,0 +1,60 @@
+{
+  "task_id": "P01",
+  "io": [
+    {
+      "name": "bottleSensor",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "cleaningConfirmButton",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "fillingConfirmButton",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "cappingConfirmButton",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "packingConfirmButton",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "finishedButton",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "Pump_Motor",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "Filling_Valve",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "Capping_Machine",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "Packing_Machine",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "Completion_Light",
+      "direction": "OUT",
+      "type": "BOOL"
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "source": "(*\n修改说明：\n以显式状态机实现扫描控制，保持所有外部接口名称、方向和类型。\n上电第一个扫描周期停止输送，第二个扫描周期开始允许启动。\n每次左行后，后续十个扫描周期禁止右行。\n启动时保存有效工艺序列；运行期间仍检查输入工艺是否合法。\n错误状态锁存并停止输送，重新初始化功能块实例才能清除。\n完成信号采用电平判定，且必须同时具有当前目标工位的到位信号。\n一次启动按钮按下最多启动一件工件，释放按钮后允许再次启动。\n相邻重复加工工位仍逐项等待完成条件，不删除或合并工步。\nCASE 的各分支均包含有效语句，不使用仅含注释的空分支。\n内部循环变量 checkIndex 使用 USINT，与 processLength 同类型，\n避免快速编译器拒绝 INT 与 USINT 的直接比较。\n循环范围为 1..8，循环结束递增后的值 9 也在 USINT 范围内。\n无新增外部接口，无厂商扩展，无定时器库依赖。\n\n边界解释与冲突报告：\nC10 的公式 G[0,1] 按包含端点的零基扫描编号解释，\n要求第 0、1 两个扫描周期停止输送。\n但其文字说明为“上电首周期不输送”，且所提供测试结果在\ncycle 1 期望 conveyorRight 为 TRUE。如果 cycle 1 对应第二次调用，\n则该测试预期与 C10 的双周期字面解释存在冲突。\n本实现保留原始公式，按文字说明及测试预期仅停止首次调用；\n不声称满足 C10 的双周期字面解释。\nC9 对每个左行扫描均适用，而不仅适用于左行上升沿。\n换向等待优先于立即输送；等待期间保持工步和目标不变。\n输入序列不合法时，包括违反末项为 5、前项为 2..4 的合同，\n均进入内部错误状态。非活动数组元素不参与校验。\n启动后有效序列使用启动时快照，避免输入变化造成工步乱序。\n\n验证状态：\n用户提供的上一版本结果：快速编译因比较类型不匹配而失败，\n权威编译通过，逐周期测试 8 项通过 3 项。\n本次仅修复已定位的比较类型错误，不改变状态机扫描行为。\n失败日志未提供逐周期输入，无法确认功能失败的具体原因。\n当前对话没有可执行工具，未运行本次修改后的编译或测试，\n不声称本次修改已经编译通过或功能正确。\n*)\n\n(*\n【必留：需求原文】\nAn automated production line consists of 5 workstations: numbered 1# to 5# from left to right. The 1# station is used for raw material loading, stations 2# to 4# are used for product processing, and the 5# station is used for finished product output and storage.\nThere is a motor in the production line, responsible for moving the product from one workstation to the next. Each workstation has a sensor (used to detect if the product has arrived).\nEach product has a different sequence and number of processing steps, specified by the process sequence 'processSequence'. The processSequence is an array type, storing the sequence numbers of the workstations, and the system automatically sends the raw materials to the corresponding workstation for processing based on the station number.\nControl requirements:\nAt the start of production, when the sensor at the 1# station (sensor1) detects the raw material, the start button at the 1# station (station1Start) is pressed. The system queries the first element of the process sequence 'processSequence', starts the conveyor to move the raw material to the corresponding workstation, and stops after delivery. Upon receiving the processing completion signal from the corresponding workstation (station2Complete to station4Complete), it continues to query the next element of the process sequence 'processSequence', determines the direction of the conveyor, and starts the conveyor (conveyorLeft, conveyorRight). This continues until the product is delivered to the 5# workstation.\n\nprocessLength specifies the active sequence length, from 1 through 8, starting at processSequence[1]. The final active entry is output station 5; other active entries are processing stations 2 through 4. The caller supplies a sequence satisfying this contract.\n\n中文摘要：柔性加工线：按工艺序列 processSequence 把工件依次送到指定工位加工，5 个工位、输送机左右互斥。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）\n*)\n\n(*\n【必留：接口、初态、约束与数据告警】\n{\n  \"task_id\": \"P16\",\n  \"title\": \"Flexible Processing Control\",\n  \"io_table\": [\n    {\n      \"direction\": \"IN\",\n      \"name\": \"processLength\",\n      \"data_type\": \"USINT\",\n      \"description\": \"Active process-sequence length, 1..8; the final active entry must be station 5.\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"sensor1\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Sensor at 1# station\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"sensor2\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Sensor at 2# station\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"sensor3\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Sensor at 3# station\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"sensor4\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Sensor at 4# station\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"sensor5\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Sensor at 5# station\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"station1Start\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Start button at 1# station\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"station2Complete\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Processing completion signal at 2# station\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"station3Complete\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Processing completion signal at 3# station\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"station4Complete\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Processing completion signal at 4# station\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"processSequence\",\n      \"data_type\": \"ARRAY[1..8] OF USINT\",\n      \"description\": \"Processing sequence\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"conveyorLeft\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Conveyor turns left\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"conveyorRight\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Conveyor turns right\"\n    }\n  ],\n  \"initial_state\": \"conveyorLeft = FALSE；conveyorRight = FALSE；工步索引 = 0；各工位空闲。\",\n  \"constraints\": [\n    \"K1 每件工件的前 processLength 个工位号来自 processSequence，按数组顺序依次加工，不得跳过或乱序。\",\n    \"K2 conveyorLeft 与 conveyorRight 互斥，任何时刻不得同时为 TRUE。\",\n    \"K3 只有目标工位的到位传感器为 TRUE 且该工位加工完成信号有效时，才允许启动下一段输送。\",\n    \"K4 processLength 超出数组范围或工位号不在 1—5 时置错误状态并停止输送。\"\n  ],\n  \"semantic_warnings\": [],\n  \"warnings\": [],\n  \"missing_fields\": [],\n  \"dialect_requirements\": [],\n  \"type_origins\": {}\n}\n*)\n\n(*\n【必留：完整形式化规约；有界时序以扫描周期计】\n# task: P16\n# meta: hard / C 状态机与节拍\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC4: G(!(conveyorLeft && conveyorRight))    -- 左右输送互斥（同一时刻只有一个方向）（K2）\nC2: G(conveyorLeft -> !conveyorRight)    -- 左行的许可是右行未动作（K2）\nC1: G(processLength == 0 -> X(!conveyorLeft && !conveyorRight))    -- 工艺长度为 0 时下一周期必须停止输送（空工艺不得启动）（K4）\nC9: G(conveyorLeft -> G[0,10](!conveyorRight))    -- 左行开始后 200 ms 内不得切到右行（换向死区）（K2）\nC10: G[0,1](!conveyorLeft && !conveyorRight)    -- 上电首周期不输送（初态）\n*)\n\nFUNCTION_BLOCK FB_P16\nVAR_INPUT\n    processLength : USINT;\n    sensor1 : BOOL;\n    sensor2 : BOOL;\n    sensor3 : BOOL;\n    sensor4 : BOOL;\n    sensor5 : BOOL;\n    station1Start : BOOL;\n    station2Complete : BOOL;\n    station3Complete : BOOL;\n    station4Complete : BOOL;\n    processSequence : ARRAY[1..8] OF USINT;\nEND_VAR\nVAR_OUTPUT\n    conveyorLeft : BOOL := FALSE;\n    conveyorRight : BOOL := FALSE;\nEND_VAR\nVAR\n    (* 0：空闲；1：输送或等待换向；2：等待加工完成；3：错误。 *)\n    controlState : USINT := 0;\n    stepIndex : USINT := 0;\n    activeLength : USINT := 0;\n    activeSequence : ARRAY[1..8] OF USINT;\n\n    currentStation : USINT := 1;\n    targetStation : USINT := 0;\n\n    startupScansRemaining : USINT := 1;\n    rightInhibitScans : USINT := 0;\n\n    startArmed : BOOL := TRUE;\n    invalidInput : BOOL := FALSE;\n    targetPresent : BOOL := FALSE;\n    targetComplete : BOOL := FALSE;\n    checkIndex : USINT := 0;\nEND_VAR\n\n(* 每个扫描先关闭输出，随后仅在获准输送时置位一个方向。 *)\nconveyorLeft := FALSE;\nconveyorRight := FALSE;\n\n(* 左行扫描将计数重置为 11。\n   后续第 1..10 个扫描递减为 10..1，仍禁止右行；\n   第 11 个扫描递减为 0，才允许右行。 *)\nIF rightInhibitScans > 0 THEN\n    rightInhibitScans := rightInhibitScans - 1;\nEND_IF;\n\nIF NOT station1Start THEN\n    startArmed := TRUE;\nEND_IF;\n\n(* 不依赖短路求值保护数组下标。 *)\ninvalidInput := FALSE;\n\nIF (processLength < 1) OR (processLength > 8) THEN\n    invalidInput := TRUE;\nELSE\n    FOR checkIndex := 1 TO 8 DO\n        IF checkIndex <= processLength THEN\n            IF (processSequence[checkIndex] < 1)\n                OR (processSequence[checkIndex] > 5) THEN\n                invalidInput := TRUE;\n            END_IF;\n\n            IF checkIndex < processLength THEN\n                IF (processSequence[checkIndex] < 2)\n                    OR (processSequence[checkIndex] > 4) THEN\n                    invalidInput := TRUE;\n                END_IF;\n            ELSE\n                IF processSequence[checkIndex] <> 5 THEN\n                    invalidInput := TRUE;\n                END_IF;\n            END_IF;\n        END_IF;\n    END_FOR;\nEND_IF;\n\nIF invalidInput THEN\n    controlState := 3;\nEND_IF;\n\nIF startupScansRemaining > 0 THEN\n    (* 首次调用停止输送；之后允许响应启动条件。 *)\n    startupScansRemaining := startupScansRemaining - 1;\nELSE\n    CASE controlState OF\n        0:\n            IF startArmed AND station1Start AND sensor1 THEN\n                activeLength := processLength;\n\n                FOR checkIndex := 1 TO 8 DO\n                    activeSequence[checkIndex] := processSequence[checkIndex];\n                END_FOR;\n\n                stepIndex := 1;\n                currentStation := 1;\n                targetStation := activeSequence[1];\n                startArmed := FALSE;\n                controlState := 1;\n            END_IF;\n\n        1:\n            (* 输送与到位判断在下方统一执行。\n               显式赋值避免编译器拒绝空 CASE 分支。 *)\n            conveyorLeft := FALSE;\n            conveyorRight := FALSE;\n\n        2:\n            targetPresent := FALSE;\n            targetComplete := FALSE;\n\n            CASE targetStation OF\n                2:\n                    targetPresent := sensor2;\n                    targetComplete := station2Complete;\n                3:\n                    targetPresent := sensor3;\n                    targetComplete := station3Complete;\n                4:\n                    targetPresent := sensor4;\n                    targetComplete := station4Complete;\n            ELSE\n                controlState := 3;\n            END_CASE;\n\n            IF controlState = 2 THEN\n                IF targetPresent AND targetComplete THEN\n                    (* 当前工步完成后只推进一个数组位置。 *)\n                    IF (stepIndex >= 1)\n                        AND (stepIndex < activeLength)\n                        AND (stepIndex < 8) THEN\n                        currentStation := targetStation;\n                        stepIndex := stepIndex + 1;\n                        targetStation := activeSequence[stepIndex];\n                        controlState := 1;\n                    ELSE\n                        controlState := 3;\n                    END_IF;\n                END_IF;\n            END_IF;\n\n        3:\n            (* 错误锁存，输出保持关闭。 *)\n            conveyorLeft := FALSE;\n            conveyorRight := FALSE;\n\n    ELSE\n        controlState := 3;\n    END_CASE;\n\n    IF controlState = 1 THEN\n        targetPresent := FALSE;\n\n        CASE targetStation OF\n            2:\n                targetPresent := sensor2;\n            3:\n                targetPresent := sensor3;\n            4:\n                targetPresent := sensor4;\n            5:\n                targetPresent := sensor5;\n        ELSE\n            controlState := 3;\n        END_CASE;\n\n        IF controlState = 1 THEN\n            IF targetPresent THEN\n                (* 到位扫描立即停止，不受换向计数影响。 *)\n                currentStation := targetStation;\n\n                IF targetStation = 5 THEN\n                    IF stepIndex = activeLength THEN\n                        controlState := 0;\n                        stepIndex := 0;\n                        activeLength := 0;\n                        targetStation := 0;\n                    ELSE\n                        controlState := 3;\n                    END_IF;\n                ELSE\n                    controlState := 2;\n                END_IF;\n            ELSE\n                IF targetStation < currentStation THEN\n                    conveyorLeft := TRUE;\n                    rightInhibitScans := 11;\n                ELSIF targetStation > currentStation THEN\n                    IF rightInhibitScans = 0 THEN\n                        conveyorRight := TRUE;\n                    END_IF;\n                ELSE\n                    (* 同工位的重复工步无需输送，但必须有到位信号。\n                       信号缺失时停机等待，不猜测产品位置。 *)\n                    conveyorLeft := FALSE;\n                    conveyorRight := FALSE;\n                END_IF;\n            END_IF;\n        END_IF;\n    END_IF;\nEND_IF;\n\n(* 防御性收尾：错误时强制关闭两个方向。 *)\nIF controlState = 3 THEN\n    conveyorLeft := FALSE;\n    conveyorRight := FALSE;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.438,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 8,
+    "passed": 3,
+    "passed_ids": [
+      "P16-03",
+      "P16-05",
+      "P16-06"
+    ],
+    "failures": [
+      {
+        "case_id": "P16-01",
+        "cycle": 1,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P16-02",
+        "cycle": 1,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P16-04",
+        "cycle": 1,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P16-07",
+        "cycle": 2,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P16-08",
+        "cycle": 1,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

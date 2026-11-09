@@ -1,0 +1,11 @@
+# task: P01
+# meta: easy / C 状态机与节拍
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(finishedButton -> X(!Pump_Motor && !Filling_Valve && !Capping_Machine && !Packing_Machine))    -- 完成按钮按下后下一周期四路执行器全部停止（停止优先于继续推进）（K4）
+C2: G(cleaningConfirmButton -> X(!Pump_Motor))    -- 清洗确认后下一周期必须停泵（需求 1 的 continues to work 指本工步持续到确认，不是泵必须一直转；原「泵运行时必须有瓶子」的反向约束已删除）（K1）
+C3: G(Filling_Valve -> (cleaningConfirmButton W Filling_Valve))    -- 灌装阀打开前，清洗确认必须已成立并保持（顺序推进）（K1）
+C4: G(!(Pump_Motor && Filling_Valve) && !(Pump_Motor && Capping_Machine) && !(Pump_Motor && Packing_Machine) && !(Filling_Valve && Capping_Machine) && !(Filling_Valve && Packing_Machine) && !(Capping_Machine && Packing_Machine))    -- 四路执行器两两互斥（同一时刻只有一个动作）（K2）
+C6: G(Completion_Light -> (Completion_Light W finishedButton))    -- 完成灯点亮后保持，直到操作员按下 finishedButton（K4）
+C9: G[0,1](!Pump_Motor && !Filling_Valve && !Capping_Machine && !Packing_Machine && !Completion_Light)    -- 上电首周期所有输出为 FALSE（初态无动作）（初态）

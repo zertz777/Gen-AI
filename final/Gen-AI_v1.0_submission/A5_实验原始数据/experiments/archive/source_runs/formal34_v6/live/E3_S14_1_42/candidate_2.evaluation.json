@@ -1,0 +1,58 @@
+{
+  "source": "FUNCTION_BLOCK FB_S14\nVAR_INPUT\n    Pressure : REAL;\n    PumpEnable : BOOL;\n    ResetBtn : BOOL;\nEND_VAR\nVAR_OUTPUT\n    LowPump : BOOL := FALSE;\n    HighPump : BOOL := FALSE;\n    ReliefValve : BOOL := FALSE;\n    AlarmLamp : BOOL := FALSE;\n    Status : WORD := 16#0000;\nEND_VAR\nVAR\n    ResetBtnLast : BOOL := FALSE;\n    ResetEdge : BOOL := FALSE;\n    HighPumpLatched : BOOL := FALSE;\n    ReliefLatched : BOOL := FALSE;\n    SensorFaultLatched : BOOL := FALSE;\n    SensorFaultActive : BOOL := FALSE;\n    NormalEnable : BOOL := FALSE;\nEND_VAR\n\n(* SEMANTIC CONFLICT NOTE:\n   Req.3 requires HighPump, once on, to drop only when Pressure < 100.0 bar.\n   Req.4 requires Pressure > 160.0 bar to force LowPump/HighPump OFF and ReliefValve ON.\n   This implementation applies the safety override: >160.0 bar forces pumps OFF and\n   clears HighPumpLatched. K1 same-cycle overpressure protection is prioritized over\n   the formal X(next-cycle) wording. *)\n\nResetEdge := ResetBtn AND NOT ResetBtnLast;\nResetBtnLast := ResetBtn;\n\nSensorFaultActive := (Pressure < 0.5) OR (Pressure > 250.0);\n\nIF Pressure > 160.0 THEN\n    ReliefLatched := TRUE;\nELSIF Pressure < 150.0 THEN\n    ReliefLatched := FALSE;\nEND_IF;\nReliefValve := ReliefLatched;\n\nIF SensorFaultActive THEN\n    SensorFaultLatched := TRUE;\n    Status := 16#8D01;\n    AlarmLamp := TRUE;\n    LowPump := FALSE;\n    HighPump := FALSE;\n    HighPumpLatched := FALSE;\nELSIF SensorFaultLatched THEN\n    IF ResetEdge THEN\n        SensorFaultLatched := FALSE;\n    ELSE\n        Status := 16#8D02;\n        AlarmLamp := TRUE;\n        LowPump := FALSE;\n        HighPump := FALSE;\n        HighPumpLatched := FALSE;\n    END_IF;\nEND_IF;\n\nIF (NOT SensorFaultActive) AND (NOT SensorFaultLatched) THEN\n    Status := 16#0000;\n    AlarmLamp := FALSE;\n    NormalEnable := PumpEnable;\n\n    IF Pressure >= 140.0 THEN\n        HighPumpLatched := TRUE;\n    ELSIF Pressure < 100.0 THEN\n        HighPumpLatched := FALSE;\n    END_IF;\n\n    IF ReliefValve OR NOT NormalEnable THEN\n        HighPumpLatched := FALSE;\n    END_IF;\n\n    LowPump := NormalEnable AND NOT ReliefValve AND (Pressure < 120.0);\n    HighPump := NormalEnable AND NOT ReliefValve AND HighPumpLatched;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.234,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.281,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 3,
+    "passed_ids": [
+      "S14-01",
+      "S14-02",
+      "S14-04"
+    ],
+    "failures": [
+      {
+        "case_id": "S14-03",
+        "cycle": 2,
+        "signal": "LowPump",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S14-05",
+        "cycle": 1,
+        "signal": "ReliefValve",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S14-06",
+        "cycle": 1,
+        "signal": "LowPump",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 23157,
+  "tag": "candidate_2"
+}

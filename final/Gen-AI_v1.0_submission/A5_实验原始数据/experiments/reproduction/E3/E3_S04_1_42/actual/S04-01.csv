@@ -1,0 +1,4 @@
+case_id,cycle,CompensatedWeight,ZeroOffset,DriftAlarm,Status
+S04-01,1,10.0,0,TRUE,16#8401
+S04-01,2,25.0,0,TRUE,16#8401
+S04-01,3,5.0,0,TRUE,16#8401

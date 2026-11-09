@@ -1,0 +1,11 @@
+{
+  "case_id": "task_P13_skeleton",
+  "kind": "task_skeleton",
+  "expected": "observe",
+  "status": "pass",
+  "elapsed_s": 0.156,
+  "source_sha256": "a1f0f1c05d961be856893dd36c3851d6616639e043287d75dab2d39be655b0eb",
+  "errors": [],
+  "evidence_kind": "live_fast_compiler",
+  "functional_tests_run": false
+}

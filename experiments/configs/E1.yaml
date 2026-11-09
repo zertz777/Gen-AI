@@ -1,0 +1,12 @@
+{
+  "setting_id": "E1",
+  "framework": "baseline",
+  "agent": "Aider 0.86.2",
+  "model": "deepseek-v4.1-flash",
+  "task_set": "all34",
+  "seed": 42,
+  "scan_cycle_ms": 20,
+  "task_timeout_s": 900,
+  "compile_timeout_s": 90,
+  "repeat": 1
+}

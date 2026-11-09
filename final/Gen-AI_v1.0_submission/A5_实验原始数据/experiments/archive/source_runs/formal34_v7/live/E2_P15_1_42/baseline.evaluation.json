@@ -1,0 +1,53 @@
+{
+  "source": "(*\n修改说明：\n实现按钮上升沿切换、自动配料、急停优先停机、安全重启及\n配料阀与出料阀互锁；保持外部接口不变。\n内部步序变量使用 autoState，避免使用 ST/SFC 关键字 STEP。\n输出声明初始为 FALSE；首次调用直接响应当前模式的启动边沿，\n不再强制屏蔽首次扫描，也不将首次模式选择视为运行中模式切换。\n\n需求原文：\nDesign a PLC program to control a material proportioning process that requires mixing three types of materials according to specific requirements and then delivering them to the next process through valve D. The system needs to support both manual and automatic operation modes and be able to safely stop all equipment when an emergency stop signal is triggered.\nControl requirements:\nEmergency Stop Logic: The estop(=FALSE) signal is used for emergency stopping of all equipment.\nManual Mode: opeMode=false, manually control the start/stop of valves A, B, C, D, and the mixing motor.\nAutomatic Mode: opeMode=true, equipment operates automatically according to the process flow.\nImplement the emergency stop logic to ensure that all equipment stops immediately when the emergency stop signal is triggered.\nIn manual mode, manually control the start/stop of valves and the mixing motor.\nFor example, pressing the valve A start button valveAStart (triggering a rising edge) causes valve A to run (valveARun=TRUE); pressing the valve A start button valveAStart again (triggering a rising edge) stops valve A (valveARun=FALSE).\nIn automatic mode, implement the following control logic based on the process flow:\nPress the autoStart button to start the automatic process, first opening valve A.\nWhen the liquid level sensor levelSensor reaches 50cm, close valve A and open valve B.\nWhen the liquid level sensor reaches 80cm, close valve B.\nBased on processMode:\nIf processMode=false, start the mixing motor; after receiving the mixing complete signal, stop the mixing motor, open valve D, and the automatic process ends.\nIf processMode=true, open valve C; when the liquid level sensor reaches 100cm, close valve C, start the mixing motor; after receiving the mixing complete signal, stop the mixing motor, open valve D, and the automatic process ends.\n\n中文摘要：物料配比控制：手动模式按按钮边沿切换各阀门与搅拌电机，\n自动模式按工艺顺序配料，急停时立即停全部设备。\n扫描周期：每次调用 20 ms。\n\n初态与约束：\n输出初始均为 FALSE；estop 正常态为 TRUE。\n给定初态文字为：模式由 opeMode 决定，上电按手动处理。\n本实现内部模式历史初始为手动，首次调用采纳当前 opeMode。\nK1：estop=FALSE 时当周期停止全部设备，优先级最高。\nK2：手动按钮按上升沿切换，不按持续电平翻转。\nK3：自动按 A、B、可选 C、搅拌、D 的顺序执行。\nK4：急停期间冻结自动步序；恢复时复位安全待机，不续跑。\n\n完整形式化规约：\nC1: G(!estop -> (!valveARun && !valveBRun && !valveCRun && !valveDRun && !mixMotorRun))\nC2: G(mixMotorRun -> !estop)\nC4: G(!(valveDRun && (valveARun || valveBRun || valveCRun)))\nC6: G(mixMotorRun -> (mixMotorRun W mixMotorComplete))\nC10: G[0,1](!valveARun && !valveBRun && !valveCRun && !valveDRun && !mixMotorRun)\n\n语义冲突报告：\n1. C2 的公式要求电机仅在急停触发时运行，与其“无急停”文字及\n   C1、正常自动搅拌需求矛盾。本实现遵循 C1 和正常运行需求，\n   不满足 C2 原公式；保留原公式，不声称规约全部满足。\n2. C6 无模式、急停例外，与手动再次按键停机及急停强制停机冲突。\n   本实现仅在未急停且未切换模式的自动搅拌步骤保持到完成信号。\n3. C4 与手动各阀门完全独立切换可能冲突。本实现优先互锁：\n   开 A/B/C 时关闭 D；开 D 时关闭 A/B/C；同扫描竞争时 D 优先。\n4. C10 若严格按扫描编号 0、1 解释，要求前两次调用输出均关闭。\n   提供的逐周期测试在 cycle=1 要求 valveARun=TRUE，但没有给出\n   完整输入轨迹或编号定义，不能确定其与 C10 的精确对应关系。\n   本次保留声明初态全关闭，取消首次调用的强制停机，\n   允许首次扫描响应启动边沿，不声称满足 C10 严格区间公式。\n5. “上电按手动处理”与首次即按 opeMode 自动启动存在解释差异。\n   本实现将其解释为内部安全初态，不强制增加手动运行扫描。\n\n边界实现：\n首次调用使用当前 opeMode，不触发运行中模式切换保护。\n首次调用按钮为 TRUE 时，相对于初始 FALSE 识别为上升沿。\n后续模式切换当周期停机并复位自动流程，不接受该周期启动边沿。\n急停期间仅冻结步号，输出立即关闭，持续更新按钮历史；\n恢复当周期复位步号并关闭输出，需要之后新的启动上升沿。\n液位采用 >= 阈值；每扫描最多推进一个自动步骤。\n在 B 达标时读取 processMode；完成信号按电平判断。\nD 在自动完成后保持开启，直至新一轮启动、模式切换或急停。\n运行中 autoStart 边沿被忽略；完成态的新启动关闭 D 并开启 A。\n\n验证状态：\n用户提供的上一版结果为 fast 和 authoritative 编译均通过，\n逐周期测试 0/7 通过，失败均报告 cycle=1 的 A 阀输出。\n本次取消首次扫描强制停机及首次模式选择的停机屏蔽。\n当前对话无可执行工具，未运行本地命令，未验证修改后的结果。\n源码使用标准 BOOL、INT、VAR、IF 和 CASE，无厂商扩展。\n编译通过不代表功能正确，仍需实际逐周期测试。\n*)\n\nFUNCTION_BLOCK FB_P15\nVAR_INPUT\n    estop : BOOL;\n    opeMode : BOOL;\n    valveAStart : BOOL;\n    valveBStart : BOOL;\n    valveCStart : BOOL;\n    valveDStart : BOOL;\n    mixMotorStart : BOOL;\n    autoStart : BOOL;\n    processMode : BOOL;\n    levelSensor : INT;\n    mixMotorComplete : BOOL;\nEND_VAR\nVAR_OUTPUT\n    valveARun : BOOL := FALSE;\n    valveBRun : BOOL := FALSE;\n    valveCRun : BOOL := FALSE;\n    valveDRun : BOOL := FALSE;\n    mixMotorRun : BOOL := FALSE;\nEND_VAR\nVAR\n    initialized : BOOL := FALSE;\n    autoState : INT := 0;\n    previousMode : BOOL := FALSE;\n    emergencySeen : BOOL := FALSE;\n\n    previousAStart : BOOL := FALSE;\n    previousBStart : BOOL := FALSE;\n    previousCStart : BOOL := FALSE;\n    previousDStart : BOOL := FALSE;\n    previousMotorStart : BOOL := FALSE;\n    previousAutoStart : BOOL := FALSE;\n\n    edgeA : BOOL := FALSE;\n    edgeB : BOOL := FALSE;\n    edgeC : BOOL := FALSE;\n    edgeD : BOOL := FALSE;\n    edgeMotor : BOOL := FALSE;\n    edgeAuto : BOOL := FALSE;\n\n    forceSafe : BOOL := FALSE;\nEND_VAR\n\nedgeA := valveAStart AND NOT previousAStart;\nedgeB := valveBStart AND NOT previousBStart;\nedgeC := valveCStart AND NOT previousCStart;\nedgeD := valveDStart AND NOT previousDStart;\nedgeMotor := mixMotorStart AND NOT previousMotorStart;\nedgeAuto := autoStart AND NOT previousAutoStart;\n\nforceSafe := FALSE;\n\n(* 首次采纳当前模式，不屏蔽首次启动边沿。 *)\nIF NOT initialized THEN\n    initialized := TRUE;\n    previousMode := opeMode;\n    autoState := 0;\nEND_IF;\n\n(* 急停优先；运行中急停不改变自动步号。 *)\nIF NOT estop THEN\n    emergencySeen := TRUE;\n    forceSafe := TRUE;\nELSIF emergencySeen THEN\n    emergencySeen := FALSE;\n    autoState := 0;\n    forceSafe := TRUE;\nELSIF opeMode <> previousMode THEN\n    autoState := 0;\n    forceSafe := TRUE;\nEND_IF;\n\nIF forceSafe THEN\n    valveARun := FALSE;\n    valveBRun := FALSE;\n    valveCRun := FALSE;\n    valveDRun := FALSE;\n    mixMotorRun := FALSE;\n\nELSIF NOT opeMode THEN\n    autoState := 0;\n\n    IF edgeA THEN\n        valveARun := NOT valveARun;\n        IF valveARun THEN\n            valveDRun := FALSE;\n        END_IF;\n    END_IF;\n\n    IF edgeB THEN\n        valveBRun := NOT valveBRun;\n        IF valveBRun THEN\n            valveDRun := FALSE;\n        END_IF;\n    END_IF;\n\n    IF edgeC THEN\n        valveCRun := NOT valveCRun;\n        IF valveCRun THEN\n            valveDRun := FALSE;\n        END_IF;\n    END_IF;\n\n    IF edgeD THEN\n        valveDRun := NOT valveDRun;\n        IF valveDRun THEN\n            valveARun := FALSE;\n            valveBRun := FALSE;\n            valveCRun := FALSE;\n        END_IF;\n    END_IF;\n\n    IF edgeMotor THEN\n        mixMotorRun := NOT mixMotorRun;\n    END_IF;\n\nELSE\n    (*\n    0：安全待机\n    10：A 配料\n    20：B 配料\n    30：C 配料\n    40：搅拌\n    50：完成，D 出料\n    *)\n    CASE autoState OF\n        0:\n            IF edgeAuto THEN\n                autoState := 10;\n            END_IF;\n\n        10:\n            IF levelSensor >= 50 THEN\n                autoState := 20;\n            END_IF;\n\n        20:\n            IF levelSensor >= 80 THEN\n                IF processMode THEN\n                    autoState := 30;\n                ELSE\n                    autoState := 40;\n                END_IF;\n            END_IF;\n\n        30:\n            IF levelSensor >= 100 THEN\n                autoState := 40;\n            END_IF;\n\n        40:\n            IF mixMotorComplete THEN\n                autoState := 50;\n            END_IF;\n\n        50:\n            IF edgeAuto THEN\n                autoState := 10;\n            END_IF;\n\n    ELSE\n        autoState := 0;\n    END_CASE;\n\n    (* 转移后的步号决定本扫描输出，切阀在同一扫描完成。 *)\n    valveARun := FALSE;\n    valveBRun := FALSE;\n    valveCRun := FALSE;\n    valveDRun := FALSE;\n    mixMotorRun := FALSE;\n\n    CASE autoState OF\n        10:\n            valveARun := TRUE;\n        20:\n            valveBRun := TRUE;\n        30:\n            valveCRun := TRUE;\n        40:\n            mixMotorRun := TRUE;\n        50:\n            valveDRun := TRUE;\n    END_CASE;\nEND_IF;\n\n(* 每次调用都更新历史，防止急停恢复或模式切换造成伪上升沿。 *)\npreviousAStart := valveAStart;\npreviousBStart := valveBStart;\npreviousCStart := valveCStart;\npreviousDStart := valveDStart;\npreviousMotorStart := mixMotorStart;\npreviousAutoStart := autoStart;\npreviousMode := opeMode;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.234,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.86,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 7,
+    "passed": 5,
+    "passed_ids": [
+      "P15-01",
+      "P15-02",
+      "P15-03",
+      "P15-04",
+      "P15-06"
+    ],
+    "failures": [
+      {
+        "case_id": "P15-05",
+        "cycle": 4,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P15-07",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

@@ -1,0 +1,68 @@
+{
+  "source": "FUNCTION_BLOCK FB_S11\nVAR_INPUT\n    SensorCurrent : REAL;\n    FallbackValue : REAL;\nEND_VAR\nVAR_OUTPUT\n    SensorValid : BOOL := FALSE;\n    DegradedMode : BOOL := FALSE;\n    ControlValue : REAL := 0.0;\n    AlarmLamp : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    Initialized : BOOL := FALSE;\n    FaultDetected : BOOL := FALSE;\n    InRecoveryBand : BOOL := FALSE;\n    InMeasurementBand : BOOL := FALSE;\n    FaultTiming : BOOL := FALSE;\n    RecoveryTiming : BOOL := FALSE;\n    FaultTicks : UINT := UINT#0;\n    RecoveryTicks : UINT := UINT#0;\n    BlinkTicks : UINT := UINT#0;\nEND_VAR\n\n(*\n    每次调用代表20 ms；计数器按相邻调用之间的时间计时。\n    断线起始拍计数为0，经过100个间隔后进入降级。\n    恢复起始拍计数为0，保持降级于恢复拍偏移0..149，\n    在偏移150处允许退出，符合C9的保持边界。\n\n    待审冲突：\n    C10要求上电当拍SensorValid=FALSE、ControlValue=0.0，\n    与“4..20 mA时SensorValid=TRUE并立即换算”在上电输入\n    有效时冲突。本实现保留明确初态，首次调用仅初始化，\n    第二次调用开始检测；不能声称同时满足两种解释。\n\n    待审未定义区间：\n    原文没有指定滞回带内非降级ControlValue的数值。\n    本实现仅在4..20 mA内更新测量值，其余非降级拍保持。\n    SensorValid在断线阈值与恢复阈值之间保持原状态。\n    非降级断线等待期间也保持ControlValue，符合C1公式；\n    C1注释若被解释为禁止此阶段保持失效测量值，则需澄清。\n    本源码未附带编译或逐周期验证结果。\n*)\n\nIF NOT Initialized THEN\n    SensorValid := FALSE;\n    DegradedMode := FALSE;\n    ControlValue := 0.0;\n    AlarmLamp := FALSE;\n    Status := WORD#16#0000;\n\n    FaultDetected := FALSE;\n    InRecoveryBand := FALSE;\n    InMeasurementBand := FALSE;\n    FaultTiming := FALSE;\n    RecoveryTiming := FALSE;\n    FaultTicks := UINT#0;\n    RecoveryTicks := UINT#0;\n    BlinkTicks := UINT#0;\n    Initialized := TRUE;\nELSE\n    FaultDetected :=\n        (SensorCurrent < 3.6) OR (SensorCurrent > 21.0);\n    InRecoveryBand :=\n        (SensorCurrent >= 3.8) AND (SensorCurrent <= 20.5);\n    InMeasurementBand :=\n        (SensorCurrent >= 4.0) AND (SensorCurrent <= 20.0);\n\n    (* 故障优先；滞回中间带保持有效性状态。 *)\n    IF FaultDetected THEN\n        SensorValid := FALSE;\n    ELSIF InRecoveryBand THEN\n        SensorValid := TRUE;\n    END_IF;\n\n    (* 未恢复的断线状态持续计时；恢复立即清除断线计时。 *)\n    IF NOT SensorValid THEN\n        IF NOT FaultTiming THEN\n            FaultTiming := TRUE;\n            FaultTicks := UINT#0;\n            BlinkTicks := UINT#0;\n        ELSE\n            IF FaultTicks < UINT#100 THEN\n                FaultTicks := FaultTicks + UINT#1;\n            END_IF;\n\n            IF BlinkTicks >= UINT#49 THEN\n                BlinkTicks := UINT#0;\n            ELSE\n                BlinkTicks := BlinkTicks + UINT#1;\n            END_IF;\n        END_IF;\n\n        IF FaultTicks >= UINT#100 THEN\n            DegradedMode := TRUE;\n        END_IF;\n    ELSE\n        FaultTiming := FALSE;\n        FaultTicks := UINT#0;\n        BlinkTicks := UINT#0;\n    END_IF;\n\n    (* 必须连续处于恢复带；离开恢复带就重置确认计时。 *)\n    IF DegradedMode THEN\n        IF SensorValid AND InRecoveryBand THEN\n            IF NOT RecoveryTiming THEN\n                RecoveryTiming := TRUE;\n                RecoveryTicks := UINT#0;\n            ELSE\n                IF RecoveryTicks < UINT#150 THEN\n                    RecoveryTicks := RecoveryTicks + UINT#1;\n                END_IF;\n            END_IF;\n\n            IF RecoveryTicks >= UINT#150 THEN\n                DegradedMode := FALSE;\n                RecoveryTiming := FALSE;\n                RecoveryTicks := UINT#0;\n            END_IF;\n        ELSE\n            RecoveryTiming := FALSE;\n            RecoveryTicks := UINT#0;\n        END_IF;\n    ELSE\n        RecoveryTiming := FALSE;\n        RecoveryTicks := UINT#0;\n    END_IF;\n\n    (* 降级输出优先，备用输入每拍更新。 *)\n    IF DegradedMode THEN\n        ControlValue := FallbackValue;\n    ELSIF SensorValid AND InMeasurementBand THEN\n        ControlValue := ((SensorCurrent - 4.0) / 16.0) * 100.0;\n    END_IF;\n\n    IF DegradedMode THEN\n        AlarmLamp := TRUE;\n        IF SensorValid THEN\n            Status := WORD#16#8A03;\n        ELSE\n            Status := WORD#16#8A02;\n        END_IF;\n    ELSIF NOT SensorValid THEN\n        (* 25拍亮、25拍灭：周期1 s，频率1 Hz。 *)\n        AlarmLamp := BlinkTicks < UINT#25;\n        Status := WORD#16#8A01;\n    ELSE\n        AlarmLamp := FALSE;\n        Status := WORD#16#0000;\n    END_IF;\nEND_IF;\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.297,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 20.688,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 5,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "S11-01",
+        "cycle": 1,
+        "signal": "SensorValid",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S11-02",
+        "cycle": 1,
+        "signal": "SensorValid",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S11-03",
+        "cycle": 1,
+        "signal": "SensorValid",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S11-04",
+        "cycle": 1,
+        "signal": "AlarmLamp",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S11-05",
+        "cycle": 1,
+        "signal": "SensorValid",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3561,
+  "tag": "candidate_3"
+}

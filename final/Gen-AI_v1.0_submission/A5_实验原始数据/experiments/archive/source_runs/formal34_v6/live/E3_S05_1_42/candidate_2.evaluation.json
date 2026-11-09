@@ -1,0 +1,70 @@
+{
+  "source": "FUNCTION_BLOCK FB_S05\nVAR_INPUT\n    FlowPulse : BOOL;\n    ShiftReset : BOOL;\n    CycleTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    TotalVolume : LREAL;\n    ShiftVolume : LREAL;\n    PulseCount : UDINT;\n    OverflowFlag : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    FlowPulseLast : BOOL := FALSE;\n    ShiftResetLast : BOOL := FALSE;\n    FirstScan : BOOL := TRUE;\n\n    ScanCounter : UDINT := 0;\n    LastPulseScan : UDINT := 0;\n    PulseEdge : BOOL;\n    ResetEdge : BOOL;\n    PulseTooFastThisScan : BOOL;\n\n    MAX_VOLUME : LREAL := 1000000.0;\n    PULSE_VOLUME : LREAL := 0.5;\nEND_VAR\n(*\n    需求冲突/未决项报告：\n    1) K4 要求检测同一扫描周期内两次以上 FlowPulse 上升沿，但接口仅有扫描级 BOOL 输入，\n       无法观测 20 ms 扫描内部发生的多次脉冲。本实现不新增硬件锁存接口，仅在采样到\n       相邻扫描上升沿间隔 <= 1 个扫描周期时保守置 Status = 16#8501，并且每扫描最多计 1 个脉冲。\n    2) K1 要求每个上升沿 TotalVolume 与 ShiftVolume 都加 0.5 L；K3/C1 要求 TotalVolume\n       达到 1000000.0 后不再增长；C6 要求 ShiftVolume <= TotalVolume。本实现优先保持\n       TotalVolume 上限和 C6：溢出后 TotalVolume 冻结，ShiftVolume 仅在不超过 TotalVolume\n       时继续增加，PulseCount 仍继续累计采样到的上升沿。该行为与 K1 在溢出后的字面要求存在冲突。\n*)\nIF FirstScan THEN\n    TotalVolume := 0.0;\n    ShiftVolume := 0.0;\n    PulseCount := 0;\n    OverflowFlag := FALSE;\n    Status := 16#0000;\n\n    FlowPulseLast := FlowPulse;\n    ShiftResetLast := ShiftReset;\n\n    ScanCounter := 0;\n    LastPulseScan := 0;\n    PulseTooFastThisScan := FALSE;\n\n    FirstScan := FALSE;\nELSE\n    ScanCounter := ScanCounter + 1;\n    PulseTooFastThisScan := FALSE;\n\n    PulseEdge := FlowPulse AND NOT FlowPulseLast;\n    ResetEdge := ShiftReset AND NOT ShiftResetLast;\n\n    FlowPulseLast := FlowPulse;\n    ShiftResetLast := ShiftReset;\n\n    IF PulseEdge THEN\n        (* 扫描级过快保守判断：相邻扫描均检测到上升沿时报告 16#8501。 *)\n        IF (CycleTime > T#0ms) AND (LastPulseScan > 0) AND ((ScanCounter - LastPulseScan) <= 1) THEN\n            PulseTooFastThisScan := TRUE;\n        END_IF;\n        LastPulseScan := ScanCounter;\n\n        (* 总量累加：达到 1000000.0 后冻结，不再增长。 *)\n        IF NOT OverflowFlag THEN\n            IF TotalVolume + PULSE_VOLUME <= MAX_VOLUME THEN\n                TotalVolume := TotalVolume + PULSE_VOLUME;\n            ELSE\n                TotalVolume := MAX_VOLUME;\n            END_IF;\n\n            IF TotalVolume >= MAX_VOLUME THEN\n                OverflowFlag := TRUE;\n            END_IF;\n        END_IF;\n\n        (* 当班脉冲数按采样到的上升沿累计。 *)\n        PulseCount := PulseCount + 1;\n\n        (* 当班流量增加，但受 C6: ShiftVolume <= TotalVolume 限制。 *)\n        IF ShiftVolume + PULSE_VOLUME <= TotalVolume THEN\n            ShiftVolume := ShiftVolume + PULSE_VOLUME;\n        ELSE\n            ShiftVolume := TotalVolume;\n        END_IF;\n    END_IF;\n\n    (* ShiftReset 上升沿清清当班量；TotalVolume 与 OverflowFlag 不受影响。 *)\n    IF ResetEdge THEN\n        ShiftVolume := 0.0;\n        PulseCount := 0;\n    END_IF;\n\n    (* Status 优先级：本扫描脉冲过快 > 总量溢出 > 正常。 *)\n    IF PulseTooFastThisScan THEN\n        Status := 16#8501;\n    ELSIF OverflowFlag OR (TotalVolume >= MAX_VOLUME) THEN\n        Status := 16#8502;\n    ELSE\n        Status := 16#0000;\n    END_IF;\nEND_IF;\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.25,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 1,
+    "passed_ids": [
+      "S05-03"
+    ],
+    "failures": [
+      {
+        "case_id": "S05-01",
+        "cycle": 1,
+        "signal": "TotalVolume",
+        "expected": 0.5,
+        "actual": 0.0
+      },
+      {
+        "case_id": "S05-02",
+        "cycle": 1,
+        "signal": "TotalVolume",
+        "expected": 0.5,
+        "actual": 0.0
+      },
+      {
+        "case_id": "S05-04",
+        "cycle": 1,
+        "signal": "TotalVolume",
+        "expected": 0.5,
+        "actual": 0.0
+      },
+      {
+        "case_id": "S05-05",
+        "cycle": 1,
+        "signal": "TotalVolume",
+        "expected": 0.5,
+        "actual": 0.0
+      },
+      {
+        "case_id": "S05-06",
+        "cycle": 1,
+        "signal": "TotalVolume",
+        "expected": 0.5,
+        "actual": 0.0
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 20091,
+  "tag": "candidate_2"
+}

@@ -1,0 +1,87 @@
+{
+  "source": "FUNCTION_BLOCK FB_P16\nVAR_INPUT\n    processLength : USINT;\n    sensor1 : BOOL;\n    sensor2 : BOOL;\n    sensor3 : BOOL;\n    sensor4 : BOOL;\n    sensor5 : BOOL;\n    station1Start : BOOL;\n    station2Complete : BOOL;\n    station3Complete : BOOL;\n    station4Complete : BOOL;\n    processSequence : ARRAY[1..8] OF USINT;\nEND_VAR\nVAR_OUTPUT\n    conveyorLeft : BOOL := FALSE;\n    conveyorRight : BOOL := FALSE;\nEND_VAR\nVAR\n    (* States: 0 idle, 1 transfer, 2 processing, 3 latched error. *)\n    state : USINT := 0;\n    bootScans : USINT := 0;\n    stepIndex : USINT := 0;\n    activeLength : USINT := 0;\n    activeSequence : ARRAY[1..8] OF USINT;\n    currentStation : USINT := 1;\n    targetStation : USINT := 0;\n\n    previousStart : BOOL := FALSE;\n    startRise : BOOL;\n    invalidSequence : BOOL;\n    errorLatched : BOOL := FALSE;\n\n    targetPresent : BOOL;\n    processingPresent : BOOL;\n    processingComplete : BOOL;\n\n    (* Ten complete scans following every left-running scan block right. *)\n    rightInhibitScans : USINT := 0;\n    rightBlocked : BOOL;\n    i : INT;\nEND_VAR\n\n(* Each invocation is one 20 ms scan.\n   The recipe is copied when a new workpiece is accepted.\n   No reset input exists: a latched error requires FB reinitialization.\n   Completion inputs are valid levels, qualified by the station sensor.\n   No compilation or cycle-test verification is claimed. *)\n\nconveyorLeft := FALSE;\nconveyorRight := FALSE;\n\nstartRise := station1Start AND NOT previousStart;\npreviousStart := station1Start;\n\nrightBlocked := rightInhibitScans > 0;\nIF rightInhibitScans > 0 THEN\n    rightInhibitScans := rightInhibitScans - 1;\nEND_IF;\n\n(* Validate only the active entries; never index with an invalid length. *)\ninvalidSequence := FALSE;\nIF (processLength < 1) OR (processLength > 8) THEN\n    invalidSequence := TRUE;\nELSE\n    FOR i := 1 TO 8 DO\n        IF i <= USINT_TO_INT(processLength) THEN\n            IF i = USINT_TO_INT(processLength) THEN\n                IF processSequence[i] <> 5 THEN\n                    invalidSequence := TRUE;\n                END_IF;\n            ELSE\n                IF (processSequence[i] < 2)\n                    OR (processSequence[i] > 4) THEN\n                    invalidSequence := TRUE;\n                END_IF;\n            END_IF;\n        END_IF;\n    END_FOR;\nEND_IF;\n\nIF invalidSequence THEN\n    errorLatched := TRUE;\nEND_IF;\n\nIF errorLatched THEN\n    state := 3;\n    stepIndex := 0;\nEND_IF;\n\n(* Both initial scans are stopped, covering G[0,1]. *)\nIF bootScans < 2 THEN\n    bootScans := bootScans + 1;\nELSIF NOT errorLatched THEN\n    CASE state OF\n        0:\n            IF startRise AND sensor1 THEN\n                activeLength := processLength;\n                FOR i := 1 TO 8 DO\n                    activeSequence[i] := processSequence[i];\n                END_FOR;\n                stepIndex := 1;\n                currentStation := 1;\n                targetStation := activeSequence[1];\n                state := 1;\n            END_IF;\n\n        1:\n            (* Transfer and arrival are evaluated below. *)\n\n        2:\n            processingPresent := FALSE;\n            processingComplete := FALSE;\n\n            CASE currentStation OF\n                2:\n                    processingPresent := sensor2;\n                    processingComplete := station2Complete;\n                3:\n                    processingPresent := sensor3;\n                    processingComplete := station3Complete;\n                4:\n                    processingPresent := sensor4;\n                    processingComplete := station4Complete;\n            END_CASE;\n\n            IF processingPresent AND processingComplete THEN\n                IF stepIndex < activeLength THEN\n                    stepIndex := stepIndex + 1;\n                    targetStation := activeSequence[stepIndex];\n                    state := 1;\n                ELSE\n                    (* Unreachable for a valid captured recipe. *)\n                    errorLatched := TRUE;\n                    state := 3;\n                END_IF;\n            END_IF;\n\n        3:\n            (* Latched error: outputs remain stopped. *)\n\n        ELSE\n            errorLatched := TRUE;\n            state := 3;\n    END_CASE;\n\n    IF state = 1 THEN\n        targetPresent := FALSE;\n        CASE targetStation OF\n            2: targetPresent := sensor2;\n            3: targetPresent := sensor3;\n            4: targetPresent := sensor4;\n            5: targetPresent := sensor5;\n            ELSE\n                errorLatched := TRUE;\n                state := 3;\n        END_CASE;\n\n        IF state = 1 THEN\n            IF targetPresent THEN\n                currentStation := targetStation;\n                IF targetStation = 5 THEN\n                    state := 0;\n                    stepIndex := 0;\n                ELSE\n                    state := 2;\n                END_IF;\n            ELSIF targetStation < currentStation THEN\n                conveyorLeft := TRUE;\n            ELSIF targetStation > currentStation THEN\n                IF NOT rightBlocked THEN\n                    conveyorRight := TRUE;\n                END_IF;\n            END_IF;\n            (* Consecutive identical stations require no conveyor motion.\n               Their entries are consumed separately, only with sensor\n               and completion valid in the processing state. *)\n        END_IF;\n    END_IF;\nEND_IF;\n\nIF errorLatched THEN\n    conveyorLeft := FALSE;\n    conveyorRight := FALSE;\nEND_IF;\n\nIF conveyorLeft THEN\n    conveyorRight := FALSE;\n    rightInhibitScans := 10;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 111,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P16_1_42\\tools\\candidate_1\\fast\\source.st:111-9..111-9: error: invalid statement in case element of ST 'CASE' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P16_1_42\\tools\\candidate_1\\fast\\source.st:111-9..111-9: error: invalid statement in case element of ST 'CASE' statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 142,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P16_1_42\\tools\\candidate_1\\fast\\source.st:142-9..142-12: error: invalid statement in case element of ST 'CASE' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P16_1_42\\tools\\candidate_1\\fast\\source.st:142-9..142-12: error: invalid statement in case element of ST 'CASE' statement."
+        }
+      ],
+      "elapsed_s": 0.157,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.407,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 8,
+    "passed": 3,
+    "passed_ids": [
+      "P16-03",
+      "P16-05",
+      "P16-06"
+    ],
+    "failures": [
+      {
+        "case_id": "P16-01",
+        "cycle": 1,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P16-02",
+        "cycle": 1,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P16-04",
+        "cycle": 1,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P16-07",
+        "cycle": 2,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P16-08",
+        "cycle": 1,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3813,
+  "tag": "candidate_1"
+}

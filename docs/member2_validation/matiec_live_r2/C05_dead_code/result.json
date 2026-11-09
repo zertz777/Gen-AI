@@ -1,0 +1,12 @@
+{
+  "case_id": "C05_dead_code",
+  "kind": "dead_code",
+  "expected": "observe",
+  "note": "观察实际诊断；编译器可优化且不发警告，不强制产生死代码warning",
+  "status": "pass",
+  "elapsed_s": 0.157,
+  "source_sha256": "1aca0a4230a2d2a557bc49bb4e75c1b1a7d3ed51062663f39a5a4cfeb6b971b8",
+  "errors": [],
+  "evidence_kind": "live_fast_compiler",
+  "functional_tests_run": false
+}

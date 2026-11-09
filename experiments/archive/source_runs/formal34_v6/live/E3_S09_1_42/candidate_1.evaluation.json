@@ -1,0 +1,70 @@
+{
+  "source": "FUNCTION_BLOCK FB_S09\nVAR_INPUT\n    StartCIP : BOOL;\n    StepDone : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    WaterValve : BOOL;\n    LyeValve : BOOL;\n    RinseValve : BOOL;\n    PumpRun : BOOL;\n    StepNo : INT;\n    Status : WORD;\nEND_VAR\nVAR\n    StartCIPLast : BOOL := FALSE;\n    StepDoneLast : BOOL := FALSE;\n    StepTimerCycles : UDINT := 0;\n    FirstScan : BOOL := TRUE;\n    StartEdge : BOOL;\n    StepDoneEdge : BOOL;\n    StartPending : BOOL := FALSE;\n    CYCLES_30S : UDINT := 1500;\n    CYCLES_60S : UDINT := 3000;\nEND_VAR\n\nStartEdge := StartCIP AND NOT StartCIPLast;\nStepDoneEdge := StepDone AND NOT StepDoneLast;\n\nIF FirstScan THEN\n    WaterValve := FALSE;\n    LyeValve := FALSE;\n    RinseValve := FALSE;\n    PumpRun := FALSE;\n    StepNo := 0;\n    StepTimerCycles := 0;\n    StepDoneLast := StepDone;\n    IF EStop_NC THEN\n        Status := 16#0000;\n        IF StartEdge THEN\n            StartPending := TRUE;\n        END_IF;\n    ELSE\n        Status := 16#8902;\n        StartPending := FALSE;\n        StartCIPLast := StartCIP;\n    END_IF;\n    FirstScan := FALSE;\nELSIF NOT EStop_NC THEN\n    WaterValve := FALSE;\n    LyeValve := FALSE;\n    RinseValve := FALSE;\n    PumpRun := FALSE;\n    StepNo := 0;\n    StepTimerCycles := 0;\n    Status := 16#8902;\n    StartPending := FALSE;\n    StartCIPLast := StartCIP;\n    StepDoneLast := StepDone;\nELSIF (StepNo < 0) OR (StepNo > 3) THEN\n    WaterValve := FALSE;\n    LyeValve := FALSE;\n    RinseValve := FALSE;\n    PumpRun := FALSE;\n    StepNo := 0;\n    StepTimerCycles := 0;\n    Status := 16#8901;\n    StartPending := FALSE;\n    StartCIPLast := StartCIP;\n    StepDoneLast := StepDone;\nELSE\n    Status := 16#0000;\n\n    IF StartPending AND (StepNo <> 0) THEN\n        StartPending := FALSE;\n    END_IF;\n\n    CASE StepNo OF\n        0:\n            StepTimerCycles := 0;\n            IF StartPending THEN\n                StepNo := 1;\n                StepTimerCycles := 0;\n                StartPending := FALSE;\n            ELSIF StartEdge THEN\n                StepNo := 1;\n                StepTimerCycles := 0;\n            END_IF;\n        1:\n            IF StepDoneEdge THEN\n                StepNo := 2;\n                StepTimerCycles := 0;\n            ELSE\n                StepTimerCycles := StepTimerCycles + 1;\n                IF StepTimerCycles >= CYCLES_30S THEN\n                    StepNo := 2;\n                    StepTimerCycles := 0;\n                END_IF;\n            END_IF;\n        2:\n            IF StepDoneEdge THEN\n                StepNo := 3;\n                StepTimerCycles := 0;\n            ELSE\n                StepTimerCycles := StepTimerCycles + 1;\n                IF StepTimerCycles >= CYCLES_60S THEN\n                    StepNo := 3;\n                    StepTimerCycles := 0;\n                END_IF;\n            END_IF;\n        3:\n            IF StepDoneEdge THEN\n                StepNo := 0;\n                StepTimerCycles := 0;\n            ELSE\n                StepTimerCycles := StepTimerCycles + 1;\n                IF StepTimerCycles >= CYCLES_30S THEN\n                    StepNo := 0;\n                    StepTimerCycles := 0;\n                END_IF;\n            END_IF;\n        ELSE\n            StepNo := 0;\n            StepTimerCycles := 0;\n            Status := 16#8901;\n    END_CASE;\n\n    CASE StepNo OF\n        0:\n            WaterValve := FALSE;\n            LyeValve := FALSE;\n            RinseValve := FALSE;\n            PumpRun := FALSE;\n        1:\n            WaterValve := TRUE;\n            LyeValve := FALSE;\n            RinseValve := FALSE;\n            PumpRun := TRUE;\n        2:\n            WaterValve := FALSE;\n            LyeValve := TRUE;\n            RinseValve := FALSE;\n            PumpRun := TRUE;\n        3:\n            WaterValve := FALSE;\n            LyeValve := FALSE;\n            RinseValve := TRUE;\n            PumpRun := TRUE;\n        ELSE\n            WaterValve := FALSE;\n            LyeValve := FALSE;\n            RinseValve := FALSE;\n            PumpRun := FALSE;\n            StepNo := 0;\n            Status := 16#8901;\n    END_CASE;\n\n    StartCIPLast := StartCIP;\n    StepDoneLast := StepDone;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.265,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.313,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 1,
+    "passed_ids": [
+      "S09-05"
+    ],
+    "failures": [
+      {
+        "case_id": "S09-01",
+        "cycle": 1,
+        "signal": "WaterValve",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S09-02",
+        "cycle": 1,
+        "signal": "WaterValve",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S09-03",
+        "cycle": 1,
+        "signal": "WaterValve",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S09-04",
+        "cycle": 1,
+        "signal": "WaterValve",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S09-06",
+        "cycle": 1,
+        "signal": "WaterValve",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 40979,
+  "tag": "candidate_1"
+}

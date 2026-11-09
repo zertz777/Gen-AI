@@ -1,0 +1,61 @@
+task_id: S05
+title: 泵站流量累计与班次清零
+difficulty: hard
+category: B
+requirement: |-
+  泵站出口装有脉冲流量计，每个脉冲代表 0.5 L。需要同时维护累计总量与当班流量。
+
+  控制要求：
+  1. FlowPulse 的每个上升沿使 PulseCount 加 1，TotalVolume 与 ShiftVolume 各加 0.5 L。
+  2. ShiftReset 的上升沿把 ShiftVolume 清 0、PulseCount 清 0，但 TotalVolume 必须保持不变。
+  3. TotalVolume 达到 1000000.0 L 时不再增加，置 OverflowFlag = TRUE；清零只能由维护流程完成（本题不提供入口，仅置位）。
+  4. FlowPulse 为高频脉冲，同一扫描周期内最多计一个脉冲（20 ms 周期内不允许丢脉冲的假设不成立时，以 Status 报 16#8501）。
+  5. 上电时 PulseCount = 0、TotalVolume = 0.0、ShiftVolume = 0.0、OverflowFlag = FALSE。
+  6. Status：16#0000 正常、16#8501 脉冲过快、16#8502 总量溢出。
+
+  扫描周期：20 ms（全组统一，见 docs/tasks_note.md）
+io_table:
+  - direction: IN
+    name: FlowPulse
+    data_type: BOOL
+    description: 流量计脉冲
+  - direction: IN
+    name: ShiftReset
+    data_type: BOOL
+    description: 班次清零（上升沿有效）
+  - direction: IN
+    name: CycleTime
+    data_type: TIME
+    description: 扫描周期，用于判断脉冲频率
+  - direction: OUT
+    name: TotalVolume
+    data_type: LREAL
+    description: 累计总量（L）
+  - direction: OUT
+    name: ShiftVolume
+    data_type: LREAL
+    description: 当班流量（L）
+  - direction: OUT
+    name: PulseCount
+    data_type: UDINT
+    description: 当班脉冲数
+  - direction: OUT
+    name: OverflowFlag
+    data_type: BOOL
+    description: 总量溢出标志
+  - direction: OUT
+    name: Status
+    data_type: WORD
+    description: 状态码
+initial_state: "PulseCount = 0；TotalVolume = 0.0；ShiftVolume = 0.0；OverflowFlag = FALSE；Status = 16#0000；FlowPulseLast = FALSE；ShiftResetLast = FALSE。"
+constraints:
+  - K1 只在 FlowPulse 的上升沿累加，不得按电平累加。
+  - K2 ShiftReset 上升沿清 ShiftVolume 与 PulseCount，TotalVolume 严格不减。
+  - K3 TotalVolume 达到 1000000.0 后保持不再增长，并置 OverflowFlag。
+  - "K4 单个扫描周期内检测到两次以上脉冲上升沿时置 Status = 16#8501，本周期只计 1 个。"
+provenance: 改编自公开题（P04 Jam Pump Debouncing and Runtime Maintenance（课程题库））；改编点：把「运行时间累加 + 500 h 维护提示」换成「脉冲流量累计 + 班次清零」，保留累计量与提示量的分离结构；为什么这样改：累计类逻辑（单调、清零范围、溢出）是模拟量题型里最容易写出边界缺陷的一类，且能直接对应 C8 计数单调条款；来源与审核记录见 data/provenance.csv 第 26 行
+spec_ref: data/specs/S05.ltl
+error_examples:
+  - 错误实现：班次清零时把 TotalVolume 也清 0。症状——交接班后累计总量归零，无法用于结算与能耗分析。
+  - 错误实现：TotalVolume 溢出后回绕（LREAL 不会回绕，但用 UDINT 计数会）。症状——总量从 999999.5 跳到 0.0，报表出现负流量。
+notes: ""

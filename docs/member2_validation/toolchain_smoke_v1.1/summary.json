@@ -1,0 +1,22 @@
+{
+  "scope": "live compiler calls only",
+  "concurrency": 2,
+  "model_calls": 0,
+  "functional_tests": false,
+  "cases": [
+    {
+      "case_id": "C00_good",
+      "status": "pass",
+      "fast": "pass",
+      "authoritative": "pass",
+      "authority_elapsed_s": 33.828
+    },
+    {
+      "case_id": "C01_undeclared",
+      "status": "fail",
+      "fast": "fail",
+      "authoritative": "fail",
+      "authority_elapsed_s": 32.235
+    }
+  ]
+}

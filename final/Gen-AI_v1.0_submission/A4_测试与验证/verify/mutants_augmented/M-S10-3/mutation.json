@@ -1,0 +1,14 @@
+{
+  "mutant_id": "M-S10-3",
+  "task_id": "S10",
+  "operator": "运算符替换",
+  "description": "复位上升沿 → 电平触发",
+  "base_source": "03_程序案例/E1_S10_1_42/final.st",
+  "patches": [
+    {
+      "from": "ResetRising := ResetBtn AND NOT ResetBtnLast;",
+      "to": "ResetRising := ResetBtn;"
+    }
+  ],
+  "expect_killer": "按住复位时来了新故障的用例（S10-06）"
+}

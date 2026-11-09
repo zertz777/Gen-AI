@@ -1,0 +1,68 @@
+{
+  "source": "FUNCTION_BLOCK FB_S12\nVAR_INPUT\n    EStop_NC : BOOL;\n    ResetBtn : BOOL;\n    StartBtn : BOOL;\n    DoorClosed : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MachineRun : BOOL := FALSE;\n    ShiftCount : UINT := UINT#0;\n    AlarmLamp : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    ResetConfirmed : BOOL := FALSE;\n    ResetBtnLast : BOOL := FALSE;\n    StartBtnLast : BOOL := FALSE;\n    ResetRise : BOOL := FALSE;\n    StartRise : BOOL := FALSE;\n    RunScans : UINT := UINT#0;\nEND_VAR\n\n(*\n    待审语义冲突：\n    C10 要求上电 [0,1] 周期 AlarmLamp = FALSE；\n    需求第 1 条要求 EStop_NC = FALSE 时立即 AlarmLamp = TRUE。\n    若上电时急停有效，两项不能同时满足。\n    本实现保留此冲突说明，并执行急停安全优先级，\n    不以初始化屏蔽急停报警。未声称已通过编译或逐周期验证。\n\n    AlarmLamp 仅按明确要求指示急停；其他状态由 Status 指示。\n    运行时间按每扫描 20 ms 累积，停机时保留不足一分钟的余量。\n    ShiftCount 到达 UINT 上限后饱和，避免回绕清零。\n*)\n\n(* 所有扫描均更新按钮历史，急停期间的按键边沿不延后执行。 *)\nResetRise := ResetBtn AND NOT ResetBtnLast;\nStartRise := StartBtn AND NOT StartBtnLast;\nResetBtnLast := ResetBtn;\nStartBtnLast := StartBtn;\n\nIF NOT EStop_NC THEN\n    (* 急停优先于门、复位及启动。 *)\n    MachineRun := FALSE;\n    ResetConfirmed := FALSE;\n    AlarmLamp := TRUE;\n    Status := WORD#16#8B01;\n\nELSIF NOT DoorClosed THEN\n    (* 开门立即停机，并撤销已经取得的复位许可。 *)\n    MachineRun := FALSE;\n    ResetConfirmed := FALSE;\n    AlarmLamp := FALSE;\n    Status := WORD#16#8B03;\n\nELSE\n    AlarmLamp := FALSE;\n\n    IF NOT ResetConfirmed THEN\n        MachineRun := FALSE;\n        Status := WORD#16#8B02;\n\n        IF ResetRise THEN\n            ResetConfirmed := TRUE;\n            Status := WORD#16#0000;\n        END_IF;\n        (* 同一扫描的启动边沿不接受，必须在复位之后再出现。 *)\n\n    ELSE\n        Status := WORD#16#0000;\n\n        IF StartRise THEN\n            MachineRun := TRUE;\n        END_IF;\n    END_IF;\nEND_IF;\n\n(* 仅实际运行扫描参与统计；急停和其他停机均冻结计数及余量。 *)\nIF MachineRun THEN\n    IF RunScans >= UINT#2999 THEN\n        RunScans := UINT#0;\n\n        IF ShiftCount < UINT#65535 THEN\n            ShiftCount := ShiftCount + UINT#1;\n        END_IF;\n    ELSE\n        RunScans := RunScans + UINT#1;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.234,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 15.469,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 5,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "S12-01",
+        "cycle": 1,
+        "signal": "MachineRun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S12-02",
+        "cycle": 1,
+        "signal": "MachineRun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S12-03",
+        "cycle": 1,
+        "signal": "MachineRun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S12-04",
+        "cycle": 1,
+        "signal": "MachineRun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S12-05",
+        "cycle": 1,
+        "signal": "MachineRun",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 2591,
+  "tag": "candidate_2"
+}

@@ -1,0 +1,50 @@
+{
+  "task_id": "S09",
+  "io": [
+    {
+      "name": "StartCIP",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "StepDone",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "EStop_NC",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "WaterValve",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "LyeValve",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "RinseValve",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "PumpRun",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "StepNo",
+      "direction": "OUT",
+      "type": "INT"
+    },
+    {
+      "name": "Status",
+      "direction": "OUT",
+      "type": "WORD"
+    }
+  ]
+}
