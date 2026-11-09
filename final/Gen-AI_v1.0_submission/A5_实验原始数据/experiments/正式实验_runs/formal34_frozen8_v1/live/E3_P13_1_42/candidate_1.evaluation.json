@@ -1,0 +1,52 @@
+{
+  "source": "FUNCTION_BLOCK FB_P13\nVAR_INPUT\n    OCCUPANCY_DETECTED : BOOL;\n    ENERGY_SAVING_MODE : BOOL;\n    HVAC_MODE_SELECTOR : INT;\nEND_VAR\nVAR_OUTPUT\n    SUPPLY_FAN_RUN : BOOL;\n    TEMP_SETPOINT_ADJUST : INT;\nEND_VAR\nVAR\n    InitDone : BOOL := FALSE;\n    StartCondition : BOOL := FALSE;\n    StartDelayCounter : INT := 0;\n    FanRunDelayed : BOOL := FALSE;\n    TempAdjustRaw : INT := 0;\n    TempAdjustLimited : INT := 0;\nEND_VAR\n\n(* 30 s start delay: 30 s / 20 ms = 1500 scans. *)\nStartCondition := OCCUPANCY_DETECTED AND (HVAC_MODE_SELECTOR <> 3);\n\nIF StartCondition THEN\n    IF StartDelayCounter < 1500 THEN\n        StartDelayCounter := StartDelayCounter + 1;\n        FanRunDelayed := FALSE;\n    ELSE\n        FanRunDelayed := TRUE;\n    END_IF;\nELSE\n    StartDelayCounter := 0;\n    FanRunDelayed := FALSE;\nEND_IF;\n\n(* Temperature-setpoint adjustment by mode and occupancy. *)\nCASE HVAC_MODE_SELECTOR OF\n    0: (* Auto *)\n        IF OCCUPANCY_DETECTED THEN\n            TempAdjustRaw := 0;\n        ELSE\n            IF ENERGY_SAVING_MODE THEN\n                TempAdjustRaw := 3;\n            ELSE\n                TempAdjustRaw := 2;\n            END_IF;\n        END_IF;\n    1: (* Comfort *)\n        IF OCCUPANCY_DETECTED THEN\n            TempAdjustRaw := 0;\n        ELSE\n            TempAdjustRaw := 1;\n        END_IF;\n    2: (* Economy *)\n        IF OCCUPANCY_DETECTED THEN\n            TempAdjustRaw := 0;\n        ELSE\n            TempAdjustRaw := 4;\n        END_IF;\n    3: (* Night *)\n        TempAdjustRaw := 4;\n    ELSE\n        TempAdjustRaw := 0;\nEND_CASE;\n\n(* K4: clamp to +/-4 degC. *)\nIF TempAdjustRaw > 4 THEN\n    TempAdjustLimited := 4;\nELSIF TempAdjustRaw < -4 THEN\n    TempAdjustLimited := -4;\nELSE\n    TempAdjustLimited := TempAdjustRaw;\nEND_IF;\n\n(* C10: first scan outputs are OFF and 0. Then normal calculation. *)\nIF NOT InitDone THEN\n    SUPPLY_FAN_RUN := FALSE;\n    TEMP_SETPOINT_ADJUST := 0;\n    InitDone := TRUE;\nELSE\n    SUPPLY_FAN_RUN := FanRunDelayed;\n    TEMP_SETPOINT_ADJUST := TempAdjustLimited;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.532,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 38.016,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 4,
+    "passed_ids": [
+      "P13-01",
+      "P13-02",
+      "P13-04",
+      "P13-06"
+    ],
+    "failures": [
+      {
+        "case_id": "P13-03",
+        "cycle": 1,
+        "signal": "TEMP_SETPOINT_ADJUST",
+        "expected": 4,
+        "actual": 0
+      },
+      {
+        "case_id": "P13-05",
+        "cycle": 1,
+        "signal": "TEMP_SETPOINT_ADJUST",
+        "expected": 3,
+        "actual": 0
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 15575,
+  "tag": "candidate_1"
+}

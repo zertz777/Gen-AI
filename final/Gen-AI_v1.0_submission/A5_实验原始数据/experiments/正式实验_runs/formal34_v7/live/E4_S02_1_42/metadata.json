@@ -1,0 +1,15 @@
+{
+  "execution_mode": "live",
+  "eligible_for_experiments": true,
+  "status": "completed",
+  "failure_reason": null,
+  "first_compile_status": "pass",
+  "selected_candidate": "candidate_1",
+  "semantic_warnings": [],
+  "degraded": false,
+  "environment_blockers": [],
+  "fingerprint": "377ad8735247159cd4ec4b1da884fbc3507df15be2ef699f7aebcf704a155dd2",
+  "seed_sent_to_api": false,
+  "tokens_estimate_upper_bound": 39429,
+  "tool_verify_status": "skipped"
+}

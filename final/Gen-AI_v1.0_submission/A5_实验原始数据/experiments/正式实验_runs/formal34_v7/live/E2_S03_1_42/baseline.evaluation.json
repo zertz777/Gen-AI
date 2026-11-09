@@ -1,0 +1,44 @@
+{
+  "source": "(*\n【修改说明】\n本次日志显示编译检查通过，但四个逐周期测试均在 cycle 1 失败：\nDriveA_Run 期望 TRUE，实际 FALSE。\n原因是此前增加了两个扫描周期的启动禁止逻辑。\n本次删除 StartupScans 和 StartupInhibit，保留输出变量的初始值；\n首次执行时，已复位、门关闭且无急停即允许两个区运行。\n保持外部接口、复位沿检测、复位锁存、B 区延时和急停优先逻辑。\n门打开的检测周期为延时起点；其后第 25 个扫描周期停止 B 区。\n门开期间不能启动原本停止的 B 区；门关闭也不能绕过复位锁存。\n\n【语义冲突与实现边界】\n1. C10 要求最初两个采样周期驱动停止且无报警，但所提供测试\n   要求 cycle 1 的 DriveA_Run 为 TRUE；若使用相同的输出采样\n   时点，两者冲突。本实现按照所提供测试取消启动禁止逻辑，\n   仅在功能块初始化时保持两区停止、无报警，不声称满足 C10。\n   需求 4 要求门开或急停当周期报警，也与 C10 在初始危险输入\n   下冲突。本实现优先危险报警，完整保留原始规约。\n2. 接口没有启动按钮，也没有 B 区动作完成信号。\n   ZoneAOccupied、ZoneBOccupied 的定义是区域内有人，不能暗中\n   将其解释为启动按钮或动作完成信号。\n   本实现不使用这两个输入推断动作完成，也不新增占用联锁；\n   B 区采用 500 ms 上限停止，不实现缺少信号的提前完成检测。\n   启动采用自动运行许可：已复位、门关闭且无急停时运行。\n   故无法实现或验证独立的启动按钮行为。\n3. 门关闭会立即停止尚在延时运行的 B 区，并等待有效复位沿；\n   门开期间不接受复位，急停期间也不接受复位。\n   若门关闭与复位上升沿在同一扫描被采样，则接受该复位。\n4. 急停同样清除已复位标志，解除后需要新的有效复位沿。\n5. C1b 的 F[0,1] 比文字的当周期停止宽松；\n   本实现采用更严格的当周期停止。\n   形式化条款旁的 K 编号与约束列表存在对应差异，原文保留。\n6. 用户提供的日志证明此前版本通过编译检查，但逐周期测试失败。\n   当前会话无可调用的执行工具，无法运行所提供的测试命令。\n   本次修改尚未重新编译或测试，不声称新版本功能已验证，\n   也不能从首个失败点推断其余周期均正确。\n\n【必留：需求原文】\n设备分 A、B 两个危险区，安全门打开时需要分级停机：A 区（靠近门）立即停，B 区（远端）允许走完当前动作再停。\n\n控制要求：\n1. DoorSwitch = TRUE（门打开）时，DriveA_Run 立即变为 FALSE；DriveB_Run 继续保持，直到 500 ms 延时到或 B 区动作完成。\n2. 门关闭（DoorSwitch = FALSE）后，必须由 ResetBtn 的上升沿确认，才允许重新启动两个区。\n3. EStop_NC = FALSE 时 A、B 两区同时立即停止，不受 500 ms 延时影响。\n4. 门打开或急停期间 AlarmLamp = TRUE。\n5. 未复位前按启动按钮无效（Status 保持 16#8301 待复位）。\n6. Status：16#0000 正常、16#8301 待复位、16#8302 门开、16#8303 急停。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）\n\n【必留：接口、初态、约束与数据告警】\n{\n  \"task_id\": \"S03\",\n  \"title\": \"安全门分级停机\",\n  \"io_table\": [\n    {\n      \"direction\": \"IN\",\n      \"name\": \"DoorSwitch\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"安全门，TRUE = 门开\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"ZoneAOccupied\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"A 区内有人\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"ZoneBOccupied\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"B 区内有人\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"ResetBtn\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"复位按钮（上升沿有效）\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"EStop_NC\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"急停常闭触点，TRUE = 正常\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"DriveA_Run\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"A 区驱动运行\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"DriveB_Run\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"B 区驱动运行\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"AlarmLamp\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"报警灯\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"Status\",\n      \"data_type\": \"WORD\",\n      \"description\": \"状态码\"\n    }\n  ],\n  \"initial_state\": \"DriveA_Run = FALSE；DriveB_Run = FALSE；AlarmLamp = FALSE；Status = 16#0000；延时计时器 = 0；已复位标志 = TRUE。\",\n  \"constraints\": [\n    \"K1 DoorSwitch 由 FALSE 变 TRUE 时，DriveA_Run 必须在同一周期内变为 FALSE。\",\n    \"K2 DriveB_Run 在门开后最多再保持 500 ms（或提前因动作完成而停）。\",\n    \"K3 门关闭后必须经过 ResetBtn 上升沿，两个区才允许重新启动。\",\n    \"K4 EStop_NC = FALSE 时两个区都立即停止，且优先于 500 ms 延时。\"\n  ],\n  \"semantic_warnings\": [],\n  \"warnings\": [],\n  \"missing_fields\": [],\n  \"dialect_requirements\": [],\n  \"type_origins\": {}\n}\n\n【必留：完整形式化规约；有界时序以扫描周期计】\n# task: S03\n# meta: medium / A 开关量联锁\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(!EStop_NC -> (!DriveA_Run && !DriveB_Run))    -- 急停当周期两区都停（优先于分级延时）（K3）\nC1b: G(DoorSwitch -> F[0,1](!DriveA_Run))    -- 门打开后 A 区当周期必须停（分级停机的高等级侧）（K1）\nC5: G(DoorSwitch -> F[0,25](!DriveB_Run))    -- 门打开后 B 区 500 ms 内必须停（低等级侧允许走完当前动作）（K2）\nC2: G(DriveA_Run -> (!DoorSwitch && EStop_NC))    -- A 区运行的许可：门关闭且无急停（K3）\nC6: G(AlarmLamp -> (AlarmLamp W !DoorSwitch))    -- 门关闭后报警才允许撤销（不得随门抖动闪烁）（K4）\nC10: G[0,1](!DriveA_Run && !DriveB_Run && !AlarmLamp)    -- 上电首周期两区都不运行、无报警（初态）\n*)\n\nFUNCTION_BLOCK FB_S03\nVAR_INPUT\n    DoorSwitch : BOOL;\n    ZoneAOccupied : BOOL;\n    ZoneBOccupied : BOOL;\n    ResetBtn : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    DriveA_Run : BOOL := FALSE;\n    DriveB_Run : BOOL := FALSE;\n    AlarmLamp : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    ResetConfirmed : BOOL := TRUE;\n    PreviousResetBtn : BOOL := FALSE;\n    PreviousDoorSwitch : BOOL := FALSE;\n    ResetRisingEdge : BOOL := FALSE;\n    DoorRisingEdge : BOOL := FALSE;\n    BStopPending : BOOL := FALSE;\n    BDelayScans : UINT := UINT#0;\nEND_VAR\n\n(* 先采样边沿；包括危险期间的按钮变化，避免解除危险后产生假边沿。 *)\nResetRisingEdge := ResetBtn AND NOT PreviousResetBtn;\nDoorRisingEdge := DoorSwitch AND NOT PreviousDoorSwitch;\n\n(* 急停、门开均锁存待复位；有效复位必须发生在安全条件下。 *)\nIF NOT EStop_NC THEN\n    ResetConfirmed := FALSE;\nELSIF DoorSwitch THEN\n    ResetConfirmed := FALSE;\nELSIF ResetRisingEdge THEN\n    ResetConfirmed := TRUE;\nEND_IF;\n\n(* 急停拥有最高优先级，不能保留或恢复此前的 B 区延时。 *)\nIF NOT EStop_NC THEN\n    DriveA_Run := FALSE;\n    DriveB_Run := FALSE;\n    BStopPending := FALSE;\n    BDelayScans := UINT#0;\n\nELSIF DoorSwitch THEN\n    DriveA_Run := FALSE;\n\n    IF DoorRisingEdge THEN\n        (* 仅允许门打开之前已在运行的 B 区继续当前动作。 *)\n        BStopPending := DriveB_Run;\n        BDelayScans := UINT#0;\n    ELSIF BStopPending THEN\n        IF BDelayScans < UINT#25 THEN\n            BDelayScans := BDelayScans + UINT#1;\n        END_IF;\n    END_IF;\n\n    IF BDelayScans >= UINT#25 THEN\n        BStopPending := FALSE;\n    END_IF;\n\n    DriveB_Run := BStopPending;\n\nELSE\n    (* 门关闭取消延时，但不能自动清除待复位状态。 *)\n    BStopPending := FALSE;\n    BDelayScans := UINT#0;\n    DriveA_Run := ResetConfirmed;\n    DriveB_Run := ResetConfirmed;\nEND_IF;\n\n(* 危险报警优先于存在冲突的上电无报警条款。 *)\nAlarmLamp := DoorSwitch OR NOT EStop_NC;\n\n(* 状态优先级：急停 > 门开 > 待复位 > 正常。 *)\nIF NOT EStop_NC THEN\n    Status := WORD#16#8303;\nELSIF DoorSwitch THEN\n    Status := WORD#16#8302;\nELSIF NOT ResetConfirmed THEN\n    Status := WORD#16#8301;\nELSE\n    Status := WORD#16#0000;\nEND_IF;\n\nPreviousResetBtn := ResetBtn;\nPreviousDoorSwitch := DoorSwitch;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 22.921,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 4,
+    "passed": 3,
+    "passed_ids": [
+      "S03-01",
+      "S03-02",
+      "S03-04"
+    ],
+    "failures": [
+      {
+        "case_id": "S03-03",
+        "cycle": 3,
+        "signal": "DriveB_Run",
+        "expected": false,
+        "actual": true
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

@@ -1,0 +1,70 @@
+{
+  "source": "FUNCTION_BLOCK FB_S09\nVAR_INPUT\n    StartCIP : BOOL;\n    StepDone : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    WaterValve : BOOL := FALSE;\n    LyeValve : BOOL := FALSE;\n    RinseValve : BOOL := FALSE;\n    PumpRun : BOOL := FALSE;\n    StepNo : INT := 0;\n    Status : WORD := 16#0000;\nEND_VAR\nVAR\n    StartCIPLast : BOOL := FALSE;\n    StepDoneLast : BOOL := FALSE;\n    StartEdge : BOOL := FALSE;\n    DoneEdge : BOOL := FALSE;\n    StepTicks : DINT := 0;\n    InitialScans : INT := 0;\n    PendingStart : BOOL := FALSE;\nEND_VAR\n\n(*\n    待审语义冲突，不能声明全部规约已满足：\n    1. 原文仅在 Step 2 明示 StepDone 提前结束；K4 则允许每步\n       提前结束，并与原文固定水洗、清水时长冲突。\n       本实现保留原文时长，仅 Step 2 接受 StepDone 上升沿。\n    2. C5 使用 StartCIP 电平且未限制急停，与上升沿启动、\n       急停流程作废且必须重新启动冲突。持续急停时 C1/K5 优先，\n       不可能同时满足 C5。\n    3. K1 的正常步序与 K5 的中途直接归零冲突；\n       急停及非法步序处理优先于正常步序。\n    4. C10 的 G[0,1] 覆盖初始两次扫描，而文字称首周期。\n       本实现按区间保留两次扫描的空闲输出；期间正常启动\n       上升沿暂存，急停立即取消暂存。\n    每次调用按 20 ms 计时；未提供编译或逐周期验证证据。\n*)\n\nStartEdge := StartCIP AND NOT StartCIPLast;\nDoneEdge := StepDone AND NOT StepDoneLast;\n\n(* 所有扫描均更新边沿历史，急停期间的启动沿不得延后生效。 *)\nStartCIPLast := StartCIP;\nStepDoneLast := StepDone;\n\n(* 先关闭输出，最后仅根据有效步序生成互斥输出。 *)\nWaterValve := FALSE;\nLyeValve := FALSE;\nRinseValve := FALSE;\nPumpRun := FALSE;\n\nIF NOT EStop_NC THEN\n    StepNo := 0;\n    StepTicks := 0;\n    PendingStart := FALSE;\n    Status := 16#8902;\n\n    IF InitialScans < 2 THEN\n        InitialScans := InitialScans + 1;\n    END_IF;\n\nELSIF (StepNo < 0) OR (StepNo > 3) THEN\n    StepNo := 0;\n    StepTicks := 0;\n    PendingStart := FALSE;\n    Status := 16#8901;\n\n    IF InitialScans < 2 THEN\n        InitialScans := InitialScans + 1;\n    END_IF;\n\nELSIF InitialScans < 2 THEN\n    StepNo := 0;\n    StepTicks := 0;\n    Status := 16#0000;\n    PendingStart := PendingStart OR StartEdge;\n    InitialScans := InitialScans + 1;\n\nELSE\n    Status := 16#0000;\n\n    CASE StepNo OF\n        0:\n            StepTicks := 0;\n            IF StartEdge OR PendingStart THEN\n                StepNo := 1;\n            END_IF;\n            PendingStart := FALSE;\n\n        1:\n            PendingStart := FALSE;\n            IF StepTicks < 1500 THEN\n                StepTicks := StepTicks + 1;\n            END_IF;\n            IF StepTicks >= 1500 THEN\n                StepNo := 2;\n                StepTicks := 0;\n            END_IF;\n\n        2:\n            PendingStart := FALSE;\n            IF StepTicks < 3000 THEN\n                StepTicks := StepTicks + 1;\n            END_IF;\n            IF DoneEdge OR (StepTicks >= 3000) THEN\n                StepNo := 3;\n                StepTicks := 0;\n            END_IF;\n\n        3:\n            PendingStart := FALSE;\n            IF StepTicks < 1500 THEN\n                StepTicks := StepTicks + 1;\n            END_IF;\n            IF StepTicks >= 1500 THEN\n                StepNo := 0;\n                StepTicks := 0;\n            END_IF;\n    END_CASE;\n\n    CASE StepNo OF\n        1:\n            WaterValve := TRUE;\n        2:\n            LyeValve := TRUE;\n        3:\n            RinseValve := TRUE;\n    END_CASE;\n\n    PumpRun := WaterValve OR LyeValve OR RinseValve;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.265,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 22.375,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 1,
+    "passed_ids": [
+      "S09-05"
+    ],
+    "failures": [
+      {
+        "case_id": "S09-01",
+        "cycle": 1,
+        "signal": "WaterValve",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S09-02",
+        "cycle": 1,
+        "signal": "WaterValve",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S09-03",
+        "cycle": 1,
+        "signal": "WaterValve",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S09-04",
+        "cycle": 1,
+        "signal": "WaterValve",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S09-06",
+        "cycle": 1,
+        "signal": "WaterValve",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3126,
+  "tag": "candidate_2"
+}

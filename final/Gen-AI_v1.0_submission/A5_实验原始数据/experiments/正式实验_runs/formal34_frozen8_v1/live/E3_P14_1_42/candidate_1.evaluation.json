@@ -1,0 +1,153 @@
+{
+  "source": "FUNCTION_BLOCK FB_P14\nVAR_INPUT\n    ipText : STRING(254);\nEND_VAR\nVAR_OUTPUT\n    ipValue : UDINT;\nEND_VAR\nVAR\n    i : INT;\n    len : INT;\n    ch : STRING(1);\n    valid : BOOL;\n    segIndex : INT;\n    digitCount : INT;\n    segValue : UDINT;\n    seg0 : UDINT;\n    seg1 : UDINT;\n    seg2 : UDINT;\n    seg3 : UDINT;\n    digit : UDINT;\n    result : UDINT;\nEND_VAR\n\nipValue := UDINT#0;\nvalid := TRUE;\nsegIndex := 0;\ndigitCount := 0;\nsegValue := UDINT#0;\nseg0 := UDINT#0;\nseg1 := UDINT#0;\nseg2 := UDINT#0;\nseg3 := UDINT#0;\nresult := UDINT#0;\n\nlen := LEN(ipText);\ni := 1;\n\nWHILE (i <= len) AND valid DO\n    ch := MID(ipText, 1, i);\n\n    IF (ch = '0') OR (ch = '1') OR (ch = '2') OR (ch = '3') OR (ch = '4') OR\n       (ch = '5') OR (ch = '6') OR (ch = '7') OR (ch = '8') OR (ch = '9') THEN\n        digitCount := digitCount + 1;\n\n        IF ch = '0' THEN\n            digit := UDINT#0;\n        ELSIF ch = '1' THEN\n            digit := UDINT#1;\n        ELSIF ch = '2' THEN\n            digit := UDINT#2;\n        ELSIF ch = '3' THEN\n            digit := UDINT#3;\n        ELSIF ch = '4' THEN\n            digit := UDINT#4;\n        ELSIF ch = '5' THEN\n            digit := UDINT#5;\n        ELSIF ch = '6' THEN\n            digit := UDINT#6;\n        ELSIF ch = '7' THEN\n            digit := UDINT#7;\n        ELSIF ch = '8' THEN\n            digit := UDINT#8;\n        ELSE\n            digit := UDINT#9;\n        END_IF;\n\n        segValue := segValue * UDINT#10 + digit;\n        IF segValue > UDINT#255 THEN\n            valid := FALSE;\n        END_IF;\n\n    ELSIF ch = '.' THEN\n        IF (digitCount = 0) OR (segIndex >= 3) THEN\n            valid := FALSE;\n        ELSE\n            CASE segIndex OF\n                0: seg0 := segValue;\n                1: seg1 := segValue;\n                2: seg2 := segValue;\n            END_CASE;\n            segIndex := segIndex + 1;\n            segValue := UDINT#0;\n            digitCount := 0;\n        END_IF;\n\n    ELSE\n        valid := FALSE;\n    END_IF;\n\n    i := i + 1;\nEND_WHILE;\n\nIF valid THEN\n    IF (digitCount = 0) OR (segIndex <> 3) THEN\n        valid := FALSE;\n    ELSE\n        seg3 := segValue;\n        result := seg0 * UDINT#16777216 +\n                  seg1 * UDINT#65536 +\n                  seg2 * UDINT#256 +\n                  seg3;\n    END_IF;\nEND_IF;\n\nIF valid THEN\n    ipValue := result;\nELSE\n    ipValue := UDINT#0;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "fail",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 3,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_1\\fast\\source.st:3-19..3-20: error: ';' missing at end of input variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_1\\fast\\source.st:3-19..3-20: error: ';' missing at end of input variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 3,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_1\\fast\\source.st:3-20..3-24: error: invalid input variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_1\\fast\\source.st:3-20..3-24: error: invalid input variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 10,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_1\\fast\\source.st:10-5..10-13: error: invalid variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_1\\fast\\source.st:10-5..10-13: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 11,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_1\\fast\\source.st:11-15..11-16: error: ';' missing at end of variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_1\\fast\\source.st:11-15..11-16: error: ';' missing at end of variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 11,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_1\\fast\\source.st:11-16..11-18: error: invalid variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_1\\fast\\source.st:11-16..11-18: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 35,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_1\\fast\\source.st:35-1..35-6: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_1\\fast\\source.st:35-1..35-6: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 38,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_1\\fast\\source.st:38-11..38-13: error: no expression defined after '<=' in ST expression.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P14_1_42\\tools\\candidate_1\\fast\\source.st:38-11..38-13: error: no expression defined after '<=' in ST expression."
+        }
+      ],
+      "elapsed_s": 0.281,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 35,
+          "message": "不能将类型 '未知的类型: 'LEN(ipText)'' 转换为类型'INT'",
+          "raw": "不能将类型 '未知的类型: 'LEN(ipText)'' 转换为类型'INT'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 35,
+          "message": "需要程序名、函数或功能块实例替代 'LEN'",
+          "raw": "需要程序名、函数或功能块实例替代 'LEN'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 39,
+          "message": "不能将类型 '未知的类型: 'MID(ipText, 1, i)'' 转换为类型'STRING(1)'",
+          "raw": "不能将类型 '未知的类型: 'MID(ipText, 1, i)'' 转换为类型'STRING(1)'"
+        },
+        {
+          "code": "E_UNDECLARED",
+          "severity": "error",
+          "line": 39,
+          "message": "没有定义标识符'MID' ",
+          "raw": "没有定义标识符'MID' "
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 39,
+          "message": "需要程序名、函数或功能块实例替代 'MID'",
+          "raw": "需要程序名、函数或功能块实例替代 'MID'"
+        }
+      ],
+      "elapsed_s": 34.719,
+      "evidence_kind": "live"
+    },
+    "errors": [
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 35,
+        "message": "不能将类型 '未知的类型: 'LEN(ipText)'' 转换为类型'INT'",
+        "raw": "不能将类型 '未知的类型: 'LEN(ipText)'' 转换为类型'INT'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 35,
+        "message": "需要程序名、函数或功能块实例替代 'LEN'",
+        "raw": "需要程序名、函数或功能块实例替代 'LEN'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 39,
+        "message": "不能将类型 '未知的类型: 'MID(ipText, 1, i)'' 转换为类型'STRING(1)'",
+        "raw": "不能将类型 '未知的类型: 'MID(ipText, 1, i)'' 转换为类型'STRING(1)'"
+      },
+      {
+        "code": "E_UNDECLARED",
+        "severity": "error",
+        "line": 39,
+        "message": "没有定义标识符'MID' ",
+        "raw": "没有定义标识符'MID' "
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 39,
+        "message": "需要程序名、函数或功能块实例替代 'MID'",
+        "raw": "需要程序名、函数或功能块实例替代 'MID'"
+      }
+    ],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "skipped",
+    "total": 0,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": []
+  },
+  "repair_rounds": 0,
+  "token_count": 11713,
+  "tag": "candidate_1"
+}

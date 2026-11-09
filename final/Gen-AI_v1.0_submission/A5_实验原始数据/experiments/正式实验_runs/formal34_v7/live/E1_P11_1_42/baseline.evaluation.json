@@ -1,0 +1,53 @@
+{
+  "source": "FUNCTION_BLOCK FB_P11\nVAR_INPUT\n    Mode : BOOL;            (* 0=手动, 1=自动 *)\n    ForwardButton : BOOL;   (* 手动正转按钮 *)\n    ReverseButton : BOOL;   (* 手动反转按钮 *)\n    SensorA : BOOL;         (* A站到位 *)\n    SensorB : BOOL;         (* B站到位 *)\n    SensorC : BOOL;         (* C站到位 *)\n    ButtonA : BOOL;         (* A站完成按钮 *)\n    ButtonB : BOOL;         (* B站完成按钮 *)\n    ButtonC : BOOL;         (* C站完成按钮 *)\nEND_VAR\nVAR_OUTPUT\n    MotorForward : BOOL;    (* 电机正转 *)\n    MotorReverse : BOOL;    (* 电机反转 *)\n    CompletionLight : BOOL; (* 完成指示灯 *)\nEND_VAR\nVAR\n    (* 自动模式工位状态机（K2：只能 A->B->C，不得跳站/回流）\n       0 = 等待A站到位并触发完成按钮\n       1 = A 到 B 输送中\n       2 = 等待B站到位并触发完成按钮\n       3 = B 到 C 输送中\n       4 = 等待C站完成按钮 / 产品离开C站 *)\n    State : INT := 0;\n    (* C站完成锁存（K4：完成后置位，产品离开C站时复位） *)\n    C_Complete : BOOL := FALSE;\nEND_VAR\n\n(* ================= 电机与工位推进 ================= *)\nIF Mode THEN\n    (* -------- 自动模式（K2/K3：逐站推进，可正转不可反转） -------- *)\n    MotorForward := FALSE;\n    MotorReverse := FALSE;\n    CASE State OF\n        0:  (* 等待A站：SensorA + ButtonA 缺一不可 *)\n            IF SensorA AND ButtonA THEN\n                MotorForward := TRUE;\n                State := 1;\n            END_IF;\n        1:  (* A->B 输送中，到达B站即停止 *)\n            IF SensorB THEN\n                State := 2;\n            ELSE\n                MotorForward := TRUE;\n            END_IF;\n        2:  (* 等待B站：SensorB + ButtonB 缺一不可 *)\n            IF SensorB AND ButtonB THEN\n                MotorForward := TRUE;\n                State := 3;\n            END_IF;\n        3:  (* B->C 输送中，到达C站即停止 *)\n            IF SensorC THEN\n                State := 4;\n            ELSE\n                MotorForward := TRUE;\n            END_IF;\n        4:  (* 等待C站完成：SensorC + ButtonC *)\n            IF SensorC AND ButtonC THEN\n                C_Complete := TRUE;\n            END_IF;\n        ELSE\n            State := 0;\n    END_CASE;\nELSE\n    (* -------- 手动模式（K1：正反转互锁；正转优先，反转被正转封锁） --------\n       - 两者同时按下：MotorForward=TRUE，MotorReverse=FALSE（仍满足 K1/C4/C2）\n       - 单独按下：对应方向动作，另一方向为 FALSE *)\n    MotorForward := ForwardButton;\n    MotorReverse := ReverseButton AND NOT ForwardButton;\nEND_IF;\n\n(* ============ C站产品离开：复位完成锁存并回到等待A站 ============ *)\nIF NOT SensorC THEN\n    C_Complete := FALSE;\n    IF State = 4 THEN\n        State := 0;\n    END_IF;\nEND_IF;\n\n(* ================= 完成灯 =================\n   C3: 点灯必须以 SensorC 为真为前提\n   C6: 点亮后保持到产品离开C站（SensorC 变假） *)\nCompletionLight := SensorC AND C_Complete;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.218,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 14.266,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 7,
+    "passed": 5,
+    "passed_ids": [
+      "P11-01",
+      "P11-02",
+      "P11-03",
+      "P11-05",
+      "P11-06"
+    ],
+    "failures": [
+      {
+        "case_id": "P11-04",
+        "cycle": 2,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P11-07",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": false,
+        "actual": true
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

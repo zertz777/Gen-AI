@@ -1,0 +1,64 @@
+{
+  "source": "FUNCTION_BLOCK FB_S01\nVAR_INPUT\n    StartBtn : BOOL;\n    LeftPartPresent : BOOL;\n    RightPartPresent : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    ClampLeft : BOOL;\n    ClampRight : BOOL;\n    Busy : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    StartBtnLast : BOOL := FALSE;\n    StartPulse : BOOL := FALSE;\n    FirstScan : BOOL := TRUE;\n    BothRequest : BOOL := FALSE;\nEND_VAR\n\n(* S01 semantic note:\n   Requirement 2 wording mixes \"auto yield\" and \"later station waits\".\n   This implementation treats a rising edge as a request for the part-present side.\n   If the other side is already clamped, it yields in the same scan before the\n   requested side clamps. If both sides are part-present and neither is clamped,\n   both are considered requested simultaneously and no clamp is made; Status is 16#8101.\n*)\n\nIF FirstScan THEN\n    ClampLeft := FALSE;\n    ClampRight := FALSE;\n    Busy := FALSE;\n    IF NOT EStop_NC THEN\n        Status := 16#8102;\n    ELSE\n        Status := 16#0000;\n    END_IF;\n    StartBtnLast := StartBtn;\n    FirstScan := FALSE;\nELSE\n    StartPulse := StartBtn AND NOT StartBtnLast;\n\n    IF NOT EStop_NC THEN\n        (* K4 / C1: emergency stop has highest priority. *)\n        ClampLeft := FALSE;\n        ClampRight := FALSE;\n        Busy := FALSE;\n        Status := 16#8102;\n    ELSE\n        (* K2 / C2 / C2b: a clamp may not remain if the corresponding part is absent. *)\n        IF NOT LeftPartPresent THEN\n            ClampLeft := FALSE;\n        END_IF;\n        IF NOT RightPartPresent THEN\n            ClampRight := FALSE;\n        END_IF;\n\n        (* K1 / C4: final interlock check before edge processing. *)\n        IF ClampLeft AND ClampRight THEN\n            ClampLeft := FALSE;\n            ClampRight := FALSE;\n            Status := 16#8101;\n        ELSE\n            Status := 16#0000;\n\n            IF StartPulse THEN\n                BothRequest := LeftPartPresent AND RightPartPresent\n                               AND NOT ClampLeft AND NOT ClampRight;\n\n                IF BothRequest THEN\n                    (* Two sides requested at the same rising edge. *)\n                    Status := 16#8101;\n                ELSE\n                    IF LeftPartPresent AND RightPartPresent THEN\n                        (* Both parts present; one side already clamped, so the other side\n                           yields/alternates to the requested other side. *)\n                        IF ClampLeft AND NOT ClampRight THEN\n                            ClampLeft := FALSE;\n                            ClampRight := TRUE;\n                        ELSIF ClampRight AND NOT ClampLeft THEN\n                            ClampRight := FALSE;\n                            ClampLeft := TRUE;\n                        END_IF;\n                    ELSIF LeftPartPresent AND NOT RightPartPresent THEN\n                        (* Left requested; right must yield. *)\n                        ClampRight := FALSE;\n                        ClampLeft := TRUE;\n                    ELSIF RightPartPresent AND NOT LeftPartPresent THEN\n                        (* Right requested; left must yield. *)\n                        ClampLeft := FALSE;\n                        ClampRight := TRUE;\n                    END_IF;\n                END_IF;\n            END_IF;\n        END_IF;\n\n        (* Re-enforce part-present requirements after edge actions. *)\n        IF NOT LeftPartPresent THEN\n            ClampLeft := FALSE;\n        END_IF;\n        IF NOT RightPartPresent THEN\n            ClampRight := FALSE;\n        END_IF;\n\n        (* K1 / C4: never allow both clamps true at end of scan. *)\n        IF ClampLeft AND ClampRight THEN\n            ClampLeft := FALSE;\n            ClampRight := FALSE;\n            Status := 16#8101;\n        END_IF;\n\n        (* Busy reflects that a station is currently clamped. *)\n        Busy := ClampLeft OR ClampRight;\n    END_IF;\n\n    StartBtnLast := StartBtn;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.235,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 2,
+    "passed_ids": [
+      "S01-03",
+      "S01-06"
+    ],
+    "failures": [
+      {
+        "case_id": "S01-01",
+        "cycle": 1,
+        "signal": "ClampLeft",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S01-02",
+        "cycle": 1,
+        "signal": "ClampRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S01-04",
+        "cycle": 1,
+        "signal": "ClampLeft",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S01-05",
+        "cycle": 1,
+        "signal": "Status",
+        "expected": 33025,
+        "actual": 0
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 22337,
+  "tag": "candidate_2"
+}

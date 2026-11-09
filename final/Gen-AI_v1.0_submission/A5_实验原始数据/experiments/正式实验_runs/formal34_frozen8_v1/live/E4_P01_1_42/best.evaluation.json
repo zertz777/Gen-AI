@@ -1,0 +1,176 @@
+{
+  "source": "FUNCTION_BLOCK FB_P01\nVAR_INPUT\n    bottleSensor : BOOL;\n    cleaningConfirmButton : BOOL;\n    fillingConfirmButton : BOOL;\n    cappingConfirmButton : BOOL;\n    packingConfirmButton : BOOL;\n    finishedButton : BOOL;\nEND_VAR\nVAR_OUTPUT\n    Pump_Motor : BOOL := FALSE;\n    Filling_Valve : BOOL := FALSE;\n    Capping_Machine : BOOL := FALSE;\n    Packing_Machine : BOOL := FALSE;\n    Completion_Light : BOOL := FALSE;\nEND_VAR\nVAR\n    initialized : BOOL := FALSE;\n    step : INT := 0;\n\n    previousCleaning : BOOL := FALSE;\n    previousFilling : BOOL := FALSE;\n    previousCapping : BOOL := FALSE;\n    previousPacking : BOOL := FALSE;\n\n    cleaningEdge : BOOL;\n    fillingEdge : BOOL;\n    cappingEdge : BOOL;\n    packingEdge : BOOL;\nEND_VAR\n\n(* 每次调用为一个20 ms扫描。\n   工步：0等待、1清洗、2灌装、3封盖、4包装、5完成。\n   C3中的W公式本身不表达历史确认；顺序要求由工步转换落实。\n   未提供真实编译或逐周期测试结果。 *)\n\ncleaningEdge := cleaningConfirmButton AND NOT previousCleaning;\nfillingEdge := fillingConfirmButton AND NOT previousFilling;\ncappingEdge := cappingConfirmButton AND NOT previousCapping;\npackingEdge := packingConfirmButton AND NOT previousPacking;\n\n(* 每拍先关闭全部输出，再按唯一工步生成输出。 *)\nPump_Motor := FALSE;\nFilling_Valve := FALSE;\nCapping_Machine := FALSE;\nPacking_Machine := FALSE;\nCompletion_Light := FALSE;\n\nIF NOT initialized THEN\n    (* C9：首次调用全部输出保持FALSE，不在上电当拍启动。 *)\n    initialized := TRUE;\n    step := 0;\n\nELSIF finishedButton THEN\n    (* 最高优先级，电平有效；按住期间不启动下一瓶。 *)\n    step := 0;\n\nELSE\n    (* 每拍最多一次工步转换；非当前工步的确认不缓存。 *)\n    CASE step OF\n        0:\n            IF bottleSensor THEN\n                step := 1;\n            END_IF;\n\n        1:\n            (* 瓶子离开时保持清洗工步，暂停期间不接受完成确认。 *)\n            IF bottleSensor AND cleaningEdge THEN\n                step := 2;\n            END_IF;\n\n        2:\n            IF fillingEdge THEN\n                step := 3;\n            END_IF;\n\n        3:\n            IF cappingEdge THEN\n                step := 4;\n            END_IF;\n\n        4:\n            IF packingEdge THEN\n                step := 5;\n            END_IF;\n\n        5:\n            (* 完成状态保持，直至finishedButton有效。 *)\n\n    ELSE\n        (* 非法内部状态安全回到等待，当前拍不启动。 *)\n        step := 0;\n    END_CASE;\n\n    CASE step OF\n        1:\n            Pump_Motor := bottleSensor;\n        2:\n            Filling_Valve := TRUE;\n        3:\n            Capping_Machine := TRUE;\n        4:\n            Packing_Machine := TRUE;\n        5:\n            Completion_Light := TRUE;\n    END_CASE;\nEND_IF;\n\n(* 首拍及复位期间同样更新历史，避免按住按钮导致重复推进。 *)\npreviousCleaning := cleaningConfirmButton;\npreviousFilling := fillingConfirmButton;\npreviousCapping := cappingConfirmButton;\npreviousPacking := packingConfirmButton;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 19,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:19-5..19-19: error: invalid variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:19-5..19-19: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 52,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:52-5..52-8: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:52-5..52-8: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 56,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:56-5..56-8: error: invalid statement list in 'ELSEIF' statement of ST 'IF' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:56-5..56-8: error: invalid statement list in 'ELSEIF' statement of ST 'IF' statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 52,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:52-14..56-8: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:52-14..56-8: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 63,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:63-17..63-20: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:63-17..63-20: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 69,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:69-17..69-20: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:69-17..69-20: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 74,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:74-17..74-20: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:74-17..74-20: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 79,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:79-17..79-20: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:79-17..79-20: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 84,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:84-17..84-20: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:84-17..84-20: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 90,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:90-5..90-8: error: invalid statement in case element of ST 'CASE' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:90-5..90-8: error: invalid statement in case element of ST 'CASE' statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 92,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:92-9..92-12: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:92-9..92-12: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 60,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:60-10..60-13: error: invalid test expression defined for ST 'CASE' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:60-10..60-13: error: invalid test expression defined for ST 'CASE' statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 95,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:95-10..95-13: error: invalid test expression defined for ST 'CASE' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P01_1_42\\tools\\candidate_3\\fast\\source.st:95-10..95-13: error: invalid test expression defined for ST 'CASE' statement."
+        }
+      ],
+      "elapsed_s": 0.281,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 35.375,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 8,
+    "passed": 1,
+    "passed_ids": [
+      "P01-07"
+    ],
+    "failures": [
+      {
+        "case_id": "P01-01",
+        "cycle": 1,
+        "signal": "Pump_Motor",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P01-02",
+        "cycle": 1,
+        "signal": "Pump_Motor",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P01-03",
+        "cycle": 1,
+        "signal": "Pump_Motor",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P01-04",
+        "cycle": 1,
+        "signal": "Pump_Motor",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P01-05",
+        "cycle": 1,
+        "signal": "Pump_Motor",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P01-06",
+        "cycle": 1,
+        "signal": "Pump_Motor",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P01-08",
+        "cycle": 1,
+        "signal": "Pump_Motor",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 2992,
+  "tag": "candidate_3"
+}

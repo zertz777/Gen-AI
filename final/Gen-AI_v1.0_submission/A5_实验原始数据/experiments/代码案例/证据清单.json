@@ -1,0 +1,46 @@
+[
+  {
+    "run_id": "E1_P02_1_42",
+    "label": "Aider：P02通过",
+    "original_source": "E:\\wttttt\\组员3_正式实验提交包_精简版_v1.1\\正式实验_runs\\formal34_v7\\live\\E1_P02_1_42\\final.st",
+    "source_sha256": "5092598febfe8f2750a6fc15d18b6c865c1f7ec8502bca9a5867a95c79ca0a39",
+    "result_sha256": "bba30f9f301079d5997fb37badeecfd668794837fd5e17066b52f5d253a9e3ab",
+    "final_status": "passed",
+    "compile_status": "pass",
+    "test": "6/6",
+    "excerpt_lines": "30-49"
+  },
+  {
+    "run_id": "E3_P02_1_42",
+    "label": "自研：P02通过",
+    "original_source": "E:\\wttttt\\组员3_正式实验提交包_精简版_v1.1\\正式实验_runs\\formal34_v6\\live\\E3_P02_1_42\\final.st",
+    "source_sha256": "dfa187e58ef20e33279656f07c2a79357041a37a39b6a54e475f41cdc78d541e",
+    "result_sha256": "804588339edf2f3487a9b558200acbd6eb973091f05ed51d167b9af8cbfee333",
+    "final_status": "passed",
+    "compile_status": "pass",
+    "test": "6/6",
+    "excerpt_lines": "31-49"
+  },
+  {
+    "run_id": "E1_S10_1_42",
+    "label": "Aider：S10通过",
+    "original_source": "E:\\wttttt\\组员3_正式实验提交包_精简版_v1.1\\正式实验_runs\\formal34_v7\\live\\E1_S10_1_42\\final.st",
+    "source_sha256": "cf26e269fea213cb598a4753fc4fdba53df2a4a9598e6380c4e2e898cc8d3d80",
+    "result_sha256": "e60f7fc6d52d7883e85f9e6cc6eaa1b5b73361893cbef8388389784ead0cc1fc",
+    "final_status": "passed",
+    "compile_status": "pass",
+    "test": "6/6",
+    "excerpt_lines": "33-53"
+  },
+  {
+    "run_id": "E3_P04_1_42",
+    "label": "自研：P04预算终止",
+    "original_source": "E:\\wttttt\\组员3_正式实验提交包_精简版_v1.1\\正式实验_runs\\formal34_v6\\live\\E3_P04_1_42\\final.st",
+    "source_sha256": "c7c5f9f73397f654f96def1d77f689f333fa0539366ecf2edb1a790656e6f79f",
+    "result_sha256": "0e9ec389c5ddb7d2b77c413b3673360cad1d27247d0aaf54a37b7ab9dd585c27",
+    "final_status": "best-effort:budget",
+    "compile_status": "pass",
+    "test": "2/7",
+    "excerpt_lines": "44-64"
+  }
+]

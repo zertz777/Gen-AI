@@ -1,0 +1,155 @@
+{
+  "source": "FUNCTION_BLOCK FB_P18\nVAR_INPUT\n    enqueue : BOOL;\n    dequeue : BOOL;\n    reset : BOOL;\nEND_VAR\nVAR_OUTPUT\n    elementCount : DINT := 0;\n    status : WORD := WORD#16#0000;\nEND_VAR\nVAR_IN_OUT\n    item : INT;\n    buffer : ARRAY[*] OF INT;\nEND_VAR\nVAR\n    prevEnqueue : BOOL := FALSE;\n    prevDequeue : BOOL := FALSE;\n    head : DINT := 0;\n    tail : DINT := 0;\n    count : DINT := 0;\n    capacity : DINT;\n    lowerBound : DINT;\n    idx : DINT;\nEND_VAR\n\n// Derive queue capacity from the actual length of the caller-supplied buffer\ncapacity := UPPER_BOUND(buffer, 1) - LOWER_BOUND(buffer, 1) + 1;\nlowerBound := LOWER_BOUND(buffer, 1);\n\n// Reset takes priority over enqueue and dequeue\nIF reset THEN\n    head := 0;\n    tail := 0;\n    count := 0;\n    elementCount := 0;\n    status := WORD#16#0000;\nELSIF enqueue AND NOT prevEnqueue THEN\n    IF count >= capacity THEN\n        status := WORD#16#8002; // enqueue rejected: queue full\n    ELSE\n        idx := lowerBound + tail;\n        buffer[idx] := item;\n        tail := tail + 1;\n        IF tail >= capacity THEN\n            tail := 0;\n        END_IF;\n        count := count + 1;\n        status := WORD#16#0000;\n    END_IF;\n    elementCount := count;\nELSIF dequeue AND NOT prevDequeue THEN\n    IF count <= 0 THEN\n        status := WORD#16#8001; // dequeue rejected: queue empty\n    ELSE\n        idx := lowerBound + head;\n        item := buffer[idx];\n        head := head + 1;\n        IF head >= capacity THEN\n            head := 0;\n        END_IF;\n        count := count - 1;\n        status := WORD#16#0000;\n    END_IF;\n    elementCount := count;\nELSE\n    elementCount := count;\n    status := WORD#16#0000;\nEND_IF;\n\n// Update edge detection memory for next invocation\nprevEnqueue := enqueue;\nprevDequeue := dequeue;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 13,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:13-20..13-20: error: invalid subrange list defined in array specification.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:13-20..13-20: error: invalid subrange list defined in array specification."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 26,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:26-2..27-8: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:26-2..27-8: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 27,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:27-23..27-24: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:27-23..27-24: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 27,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:27-24..27-63: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:27-24..27-63: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 28,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:28-25..28-26: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:28-25..28-26: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 28,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:28-26..28-36: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:28-26..28-36: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 30,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:30-1..32-8: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:30-1..32-8: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 37,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:37-1..39-14: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:37-1..39-14: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 39,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:39-33..41-11: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:39-33..41-11: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 49,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:49-5..49-10: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:49-5..49-10: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 51,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:51-1..53-14: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:51-1..53-14: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 53,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:53-33..55-11: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:53-33..55-11: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 63,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:63-5..63-10: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:63-5..63-10: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 65,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:65-1..66-16: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:65-1..66-16: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 68,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:68-1..68-6: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:68-1..68-6: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 70,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:70-1..71-11: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P18_1_42\\tools\\candidate_1\\fast\\source.st:70-1..71-11: error: invalid variable before ':=' in ST assignment statement."
+        }
+      ],
+      "elapsed_s": 0.203,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.64,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 9,
+    "passed": 9,
+    "passed_ids": [
+      "P18-01",
+      "P18-02",
+      "P18-03",
+      "P18-04",
+      "P18-05",
+      "P18-06",
+      "P18-07",
+      "P18-08",
+      "P18-09"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 10907,
+  "tag": "candidate_1"
+}

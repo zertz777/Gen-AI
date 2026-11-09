@@ -1,0 +1,39 @@
+{
+  "source": "(*\n实现说明：\n每次调用代表 20 ms；本任务无需定时器。\n保持外部接口的名称、方向和类型不变。\n\n本次修改：\n运行中触发跳闸的条件排除轻故障码 16#0001。\n轻故障仅报警，不产生新的跳闸；已有跳闸锁存不因轻故障解除。\n重故障 16#0002、16#0003 仍在同一扫描周期跳闸并锁存。\n运行中其他非零、非轻故障码仍触发跳闸。\n\n测试依据与验证状态：\n用户提供的检查结果为 pass；逐周期测试为 5/6 通过。\nS10-01 在周期 1 的 TripOutput 期望 FALSE，实际 TRUE。\n报告未包含该周期输入，不能仅凭报告确定失败原因；\n本次按需求中的轻故障不跳闸条款及 C1 对轻故障的排除修正。\n未在当前环境运行编译或测试，不声称修改后已经全部通过。\n需要重新执行原测试命令，以逐周期结果判定修改后的功能。\n\n语义冲突报告：\n1. 控制要求 1 要求轻故障不跳闸，控制要求 4 / K4 却要求运行中\n   任何非零故障码立即跳闸；当 VFDRun 为 TRUE 且故障码为\n   16#0001 时，两者不能同时满足。\n   本实现选择轻故障不产生新跳闸，与 C1 对轻故障的排除一致；\n   不声称满足 K4 对运行中轻故障立即跳闸的要求。\n2. C2 要求 TripOutput 为 TRUE 时 VFDRun 必须为 FALSE。\n   VFDRun 是只读输入；本功能块不能保证其在跳闸当周期变为 FALSE。\n   运行中发生需跳闸故障时，立即跳闸要求与 C2 无法由本接口\n   同时保证。\n3. C7 约束下一周期的 VFDRun 输入，不能由本功能块保证；\n   本实现不写入 VFDRun。\n4. C10 要求上电前两个采样点输出无故障；若这些采样点已经存在\n   重故障，则与同周期跳闸要求冲突。本实现初始化输出为无故障，\n   但第一次调用即处理输入，不屏蔽启动期间故障。\n5. C6 仅以 ResetBtn 电平作为保持边界，未完整表达 K3 的上升沿\n   和当前无故障条件。本实现使用 K3 的严格复位条件。\n\n边界选择：\n所有触发跳闸的故障均锁存，以满足跳闸保持要求。\n锁存首次触发跳闸的故障码，复位前不被后续故障码覆盖。\n锁存期间 AlarmLamp 保持 TRUE，Status 显示锁存故障码。\n未锁存时，任意非零故障码点亮 AlarmLamp，Status 显示当前故障码。\n未运行时，未定义的非零故障码只报警；16#0002 和 16#0003\n不论是否运行均立即跳闸。\n复位按钮初始已按下时，因 ResetBtnLast 初值为 FALSE，\n第一次调用将检测到上升沿，但仅当前无故障时允许复位。\n*)\n\n(*\n【必留：需求原文】\n变频器通过故障码上报状态，需要按严重程度分级处理。\n\n控制要求：\n1. VFDFaultCode = 16#0001 为轻故障：只点亮 AlarmLamp，不跳闸，VFDRun 保持。\n2. VFDFaultCode = 16#0002 或 16#0003 为重故障：立即置 TripOutput = TRUE，AlarmLamp = TRUE，并锁存故障码。\n3. 重故障锁存后，即使 VFDFaultCode 恢复为 16#0000 也不得自动复位；必须 ResetBtn 上升沿且当前无故障才解除 TripOutput。\n4. 运行中（VFDRun = TRUE）出现任何非零故障码时，TripOutput 立即为 TRUE。\n5. Status 输出当前生效的故障码（16#0000 表示无故障）。\n6. 上电时 TripOutput = FALSE、AlarmLamp = FALSE、Status = 16#0000。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）\n*)\n\n(*\n【必留：接口、初态、约束与数据告警】\n{\n  \"task_id\": \"S10\",\n  \"title\": \"变频器故障码分级报警\",\n  \"io_table\": [\n    {\n      \"direction\": \"IN\",\n      \"name\": \"VFDFaultCode\",\n      \"data_type\": \"WORD\",\n      \"description\": \"变频器故障码\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"VFDRun\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"变频器运行反馈\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"ResetBtn\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"复位按钮（上升沿有效）\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"AlarmLamp\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"报警灯\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"TripOutput\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"跳闸输出\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"Status\",\n      \"data_type\": \"WORD\",\n      \"description\": \"当前生效故障码\"\n    }\n  ],\n  \"initial_state\": \"AlarmLamp = FALSE；TripOutput = FALSE；Status = 16#0000；ResetBtnLast = FALSE；锁存故障码 = 16#0000。\",\n  \"constraints\": [\n    \"K1 重故障必须在同一周期内置 TripOutput。\",\n    \"K2 重故障锁存，故障码消失后不自动复位。\",\n    \"K3 复位只在 ResetBtn 上升沿且当前无故障时生效。\",\n    \"K4 VFDRun = TRUE 且故障码非零时 TripOutput 立即为 TRUE。\"\n  ],\n  \"semantic_warnings\": [],\n  \"warnings\": [],\n  \"missing_fields\": [],\n  \"dialect_requirements\": [],\n  \"type_origins\": {}\n}\n*)\n\n(*\n【必留：完整形式化规约；有界时序以扫描周期计】\n# task: S10\n# meta: easy / D 故障与安全\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(VFDRun && VFDFaultCode != 16#0000 && VFDFaultCode != 16#0001 -> TripOutput)    -- 运行中出现重故障码（除 16#0001 轻故障外）必须当周期跳闸（K4）\nC2: G(TripOutput -> !VFDRun)    -- 跳闸的许可形式：跳闸时不得处于运行状态（K2）\nC6: G(TripOutput -> (TripOutput W ResetBtn))    -- 跳闸保持到复位按钮（不能随故障码消失自动复位）（K3）\nC7: G(VFDFaultCode == 16#0001 && VFDRun -> X(VFDRun))    -- 轻故障只报警不跳闸，运行状态不得因轻故障改变（K1）\nC10: G[0,1](!TripOutput && !AlarmLamp && Status == 16#0000)    -- 上电首周期不跳闸、不报警（初态）\n*)\n\nFUNCTION_BLOCK FB_S10\nVAR_INPUT\n    VFDFaultCode : WORD;\n    VFDRun : BOOL;\n    ResetBtn : BOOL;\nEND_VAR\nVAR_OUTPUT\n    AlarmLamp : BOOL := FALSE;\n    TripOutput : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    ResetBtnLast : BOOL := FALSE;\n    ResetRising : BOOL := FALSE;\n    TripLatched : BOOL := FALSE;\n    LatchedFaultCode : WORD := WORD#16#0000;\n    FaultPresent : BOOL := FALSE;\n    HeavyFault : BOOL := FALSE;\n    TripRequired : BOOL := FALSE;\nEND_VAR\n\nResetRising := ResetBtn AND NOT ResetBtnLast;\nResetBtnLast := ResetBtn;\n\nFaultPresent := VFDFaultCode <> WORD#16#0000;\nHeavyFault := (VFDFaultCode = WORD#16#0002)\n              OR (VFDFaultCode = WORD#16#0003);\nTripRequired := HeavyFault\n                OR (VFDRun AND FaultPresent\n                    AND (VFDFaultCode <> WORD#16#0001));\n\nIF ResetRising AND NOT FaultPresent THEN\n    TripLatched := FALSE;\n    LatchedFaultCode := WORD#16#0000;\nEND_IF;\n\nIF TripRequired THEN\n    IF NOT TripLatched THEN\n        LatchedFaultCode := VFDFaultCode;\n    END_IF;\n    TripLatched := TRUE;\nEND_IF;\n\nTripOutput := TripLatched;\nAlarmLamp := FaultPresent OR TripLatched;\n\nIF TripLatched THEN\n    Status := LatchedFaultCode;\nELSE\n    Status := VFDFaultCode;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 22.39,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "S10-01",
+      "S10-02",
+      "S10-03",
+      "S10-04",
+      "S10-05",
+      "S10-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

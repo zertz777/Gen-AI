@@ -1,0 +1,52 @@
+{
+  "source": "FUNCTION_BLOCK FB_S14\nVAR_INPUT\n    Pressure : REAL;\n    PumpEnable : BOOL;\n    ResetBtn : BOOL;\nEND_VAR\nVAR_OUTPUT\n    LowPump : BOOL;\n    HighPump : BOOL;\n    ReliefValve : BOOL;\n    AlarmLamp : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    (* --- internal state (declared, no external interface change) --- *)\n    ResetBtnLast  : BOOL := FALSE;  (* previous ResetBtn value, rising-edge detect *)\n    FaultLatched  : BOOL := FALSE;  (* latched sensor fault, awaiting ResetBtn *)\n    HighPumpLatch : BOOL := FALSE;  (* single load-stage state:\n                                       TRUE  = high stage (HighPump active)\n                                       FALSE = low  stage (LowPump active)\n                                       matches initial_state HighPumpLatched = FALSE *)\n    ReliefLatch   : BOOL := FALSE;  (* hysteresis state of relief valve *)\nEND_VAR\n(*\n  Conflict / ambiguity report (kept, not silently resolved):\n  - C1 uses X(...) (relief held next cycle) while K1 / requirement 4 require\n    same-cycle relief plus a <150.0 release. Implemented as K1 + 160.0/150.0\n    hysteresis; therefore C1 is not satisfied on a one-cycle drop >160 -> <150.\n  - C10 formal interval [0,1] implies two cycles, the note says \"first scan\".\n    The cycle-by-cycle tests treat the first call as cycle 1 and expect the\n    outputs computed in that same cycle, so no first-scan freeze is applied;\n    power-on defaults (BOOL = FALSE, Status initial) are still kept.\n  - Requirement 6 does not specify ReliefValve during a sensor fault, nor\n    AlarmLamp during 16#8D02. Implemented: ReliefValve = FALSE on fault,\n    AlarmLamp stays TRUE until ResetBtn resets.\n  - Requirement 1 (Pressure < 120 -> LowPump = TRUE) is an implication, so the\n    single load-stage model (LowPump active for the whole low stage, i.e. while\n    the high stage is not latched, Pressure < 140) does not conflict with it.\n    This is required to satisfy the hysteresis test (S14-03) and the staged\n    loading test (S14-06).\n  Compile success only proves compilation; functional correctness requires\n  cycle-by-cycle testing.\n*)\n\n(* Sensor out-of-range: broken wire / short circuit *)\nIF (Pressure < 0.5) OR (Pressure > 250.0) THEN\n    (* 16#8D01 : sensor fault -> latch it *)\n    FaultLatched := TRUE;\nEND_IF;\n\n(* Reset: only when fault cleared and ResetBtn rising edge *)\nIF FaultLatched AND (Pressure >= 0.5) AND (Pressure <= 250.0)\n   AND ResetBtn AND (NOT ResetBtnLast) THEN\n    FaultLatched := FALSE;\nEND_IF;\n\nIF (Pressure < 0.5) OR (Pressure > 250.0) THEN\n    (* Sensor fault active this scan: 16#8D01, stop everything *)\n    Status := 16#8D01;\n    AlarmLamp := TRUE;\n    LowPump := FALSE;\n    HighPump := FALSE;\n    ReliefValve := FALSE;\n    HighPumpLatch := FALSE;\n    ReliefLatch := FALSE;\nELSIF FaultLatched THEN\n    (* Fault cleared but not yet reset: 16#8D02, keep alarm, no load *)\n    Status := 16#8D02;\n    AlarmLamp := TRUE;\n    LowPump := FALSE;\n    HighPump := FALSE;\n    ReliefValve := FALSE;\n    HighPumpLatch := FALSE;\n    ReliefLatch := FALSE;\nELSE\n    (* Normal operation *)\n    Status := 16#0000;\n    AlarmLamp := FALSE;\n\n    (* Load stage hysteresis (requirement 2/3, C7): engage high stage at\n       >= 140.0, release back to low stage at < 100.0, hold in between. *)\n    IF Pressure >= 140.0 THEN\n        HighPumpLatch := TRUE;\n    ELSIF Pressure < 100.0 THEN\n        HighPumpLatch := FALSE;\n    END_IF;\n\n    (* Relief hysteresis (requirement 4): >160.0 ON, <150.0 OFF *)\n    IF Pressure > 160.0 THEN\n        ReliefLatch := TRUE;\n    ELSIF Pressure < 150.0 THEN\n        ReliefLatch := FALSE;\n    END_IF;\n\n    IF ReliefLatch THEN\n        (* K1: same-cycle relief; C4: relief excludes both pumps *)\n        ReliefValve := TRUE;\n        LowPump := FALSE;\n        HighPump := FALSE;\n    ELSE\n        ReliefValve := FALSE;\n        IF PumpEnable THEN\n            (* Staged loading: high stage drives HighPump, low stage drives\n               LowPump. Never both simultaneously (mutual exclusion kept). *)\n            HighPump := HighPumpLatch;\n            LowPump := NOT HighPumpLatch;\n        ELSE\n            (* PumpEnable = FALSE : both pumps stopped *)\n            LowPump := FALSE;\n            HighPump := FALSE;\n        END_IF;\n    END_IF;\nEND_IF;\n\n(* Remember ResetBtn for next-scan rising-edge detection *)\nResetBtnLast := ResetBtn;\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.203,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 15.563,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 4,
+    "passed_ids": [
+      "S14-02",
+      "S14-03",
+      "S14-04",
+      "S14-05"
+    ],
+    "failures": [
+      {
+        "case_id": "S14-01",
+        "cycle": 3,
+        "signal": "LowPump",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S14-06",
+        "cycle": 1,
+        "signal": "LowPump",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

@@ -1,0 +1,231 @@
+{
+  "source": "FUNCTION_BLOCK FB_P01\nVAR_INPUT\n    bottleSensor : BOOL;\n    cleaningConfirmButton : BOOL;\n    fillingConfirmButton : BOOL;\n    cappingConfirmButton : BOOL;\n    packingConfirmButton : BOOL;\n    finishedButton : BOOL;\nEND_VAR\nVAR_OUTPUT\n    Pump_Motor : BOOL;\n    Filling_Valve : BOOL;\n    Capping_Machine : BOOL;\n    Packing_Machine : BOOL;\n    Completion_Light : BOOL;\nEND_VAR\nVAR\n    step : INT := 0;\n    prevCleaningConfirmButton : BOOL := FALSE;\n    prevFillingConfirmButton : BOOL := FALSE;\n    prevCappingConfirmButton : BOOL := FALSE;\n    prevPackingConfirmButton : BOOL := FALSE;\n    cleaningConfirmEdge : BOOL;\n    fillingConfirmEdge : BOOL;\n    cappingConfirmEdge : BOOL;\n    packingConfirmEdge : BOOL;\nEND_VAR\n\n(* 按钮上升沿检测 *)\ncleaningConfirmEdge := cleaningConfirmButton AND NOT prevCleaningConfirmButton;\nfillingConfirmEdge := fillingConfirmButton AND NOT prevFillingConfirmButton;\ncappingConfirmEdge := cappingConfirmButton AND NOT prevCappingConfirmButton;\npackingConfirmEdge := packingConfirmButton AND NOT prevPackingConfirmButton;\n\nprevCleaningConfirmButton := cleaningConfirmButton;\nprevFillingConfirmButton := fillingConfirmButton;\nprevCappingConfirmButton := cappingConfirmButton;\nprevPackingConfirmButton := packingConfirmButton;\n\n(* 安全优先级：finishedButton 为 TRUE 时，停止四路执行器、熄灭完成灯、回到等待瓶子 *)\nIF finishedButton THEN\n    step := 0;\n    Pump_Motor := FALSE;\n    Filling_Valve := FALSE;\n    Capping_Machine := FALSE;\n    Packing_Machine := FALSE;\n    Completion_Light := FALSE;\nELSE\n    CASE step OF\n        0:  (* 等待瓶子 *)\n            Pump_Motor := FALSE;\n            Filling_Valve := FALSE;\n            Capping_Machine := FALSE;\n            Packing_Machine := FALSE;\n            Completion_Light := FALSE;\n            IF bottleSensor THEN\n                step := 1;\n                Pump_Motor := TRUE;\n            END_IF;\n\n        1:  (* 清洗：泵受 bottleSensor 控制，瓶子离开时停泵并保持本工步 *)\n            Filling_Valve := FALSE;\n            Capping_Machine := FALSE;\n            Packing_Machine := FALSE;\n            Completion_Light := FALSE;\n            Pump_Motor := bottleSensor;\n            IF cleaningConfirmEdge THEN\n                step := 2;\n                Pump_Motor := FALSE;\n                Filling_Valve := TRUE;\n            END_IF;\n\n        2:  (* 灌装 *)\n            Pump_Motor := FALSE;\n            Capping_Machine := FALSE;\n            Packing_Machine := FALSE;\n            Completion_Light := FALSE;\n            Filling_Valve := TRUE;\n            IF fillingConfirmEdge THEN\n                step := 3;\n                Filling_Valve := FALSE;\n                Capping_Machine := TRUE;\n            END_IF;\n\n        3:  (* 封盖 *)\n            Pump_Motor := FALSE;\n            Filling_Valve := FALSE;\n            Packing_Machine := FALSE;\n            Completion_Light := FALSE;\n            Capping_Machine := TRUE;\n            IF cappingConfirmEdge THEN\n                step := 4;\n                Capping_Machine := FALSE;\n                Packing_Machine := TRUE;\n            END_IF;\n\n        4:  (* 包装 *)\n            Pump_Motor := FALSE;\n            Filling_Valve := FALSE;\n            Capping_Machine := FALSE;\n            Completion_Light := FALSE;\n            Packing_Machine := TRUE;\n            IF packingConfirmEdge THEN\n                step := 5;\n                Packing_Machine := FALSE;\n                Completion_Light := TRUE;\n            END_IF;\n\n        5:  (* 包装完成，点亮指示灯，等待 finishedButton 复位 *)\n            Pump_Motor := FALSE;\n            Filling_Valve := FALSE;\n            Capping_Machine := FALSE;\n            Packing_Machine := FALSE;\n            Completion_Light := TRUE;\n\n        ELSE\n            (* 异常状态复位 *)\n            step := 0;\n            Pump_Motor := FALSE;\n            Filling_Valve := FALSE;\n            Capping_Machine := FALSE;\n            Packing_Machine := FALSE;\n            Completion_Light := FALSE;\n    END_CASE;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 18,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:18-5..18-19: error: invalid located variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:18-5..18-19: error: invalid located variable declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 19,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:19-5..19-45: error: invalid located variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:19-5..19-45: error: invalid located variable declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 20,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:20-5..20-44: error: invalid located variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:20-5..20-44: error: invalid located variable declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 21,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:21-5..21-44: error: invalid located variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:21-5..21-44: error: invalid located variable declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 22,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:22-5..22-44: error: invalid located variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:22-5..22-44: error: invalid located variable declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 23,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:23-5..23-30: error: invalid located variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:23-5..23-30: error: invalid located variable declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 24,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:24-5..24-29: error: invalid located variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:24-5..24-29: error: invalid located variable declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 25,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:25-5..25-29: error: invalid located variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:25-5..25-29: error: invalid located variable declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 26,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:26-5..26-29: error: invalid located variable declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:26-5..26-29: error: invalid located variable declaration."
+        },
+        {
+          "code": "E_SYNTAX",
+          "severity": "error",
+          "line": 18,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:18-5..18-8: error: unexpected token after 'VAR' in located variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:18-5..18-8: error: unexpected token after 'VAR' in located variable(s) declaration."
+        },
+        {
+          "code": "E_SYNTAX",
+          "severity": "error",
+          "line": 17,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:17-1..27-7: error: unexpected located variable(s) declaration in function block declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:17-1..27-7: error: unexpected located variable(s) declaration in function block declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 30,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:30-2..30-20: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:30-2..30-20: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 31,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:31-1..31-18: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:31-1..31-18: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 32,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:32-1..32-18: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:32-1..32-18: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 33,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:33-1..33-18: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:33-1..33-18: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 35,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:35-1..35-25: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:35-1..35-25: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 36,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:36-1..36-24: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:36-1..36-24: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 37,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:37-1..37-24: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:37-1..37-24: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 38,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:38-1..38-24: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:38-1..38-24: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 42,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:42-5..42-8: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:42-5..42-8: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 57,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:57-17..57-20: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:57-17..57-20: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 68,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:68-17..68-20: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:68-17..68-20: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 80,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:80-17..80-20: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:80-17..80-20: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 92,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:92-17..92-20: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:92-17..92-20: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 104,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:104-17..104-20: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:104-17..104-20: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 118,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:118-13..118-16: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:118-13..118-16: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 49,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:49-10..49-13: error: invalid test expression defined for ST 'CASE' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P01_1_42\\tools\\candidate_1\\fast\\source.st:49-10..49-13: error: invalid test expression defined for ST 'CASE' statement."
+        }
+      ],
+      "elapsed_s": 0.281,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 36.828,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 8,
+    "passed": 8,
+    "passed_ids": [
+      "P01-01",
+      "P01-02",
+      "P01-03",
+      "P01-04",
+      "P01-05",
+      "P01-06",
+      "P01-07",
+      "P01-08"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 16501,
+  "tag": "candidate_1"
+}

@@ -1,0 +1,39 @@
+{
+  "source": "(*\n【必留：需求原文】\nControl a wastewater-treatment aeration blower with a low-dissolved-oxygen demand, a 5-second start delay, emergency-stop priority and start-cycle counting.\n\n1. Start delay timing when both DO_LOW and AERATION_E_STOP_NC are TRUE. Allow BLOWER_RUN to become TRUE only after these conditions have remained satisfied for 5 seconds.\n2. If DO_LOW becomes FALSE or an emergency stop occurs, immediately disable BLOWER_RUN and reset the start timer, whether timing is incomplete or complete. A new demand must wait the full 5 seconds again.\n3. Increment AERATION_BLOWER_CYCLE_COUNT once on each FALSE-to-TRUE transition of BLOWER_RUN. Do not count repeatedly during continuous operation.\n4. At power-up, initialize the blower to OFF and the start count to zero. The start delay gates a BOOL enable; no continuous speed ramp is required.\n\n中文摘要：曝气风机延时启动：溶解氧偏低且无急停持续 5 秒才启动，\n条件消失立即停机并复位计时，按启动次数计数。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）\n\n【必留：接口、初态、约束与数据告警】\n{\n  \"task_id\": \"P06\",\n  \"title\": \"Aeration Blower Delayed Start\",\n  \"io_table\": [\n    {\n      \"direction\": \"IN\",\n      \"name\": \"DO_LOW\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Dissolved oxygen is below its threshold and aeration is needed.\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"AERATION_E_STOP_NC\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"TRUE means the emergency stop is inactive; FALSE means it is active.\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"BLOWER_RUN\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Blower motor-contactor run command.\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"AERATION_BLOWER_CYCLE_COUNT\",\n      \"data_type\": \"UINT\",\n      \"description\": \"Count of actual blower starts.\"\n    }\n  ],\n  \"initial_state\": \"BLOWER_RUN = FALSE；AERATION_BLOWER_CYCLE_COUNT = 0；启动延时计时器清零。\",\n  \"constraints\": [\n    \"K1 延时计时只在 DO_LOW = TRUE 且 AERATION_E_STOP_NC = TRUE 时进行。\",\n    \"K2 上述两个条件同时满足并持续满 5 s 后才允许 BLOWER_RUN = TRUE。\",\n    \"K3 DO_LOW 变 FALSE 或急停发生时，BLOWER_RUN 立即 FALSE、启动计时复位；下次需求须重新计满 5 s。\",\n    \"K4 AERATION_BLOWER_CYCLE_COUNT 只在 BLOWER_RUN 的 FALSE→TRUE 沿加 1，连续运行期间不得重复计数。\"\n  ],\n  \"semantic_warnings\": [],\n  \"warnings\": [],\n  \"missing_fields\": [],\n  \"dialect_requirements\": [],\n  \"type_origins\": {}\n}\n\n【必留：完整形式化规约；有界时序以扫描周期计】\n# task: P06\n# meta: easy / A 开关量联锁\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(!AERATION_E_STOP_NC -> !BLOWER_RUN)    -- 急停当周期风机必须停（K1/K3）\nC2: G(BLOWER_RUN -> (DO_LOW && AERATION_E_STOP_NC))    -- 风机运行的双许可：溶解氧偏低且无急停（K2）\nC3: G(!DO_LOW -> X(!BLOWER_RUN))    -- 溶解氧恢复后下一周期必须停机并复位启动计时（K3）\nC6: G(BLOWER_RUN -> (BLOWER_RUN W !DO_LOW))    -- 需求持续期间风机保持运行，不因单周期抖动反复启停（K2/K3）\nC10: G[0,1](!BLOWER_RUN)    -- 上电首周期风机不运行（需先计满 5 s）（K1）\n\n实现说明与冲突报告：\n替换占位 RETURN，增加非保持的扫描计时状态和输出沿检测状态。\n每次调用代表完整的 20 ms 扫描；第 250 个连续双许可扫描结束时启动。\n任一许可失效，当次调用立即停机并清零计时。\n\nC6 与急停优先存在冲突：运行后 DO_LOW 始终为 TRUE 时，\nC6 要求一直运行，但急停时 C1、K3 要求立即停机。\n本实现保留原规约，按题面明确要求优先执行急停，不声称满足原始 C6。\nC3 的下一周期停机要求由当周期立即停机和重新等待 250 扫描实现。\n\nUINT 无法表示无限启动次数；未规定溢出策略。\n本实现显式采用模 65536 计数，65535 后的下一次启动变为 0，\n避免依赖运行时整数溢出行为。\n\n未提供可访问的编译器、测试执行工具或测试命令，\n因此未运行编译或逐周期测试，未验证功能正确性。\n*)\nFUNCTION_BLOCK FB_P06\nVAR_INPUT\n    DO_LOW : BOOL;\n    AERATION_E_STOP_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    BLOWER_RUN : BOOL := FALSE;\n    AERATION_BLOWER_CYCLE_COUNT : UINT := UINT#0;\nEND_VAR\nVAR\n    StartDelayScans : UINT := UINT#0;\n    PreviousBlowerRun : BOOL := FALSE;\nEND_VAR\n\nIF NOT AERATION_E_STOP_NC OR NOT DO_LOW THEN\n    StartDelayScans := UINT#0;\n    BLOWER_RUN := FALSE;\nELSE\n    IF StartDelayScans < UINT#250 THEN\n        StartDelayScans := StartDelayScans + UINT#1;\n    END_IF;\n    BLOWER_RUN := StartDelayScans >= UINT#250;\nEND_IF;\n\nIF BLOWER_RUN AND NOT PreviousBlowerRun THEN\n    IF AERATION_BLOWER_CYCLE_COUNT = UINT#65535 THEN\n        AERATION_BLOWER_CYCLE_COUNT := UINT#0;\n    ELSE\n        AERATION_BLOWER_CYCLE_COUNT :=\n            AERATION_BLOWER_CYCLE_COUNT + UINT#1;\n    END_IF;\nEND_IF;\n\nPreviousBlowerRun := BLOWER_RUN;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.282,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.281,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P06-01",
+      "P06-02",
+      "P06-03",
+      "P06-04",
+      "P06-05",
+      "P06-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

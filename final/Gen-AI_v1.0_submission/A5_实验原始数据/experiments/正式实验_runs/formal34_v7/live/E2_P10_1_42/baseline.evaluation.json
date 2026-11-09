@@ -1,0 +1,68 @@
+{
+  "source": "(*\n【必留：需求原文】\nWrite a function block FB to implement a temperature control logic. The program should include the following functions:\n1. Read the value of the temperature sensor through an analog input module.\n2. Compare the read temperature value TemperatureSensorInput with the set temperature value SetTemperature.\n3. If the actual temperature is lower than the set temperature, start the heater HeaterOutput.\n4. If the actual temperature is higher than the set temperature, turn off the heater HeaterOutput.\n5. If the heater works continuously for more than a certain period (for convenience, using 5s), it should trigger an overheating protection, automatically turn off the heater, and must wait for a certain period (for convenience, using 3s) before the overheating protection can be lifted.\n6. Provide status indication, displaying the current temperature, set temperature, heater status, and whether overheating protection is triggered.\n7. Provide temperature sensor fault judgment, if the read temperature value TemperatureSensorInput is less than 0 or greater than 100, it is considered a sensor fault, and the heater should be turned off.\n\n中文摘要：温度逻辑控制：低于设定值加热、高于设定值停止，\n连续加热超 5 秒触发过热保护并需等 3 秒才能解除，\n传感器越界判故障。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）\n\n【必留：接口、初态、约束与数据告警】\n{\n  \"task_id\": \"P10\",\n  \"title\": \"Temperature Logic Control\",\n  \"io_table\": [\n    {\n      \"direction\": \"IN\",\n      \"name\": \"TemperatureSensorInput\",\n      \"data_type\": \"REAL\",\n      \"description\": \"The input value of the temperature sensor, i.e., the actual temperature\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"SetTemperature\",\n      \"data_type\": \"REAL\",\n      \"description\": \"The set temperature value\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"CurrentTemperature\",\n      \"data_type\": \"REAL\",\n      \"description\": \"Display of the current temperature\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"SetTempDisplay\",\n      \"data_type\": \"REAL\",\n      \"description\": \"Display of the set temperature\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"HeaterStatus\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Display of the heater status\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"OverheatProtection\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Display of the overheating protection status\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"HeaterOutput\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"The control output of the heater\"\n    }\n  ],\n  \"initial_state\": \"HeaterOutput = FALSE；OverheatProtection = FALSE；传感器故障标志 = FALSE；加热计时与保护计时清零。\",\n  \"constraints\": [\n    \"K1 TemperatureSensorInput < SetTemperature 时 HeaterOutput = TRUE，> SetTemperature 时 HeaterOutput = FALSE。\",\n    \"K2 加热连续运行超过 5 s 触发 OverheatProtection，并强制 HeaterOutput = FALSE。\",\n    \"K3 过热保护触发后必须保持至少 3 s 才能解除，解除前不得重新加热。\",\n    \"K4 TemperatureSensorInput < 0 或 > 100 判为传感器故障，此时不得继续加热。\"\n  ],\n  \"semantic_warnings\": [],\n  \"warnings\": [],\n  \"missing_fields\": [],\n  \"dialect_requirements\": [],\n  \"type_origins\": {}\n}\n\n【必留：完整形式化规约；有界时序以扫描周期计】\n# task: P10\n# meta: medium / B 模拟量与数据处理\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(OverheatProtection -> !HeaterOutput)    -- 过热保护动作时加热必须关断（保护优先于温控）（K2）\nC2: G(HeaterOutput -> !OverheatProtection)    -- 加热的前提是没有过热保护（同一约束的许可形式）（K2）\nC7: G(TemperatureSensorInput < 0.0 -> X(!HeaterOutput))    -- 低于 0 ℃ 判为传感器故障，下一周期不得加热（K4）\nC7b: G(TemperatureSensorInput > 100.0 -> X(!HeaterOutput))    -- 高于 100 ℃ 判为传感器故障，下一周期不得加热（K4）\nC9: G(OverheatProtection -> G[0,150](OverheatProtection))    -- 过热保护触发后至少保持 3 s 才能解除（K3）\nC10: G[0,1](!HeaterOutput && !OverheatProtection)    -- 上电首周期不加热、无保护（初态）\n\n【本次修改与测试冲突报告】\n需要修改代码：快速编译器不接受仅含注释的 ELSE 分支。\n已删除该空 ELSE；温度等于设定值时不赋值，仍保持原输出。\n未修改外部接口，未增加厂商扩展。\n\n提供的逐周期测试结果为 0/5，通过编译不代表功能正确。\n全部失败均为 cycle=1 的 HeaterStatus 期望 TRUE、实际 FALSE。\n若该 cycle 对应 C10 的采样点 0 或 1，则该期望与 C10 以及\nHeaterStatus 显示实际 HeaterOutput 的要求直接冲突。\n不能通过仅将 HeaterStatus 改为 TRUE 来掩盖实际加热状态，\n也不能在保留字面 C10 的同时允许该采样点加热。\n当前没有测试源码或采样映射，不能确认测试是否将初始化状态\n作为调用前的独立采样点。本实现保留前两次调用安全输出，\n不擅自删除 C10，因此不声称已修复这五项功能测试失败。\n\n【语义冲突与边界选择】\n1. K1 若按无条件逻辑理解，与 K2/K4 的强制关断冲突。\n   实现按安全联锁优先处理，温控仅在联锁允许时执行。\n2. C9 的前件是每个保护有效周期，而不是保护上升沿。\n   按给定闭区间语义，它要求保护有效后下一周期仍然有效；\n   逐周期重复该要求将导致保护永久保持，不能在 3 s 后自动解除。\n   保留原文及公式，实现选择满足字面 C9 的锁存保护。\n   ProtectionScans 记录等待 3 s 的过程，但不在计时结束后解除。\n   因而本实现不提供自然语言可能期望的自动恢复。\n   如需自动恢复，应先修正规约；本文件没有擅自修改规约或新增复位接口。\n3. C10 的 [0,1] 包含两个采样点，与“首周期”的文字描述不同。\n   实现前两次调用均禁止加热且不触发保护。\n4. K4 要求故障当周期关断，C7/C7b 还要求下一周期关断。\n   因而当前故障及上一周期故障均禁止加热。\n5. 温度恰等于设定值时保持先前加热输出；安全联锁仍优先。\n6. 每次调用之间的时间为 20 ms。只累计上一周期实际输出为 TRUE\n   的时间；连续加热经过 250 个间隔为 5 s，经过 251 个间隔\n   为 5.02 s，严格超过 5 s 时触发保护。\n\n【验证状态】\n用户提供的修改前结果：fast 编译失败，authoritative 编译通过，\n逐周期功能测试全部失败。\n本次修改消除了报告中的空 ELSE 语法问题。\n当前对话没有可执行工具，未重新运行给定命令，\n不声称修改后已经通过编译或逐周期功能测试。\n*)\n\nFUNCTION_BLOCK FB_P10\nVAR_INPUT\n    TemperatureSensorInput : REAL;\n    SetTemperature : REAL;\nEND_VAR\nVAR_OUTPUT\n    CurrentTemperature : REAL;\n    SetTempDisplay : REAL;\n    HeaterStatus : BOOL := FALSE;\n    OverheatProtection : BOOL := FALSE;\n    HeaterOutput : BOOL := FALSE;\nEND_VAR\nVAR\n    StartupScans : UINT := 0;\n    HeatingScans : UINT := 0;\n    ProtectionScans : UINT := 0;\n    SensorFault : BOOL := FALSE;\n    PreviousSensorFault : BOOL := FALSE;\nEND_VAR\n\nCurrentTemperature := TemperatureSensorInput;\nSetTempDisplay := SetTemperature;\n\nSensorFault :=\n    (TemperatureSensorInput < 0.0) OR\n    (TemperatureSensorInput > 100.0);\n\nIF StartupScans < 2 THEN\n    (* C10：前两次调用保持安全初始输出。 *)\n    HeaterOutput := FALSE;\n    OverheatProtection := FALSE;\n    HeatingScans := 0;\n    ProtectionScans := 0;\n    StartupScans := StartupScans + 1;\nELSE\n    IF OverheatProtection THEN\n        (* 从保护触发后的下一次调用开始累计等待时间。\n           计数饱和，避免长时间运行导致整数溢出。\n           字面 C9 要求继续锁存，不允许自动解除。 *)\n        IF ProtectionScans < 150 THEN\n            ProtectionScans := ProtectionScans + 1;\n        END_IF;\n        HeatingScans := 0;\n    ELSE\n        (* HeaterOutput 此时仍是上一周期实际输出。\n           仅在上一周期实际加热时累计已过去的 20 ms。 *)\n        IF HeaterOutput THEN\n            IF HeatingScans < 251 THEN\n                HeatingScans := HeatingScans + 1;\n            END_IF;\n        ELSE\n            HeatingScans := 0;\n        END_IF;\n\n        IF HeatingScans > 250 THEN\n            OverheatProtection := TRUE;\n            ProtectionScans := 0;\n        END_IF;\n    END_IF;\n\n    (* 温度相等时不赋值，保持原输出；无需空 ELSE 分支。 *)\n    IF OverheatProtection OR SensorFault OR PreviousSensorFault THEN\n        HeaterOutput := FALSE;\n    ELSIF TemperatureSensorInput < SetTemperature THEN\n        HeaterOutput := TRUE;\n    ELSIF TemperatureSensorInput > SetTemperature THEN\n        HeaterOutput := FALSE;\n    END_IF;\n\n    IF NOT HeaterOutput THEN\n        HeatingScans := 0;\n    END_IF;\nEND_IF;\n\nHeaterStatus := HeaterOutput;\nPreviousSensorFault := SensorFault;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.265,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.453,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 5,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "P10-01",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P10-02",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P10-03",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P10-04",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P10-05",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

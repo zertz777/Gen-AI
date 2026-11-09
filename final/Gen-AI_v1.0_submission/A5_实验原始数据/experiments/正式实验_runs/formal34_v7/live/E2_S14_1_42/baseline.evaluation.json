@@ -1,0 +1,58 @@
+{
+  "source": "(*\n【必留：需求原文】\n液压站按系统压力自动投切泵组与卸荷阀，要求不频繁启停、越界立即保护。\n\n控制要求：\n1. PumpEnable = TRUE 且 AlarmLamp = FALSE 时按压力分级加载：\n   Pressure < 120.0 bar → LowPump = TRUE。\n2. 高压泵投入：Pressure >= 140.0 bar → HighPump = TRUE。\n3. 滞回：HighPump 投入后，只有 Pressure < 100.0 bar 才断开；\n   100.0 <= Pressure < 140.0 区间保持原状态，不得反复启停。\n4. 卸荷：Pressure > 160.0 bar → ReliefValve = TRUE 且\n   LowPump、HighPump 同时 FALSE；\n   Pressure < 150.0 bar 后 ReliefValve = FALSE。\n5. 卸荷阀与泵互斥：ReliefValve 与 LowPump/HighPump 不得同时为 TRUE。\n6. 传感器越界：Pressure < 0.5 bar 或 Pressure > 250.0 bar\n   视为断线/短路 → 两泵 FALSE、AlarmLamp = TRUE、Status = 16#8D01；\n   故障消失后需 ResetBtn 上升沿复位（复位前 Status = 16#8D02）。\n7. Status：16#0000 正常、16#8D01 传感器故障、16#8D02 待复位。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）\n\n【必留：接口、初态、约束与数据告警】\n{\n  \"task_id\": \"S14\",\n  \"title\": \"液压站压力分级加载与卸荷\",\n  \"io_table\": [\n    {\n      \"direction\": \"IN\",\n      \"name\": \"Pressure\",\n      \"data_type\": \"REAL\",\n      \"description\": \"系统压力，单位 bar\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"PumpEnable\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"允许加载\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"ResetBtn\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"复位按钮，上升沿有效\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"LowPump\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"低压泵\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"HighPump\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"高压泵\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"ReliefValve\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"卸荷阀\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"AlarmLamp\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"报警灯\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"Status\",\n      \"data_type\": \"WORD\",\n      \"description\": \"状态码\"\n    }\n  ],\n  \"initial_state\": \"LowPump = HighPump = ReliefValve = AlarmLamp = FALSE；Status = 16#0000；ResetBtnLast = FALSE；HighPumpLatched = FALSE。\",\n  \"constraints\": [\n    \"K1 Pressure > 160.0 bar 时必须在同一周期卸荷并停泵。\",\n    \"K2 Pressure < 120.0 bar 且 PumpEnable 时必须加载低压泵（允许一个扫描周期延迟）。\",\n    \"K3 高压泵在 100.0—140.0 bar 之间保持原状态，构成 40 bar 滞回带。\",\n    \"K4 传感器越界（< 0.5 或 > 250.0 bar）必须在 200 ms 内停机报警，Status = 16#8D01。\",\n    \"K5 卸荷阀与任一台泵不得同时为 TRUE。\"\n  ],\n  \"semantic_warnings\": [],\n  \"warnings\": [],\n  \"missing_fields\": [],\n  \"dialect_requirements\": [],\n  \"type_origins\": {}\n}\n\n【必留：完整形式化规约；有界时序以扫描周期计】\n# task: S14\n# meta: medium / B 模拟量处理\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(Pressure > 160.0 -> X(!LowPump && !HighPump && ReliefValve))    -- 过压当周期卸荷并停泵（K1）\nC2: G(Pressure < 120.0 && PumpEnable && !AlarmLamp -> X(LowPump))    -- 低压加载条件成立时一周期内投泵（K2）\nC4: G(!(ReliefValve && LowPump) && !(ReliefValve && HighPump))    -- 卸荷阀与泵不得同时为 TRUE（K5）\nC6: G((Pressure < 0.5 || Pressure > 250.0) -> F[0,10] AlarmLamp)    -- 传感器越界 200 ms 内报警（10 周期）（K4）\nC7: G(HighPump && Pressure >= 100.0 && Pressure < 140.0 -> X(HighPump))    -- 滞回带内保持高压泵状态，不抖动（K3）\nC10: G[0,1](!LowPump && !HighPump && !ReliefValve && !AlarmLamp && Status == 16#0000)    -- 上电首周期不加载、无报警（初态）\n\n【修改说明与语义冲突报告】\n以显式初值、故障锁存、复位边沿和高压泵滞回替换占位实现。\n每次调用直接计算本次扫描输出，不使用定时器或厂商扩展。\n\n原文与形式化规约存在以下冲突，原条款保留，不宣称全部满足：\n1. C10 要求初始扫描输出保持关闭且不报警；若初始压力大于\n   160.0，则与 K1 同周期卸荷冲突；若初始压力小于 120.0 且允许\n   加载，则 C10 的 [0,1] 与 C2 下一状态加载也存在冲突。\n   本实现仅在调用前提供所列初态，首次调用立即响应输入，\n   不强制维持 C10 的整个区间。\n2. K2 未排除故障与待复位状态；C2 未排除本次新检测到的故障。\n   例如 Pressure = 0.0、PumpEnable = TRUE 时，加载要求与停泵\n   保护冲突。本实现优先停泵报警。\n3. “高压泵只有 Pressure < 100.0 才断开”与过压卸荷、故障停泵\n   冲突；C7 也未排除 PumpEnable 撤销或报警保护。\n   本实现在允许加载且无保护时保持滞回；禁止加载、报警或卸荷\n   均强制停泵并清除高压泵锁存。\n4. C1、C2、C7 使用 X 描述下一状态，K1 却明确要求同周期动作。\n   本实现采用本次输入到本次扫描结束输出的执行语义；\n   不额外延迟保护，不能未经时序采样定义确认而声称满足全部 LTL。\n\n【边界选择】\nPressure = 0.5 或 250.0 不构成传感器越界。\nPressure = 160.0 不新触发卸荷；已卸荷时保持至 Pressure < 150.0。\nPressure = 150.0 保持卸荷阀原状态。\nPressure = 120.0 不加载低压泵。\nPressure = 140.0 在允许加载且无保护时投入高压泵。\nPressure = 100.0 保持高压泵锁存。\n复位只在传感器恢复正常且检测到新的上升沿时有效；\n故障期间的复位边沿不缓存。\n复位成功的同一扫描允许按压力重新加载。\n卸荷阀按压力独立运行，不受 PumpEnable 或报警锁存禁止，\n因此 Pressure > 250.0 时仍卸荷，同时停泵并报警。\n\n【验证状态】\n当前对话未提供可执行工具、编译 profile 或已配置测试命令，\n未运行编译与逐周期测试，不声称编译或功能已经验证。\n*)\n\nFUNCTION_BLOCK FB_S14\nVAR_INPUT\n    Pressure : REAL;\n    PumpEnable : BOOL;\n    ResetBtn : BOOL;\nEND_VAR\nVAR_OUTPUT\n    LowPump : BOOL := FALSE;\n    HighPump : BOOL := FALSE;\n    ReliefValve : BOOL := FALSE;\n    AlarmLamp : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    ResetBtnLast : BOOL := FALSE;\n    ResetRising : BOOL := FALSE;\n    HighPumpLatched : BOOL := FALSE;\n    ReliefValveLatched : BOOL := FALSE;\n    FaultLatched : BOOL := FALSE;\n    SensorFault : BOOL := FALSE;\nEND_VAR\n\n(* 每扫描采集边沿；故障期间的边沿不会延后用于复位。 *)\nResetRising := ResetBtn AND NOT ResetBtnLast;\nResetBtnLast := ResetBtn;\n\nSensorFault := (Pressure < 0.5) OR (Pressure > 250.0);\n\n(* 当前故障优先于复位请求。 *)\nIF SensorFault THEN\n    FaultLatched := TRUE;\nELSIF FaultLatched AND ResetRising THEN\n    FaultLatched := FALSE;\nEND_IF;\n\nAlarmLamp := FaultLatched;\n\nIF SensorFault THEN\n    Status := WORD#16#8D01;\nELSIF FaultLatched THEN\n    Status := WORD#16#8D02;\nELSE\n    Status := WORD#16#0000;\nEND_IF;\n\n(* 卸荷阀具有 160/150 bar 滞回，过压立即动作。 *)\nIF Pressure > 160.0 THEN\n    ReliefValveLatched := TRUE;\nELSIF Pressure < 150.0 THEN\n    ReliefValveLatched := FALSE;\nEND_IF;\n\nReliefValve := ReliefValveLatched;\n\n(* 默认停泵；仅在所有加载许可成立时计算分级加载。 *)\nLowPump := FALSE;\nHighPump := FALSE;\n\nIF (NOT PumpEnable) OR AlarmLamp OR ReliefValve THEN\n    HighPumpLatched := FALSE;\nELSE\n    LowPump := Pressure < 120.0;\n\n    IF Pressure >= 140.0 THEN\n        HighPumpLatched := TRUE;\n    ELSIF Pressure < 100.0 THEN\n        HighPumpLatched := FALSE;\n    END_IF;\n\n    HighPump := HighPumpLatched;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.235,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 25.25,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 3,
+    "passed_ids": [
+      "S14-01",
+      "S14-02",
+      "S14-04"
+    ],
+    "failures": [
+      {
+        "case_id": "S14-03",
+        "cycle": 2,
+        "signal": "LowPump",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S14-05",
+        "cycle": 1,
+        "signal": "ReliefValve",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S14-06",
+        "cycle": 1,
+        "signal": "LowPump",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

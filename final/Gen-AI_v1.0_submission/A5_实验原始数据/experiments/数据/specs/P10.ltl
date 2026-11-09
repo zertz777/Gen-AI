@@ -1,0 +1,11 @@
+# task: P10
+# meta: medium / B 模拟量与数据处理
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(OverheatProtection -> !HeaterOutput)    -- 过热保护动作时加热必须关断（保护优先于温控）（K2）
+C2: G(HeaterOutput -> !OverheatProtection)    -- 加热的前提是没有过热保护（同一约束的许可形式）（K2）
+C7: G(TemperatureSensorInput < 0.0 -> X(!HeaterOutput))    -- 低于 0 ℃ 判为传感器故障，下一周期不得加热（K4）
+C7b: G(TemperatureSensorInput > 100.0 -> X(!HeaterOutput))    -- 高于 100 ℃ 判为传感器故障，下一周期不得加热（K4）
+C9: G(OverheatProtection -> G[0,150](OverheatProtection))    -- 过热保护触发后至少保持 3 s 才能解除（K3）
+C10: G[0,1](!HeaterOutput && !OverheatProtection)    -- 上电首周期不加热、无保护（初态）

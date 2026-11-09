@@ -1,0 +1,75 @@
+{
+  "source": "FUNCTION_BLOCK FB_S04\nVAR_INPUT\n    RawWeight : INT;\n    ZeroBtn : BOOL;\n    CalibWeight : REAL;\nEND_VAR\nVAR_OUTPUT\n    CompensatedWeight : REAL;\n    ZeroOffset : INT;\n    DriftAlarm : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    ZeroBtnLast : BOOL := FALSE;\n    InitDone : BOOL := FALSE;\n    Delta : DINT;\nEND_VAR\n\n(*\n  Reported semantic conflicts retained:\n  1) K3/C6 hysteresis vs C2: DriftAlarm is held between |Delta| = 150 and 200,\n     while C2 states G(DriftAlarm -> driftOut) with driftOut at |Delta| >= 200.\n     This implementation follows the explicit hysteresis K3/C6.\n  2) C4 every-scan conversion vs initial_state/C10 first-cycle compensation:\n     first scan is initialized to CompensatedWeight = 0.0; C4 is applied thereafter.\n  3) First-scan ZeroBtn edge is suppressed to keep C10 ZeroOffset = 0 on the first scan.\n*)\n\nIF NOT InitDone THEN\n    ZeroOffset := 0;\n    CompensatedWeight := 0.0;\n    DriftAlarm := FALSE;\n    Status := 16#0000;\n    ZeroBtnLast := ZeroBtn;  (* suppress power-up edge; keep first-cycle ZeroOffset = 0 *)\n    InitDone := TRUE;\nELSE\n    (* K1: ZeroBtn rising edge calibrates zero point and clears drift alarm. *)\n    IF ZeroBtn AND NOT ZeroBtnLast THEN\n        ZeroOffset := RawWeight;\n        DriftAlarm := FALSE;\n    END_IF;\n    ZeroBtnLast := ZeroBtn;\n\n    (* K2/C4: compensated weight, DINT subtraction avoids INT overflow. *)\n    Delta := INT_TO_DINT(RawWeight) - INT_TO_DINT(ZeroOffset);\n    CompensatedWeight := DINT_TO_REAL(Delta) * 0.01;\n\n    (* K3: drift alarm with 50-unit hysteresis. Formal driftOut uses >= 200. *)\n    IF DriftAlarm THEN\n        IF (Delta <= 150) AND (Delta >= -150) THEN\n            DriftAlarm := FALSE;\n        END_IF;\n    ELSE\n        IF (Delta >= 200) OR (Delta <= -200) THEN\n            DriftAlarm := TRUE;\n        END_IF;\n    END_IF;\n\n    (* Status priority: out-of-range 8402, drift 8401, normal 0000.\n       For IEC INT, the 8402 condition is unreachable but retained per requirement. *)\n    IF (RawWeight > 32767) OR (RawWeight < -32768) THEN\n        Status := 16#8402;\n    ELSIF DriftAlarm THEN\n        Status := 16#8401;\n    ELSE\n        Status := 16#0000;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.562,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "S04-01",
+        "cycle": 1,
+        "signal": "CompensatedWeight",
+        "expected": 10.0,
+        "actual": 0.0
+      },
+      {
+        "case_id": "S04-02",
+        "cycle": 1,
+        "signal": "ZeroOffset",
+        "expected": 500,
+        "actual": 0
+      },
+      {
+        "case_id": "S04-03",
+        "cycle": 1,
+        "signal": "ZeroOffset",
+        "expected": 500,
+        "actual": 0
+      },
+      {
+        "case_id": "S04-04",
+        "cycle": 1,
+        "signal": "CompensatedWeight",
+        "expected": 2.5,
+        "actual": 0.0
+      },
+      {
+        "case_id": "S04-05",
+        "cycle": 1,
+        "signal": "CompensatedWeight",
+        "expected": 1.9,
+        "actual": 0.0
+      },
+      {
+        "case_id": "S04-06",
+        "cycle": 1,
+        "signal": "CompensatedWeight",
+        "expected": 2.0,
+        "actual": 0.0
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 18197,
+  "tag": "candidate_3"
+}

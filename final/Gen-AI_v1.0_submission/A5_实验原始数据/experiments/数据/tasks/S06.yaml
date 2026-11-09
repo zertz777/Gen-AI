@@ -1,0 +1,64 @@
+task_id: S06
+title: 烘箱分段升温与超温降载
+difficulty: medium
+category: B
+requirement: |-
+  烘箱按三段升温曲线工作，超温时必须先降载而不是直接断电。
+
+  控制要求：
+  1. Segment 取值 0/1/2，分别对应目标温度 SetTemp 的 50%/80%/100%；段号非法时按 0 段处理并置 Status = 16#8601。
+  2. 当前温度 TempPV 低于目标值 -5 ℃ 时 HeatOn = TRUE，高于目标值 +5 ℃ 时 HeatOn = FALSE，两者之间保持（死区）。
+  3. TempPV 超过目标值 +10 ℃ 时置 OverTempAlarm = TRUE 并置 LoadReduce = TRUE；TempPV 回落到目标值 -3 ℃ 以下才撤销 LoadReduce。
+  4. HeatOn = TRUE 期间 FanOn 必须为 TRUE（先开风机后加热，禁止干烧）。
+  5. Status：16#0000 正常、16#8601 段号非法、16#8602 超温降载。
+
+  扫描周期：20 ms（全组统一，见 docs/tasks_note.md）
+io_table:
+  - direction: IN
+    name: TempPV
+    data_type: REAL
+    description: 当前温度（℃）
+  - direction: IN
+    name: SetTemp
+    data_type: REAL
+    description: 本段目标温度（℃）
+  - direction: IN
+    name: Segment
+    data_type: INT
+    description: 升温段号 0—2
+  - direction: IN
+    name: LoadReduceReq
+    data_type: BOOL
+    description: 上位机请求降载
+  - direction: OUT
+    name: HeatOn
+    data_type: BOOL
+    description: 加热输出
+  - direction: OUT
+    name: FanOn
+    data_type: BOOL
+    description: 风机输出
+  - direction: OUT
+    name: OverTempAlarm
+    data_type: BOOL
+    description: 超温报警
+  - direction: OUT
+    name: LoadReduce
+    data_type: BOOL
+    description: 降载输出
+  - direction: OUT
+    name: Status
+    data_type: WORD
+    description: 状态码
+initial_state: "HeatOn = FALSE；FanOn = FALSE；OverTempAlarm = FALSE；LoadReduce = FALSE；Status = 16#0000。"
+constraints:
+  - K1 目标温度 = SetTemp × (0.5 / 0.8 / 1.0)，随 Segment 切换。
+  - K2 加热判据带 ±5 ℃ 死区，避免在目标值附近高频通断。
+  - K3 超温 +10 ℃ 置降载，回落 -3 ℃ 才撤销（迟滞不小于 13 ℃）。
+  - K4 HeatOn 为 TRUE 时 FanOn 必须为 TRUE（联锁）。
+provenance: 改编自公开题（P10 Temperature Logic Control（课程题库））；改编点：把单段设定值改为三段升温曲线，把「过热保护」改为「降载 + 迟滞恢复」，并补上风机联锁；为什么这样改：原题只考一个设定值比较，工艺性偏弱；分段升温与降载更接近热处理现场，且能同时考死区与联锁两条规约；来源与审核记录见 data/provenance.csv 第 27 行
+spec_ref: data/specs/S06.ltl
+error_examples:
+  - 错误实现：无死区，TempPV < 目标值就加热。症状——加热器在目标值附近以扫描周期频率通断，接触器寿命骤降。
+  - 错误实现：超温时直接断加热、不断风机。症状——加热器余热无法带走，箱内温度继续上升。
+notes: ""

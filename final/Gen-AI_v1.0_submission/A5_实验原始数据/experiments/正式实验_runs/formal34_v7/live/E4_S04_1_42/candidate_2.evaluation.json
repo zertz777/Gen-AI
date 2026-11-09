@@ -1,0 +1,58 @@
+{
+  "source": "(*\n【需求原文】\n称重传感器长时间运行会出现零点漂移，需要在空秤时重新标定零点。\n\n控制要求：\n1. ZeroBtn 的上升沿把当前 RawWeight 采样为零点 ZeroOffset，同时清 DriftAlarm。\n2. CompensatedWeight = (RawWeight - ZeroOffset) * 0.01（单位 kg，0.01 为标定系数），每个扫描周期更新。\n3. 当 (RawWeight - ZeroOffset) 的绝对值超过 200（即 2 kg）时置 DriftAlarm = TRUE；回到 ±150 以内才复位（滞回）。\n4. 上电时 ZeroOffset = 0，DriftAlarm = FALSE。\n5. Status：16#0000 正常、16#8401 零点漂移、16#8402 采样值超量程（RawWeight 超出 -32768..32767 的可用段）。\n\n扫描周期：20 ms。\n\n待审语义冲突（保留，不宣称已解决）：\n- 原文要求绝对偏差 > 200 才置位，形式规约 driftOut 使用 >= 200。\n  本实现采用原文的严格大于边界。\n- C2 要求报警时偏差始终 >= 200，与 K3/C6 在 150 < 绝对偏差 < 200\n  区间保持报警的要求冲突。本实现保留原文滞回，不满足该区间的 C2。\n- C10 要求初始扫描输出重量为零、无报警且零点为零；\n  对任意非零输入，这与 C4 每扫描换算冲突；首扫描按钮为 TRUE 时，\n  还与 K1 的上升沿标定冲突。本实现将给定初态作为执行扫描前的初值，\n  首扫描即执行换算、边沿和报警逻辑，不强制零输出。\n- RawWeight 为 INT，其可表示范围已是 -32768..32767，\n  因而该接口无法传入题述超量程值，16#8402 分支不可由合法 INT 输入触发。\n  不改变接口，也不将合法端点擅自视为故障。\n\n初始化依赖本实例在上电时非保持初始化；部署不得将该实例配置为\n断电保持并沿用旧状态。本源码未经过真实编译或逐周期测试验证。\nCalibWeight 仅作显示输入，不参与换算。\n*)\n\nFUNCTION_BLOCK FB_S04\nVAR_INPUT\n    RawWeight : INT;\n    ZeroBtn : BOOL;\n    CalibWeight : REAL;\nEND_VAR\nVAR_OUTPUT\n    CompensatedWeight : REAL := 0.0;\n    ZeroOffset : INT := 0;\n    DriftAlarm : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    ZeroBtnLast : BOOL := FALSE;\n    ZeroRise : BOOL := FALSE;\n    RawWide : DINT := 0;\n    ZeroDelta : DINT := 0;\n    AbsDelta : DINT := 0;\n    SampleOutOfRange : BOOL := FALSE;\nEND_VAR\n\n(* 在加减运算之前扩展类型，避免 INT 差值溢出。 *)\nRawWide := INT_TO_DINT(RawWeight);\nSampleOutOfRange :=\n    (RawWide < DINT#-32768) OR (RawWide > DINT#32767);\n\nZeroRise := ZeroBtn AND NOT ZeroBtnLast;\nZeroBtnLast := ZeroBtn;\n\nIF ZeroRise THEN\n    ZeroOffset := RawWeight;\n    DriftAlarm := FALSE;\nEND_IF;\n\nZeroDelta := RawWide - INT_TO_DINT(ZeroOffset);\n\nIF ZeroDelta < DINT#0 THEN\n    AbsDelta := -ZeroDelta;\nELSE\n    AbsDelta := ZeroDelta;\nEND_IF;\n\nCompensatedWeight := DINT_TO_REAL(ZeroDelta) * REAL#0.01;\n\n(* 标定扫描清警；其余扫描执行置位、复位和中间区间保持。 *)\nIF NOT ZeroRise THEN\n    IF AbsDelta > DINT#200 THEN\n        DriftAlarm := TRUE;\n    ELSIF AbsDelta <= DINT#150 THEN\n        DriftAlarm := FALSE;\n    END_IF;\nEND_IF;\n\n(* 状态优先级：采样超量程高于零点漂移。 *)\nIF SampleOutOfRange THEN\n    Status := WORD#16#8402;\nELSIF DriftAlarm THEN\n    Status := WORD#16#8401;\nELSE\n    Status := WORD#16#0000;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.5,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 3,
+    "passed_ids": [
+      "S04-02",
+      "S04-04",
+      "S04-05"
+    ],
+    "failures": [
+      {
+        "case_id": "S04-01",
+        "cycle": 1,
+        "signal": "DriftAlarm",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S04-03",
+        "cycle": 2,
+        "signal": "DriftAlarm",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S04-06",
+        "cycle": 3,
+        "signal": "DriftAlarm",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 2881,
+  "tag": "candidate_2"
+}

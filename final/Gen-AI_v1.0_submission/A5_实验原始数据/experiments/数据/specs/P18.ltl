@@ -1,0 +1,10 @@
+# task: P18
+# meta: hard / B 模拟量与数据处理
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(reset -> elementCount == 0)    -- 复位当周期队列必须清空（优先于同周期的入队/出队）（K1）
+C4: G(reset && enqueue -> elementCount == 0)    -- 复位与入队同时请求时当拍以复位为准（K1）
+C2: G(elementCount >= 0)    -- 元素计数不得为负（出队不得越过队首）（K3/K4）
+C9: G(status == 16#8001 -> elementCount == 0)    -- 空队出队被拒绝时仍为空（K3）
+C10: G[0,0](elementCount == 0)    -- 上电当拍队列为空（初态）

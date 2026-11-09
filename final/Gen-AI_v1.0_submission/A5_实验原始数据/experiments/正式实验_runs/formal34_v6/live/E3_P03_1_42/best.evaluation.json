@@ -1,0 +1,39 @@
+{
+  "source": "FUNCTION_BLOCK FB_P03\nVAR_INPUT\n    Value : REAL;\n    hiLevel : REAL;\n    loLevel : REAL;\n    hystWindow : REAL;\nEND_VAR\nVAR_OUTPUT\n    hiAlarm : BOOL;\n    loAlarm : BOOL;\n    error : BOOL;\n    status : WORD;\nEND_VAR\n\n(* Conflict note: C10 requires first-scan !hiAlarm && !loAlarm && !error && status=16#0000.\n   If K1/K2 invalid parameters or K3/K4 alarm conditions are true on the first scan,\n   this conflicts with immediate error/alarm handling. This implementation prioritizes\n   K1-K4 immediate safety/error logic; initial output values are as declared by the task. *)\n\n(* K1: loLevel >= hiLevel -> error 16#8001 and skip alarm logic *)\nIF loLevel >= hiLevel THEN\n    error := TRUE;\n    status := WORD#16#8001;\n    hiAlarm := FALSE;\n    loAlarm := FALSE;\n\n(* K2: hystWindow >= (hiLevel - loLevel) -> error 16#8002 and skip alarm logic *)\nELSIF hystWindow >= (hiLevel - loLevel) THEN\n    error := TRUE;\n    status := WORD#16#8002;\n    hiAlarm := FALSE;\n    loAlarm := FALSE;\n\n(* Valid parameters: execute hysteresis alarm logic *)\nELSE\n    error := FALSE;\n    status := WORD#16#0000;\n\n    (* K3: high alarm with hysteresis *)\n    IF Value > hiLevel THEN\n        hiAlarm := TRUE;\n    ELSIF Value < (hiLevel - hystWindow) THEN\n        hiAlarm := FALSE;\n    END_IF;\n\n    (* K4: low alarm with hysteresis *)\n    IF Value < loLevel THEN\n        loAlarm := TRUE;\n    ELSIF Value > (loLevel + hystWindow) THEN\n        loAlarm := FALSE;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.016,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P03-01",
+      "P03-02",
+      "P03-03",
+      "P03-04",
+      "P03-05",
+      "P03-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 12315,
+  "tag": "candidate_2"
+}

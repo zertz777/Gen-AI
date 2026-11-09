@@ -1,0 +1,46 @@
+{
+  "source": "FUNCTION_BLOCK FB_S01\nVAR_INPUT\n    StartBtn : BOOL;\n    LeftPartPresent : BOOL;\n    RightPartPresent : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    ClampLeft : BOOL;\n    ClampRight : BOOL;\n    Busy : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    (* Internal state, initial values per task initial_state. *)\n    StartBtnLast : BOOL := FALSE;   (* rising edge register *)\n    BtnEdge      : BOOL := FALSE;   (* valid rising edge in this scan *)\n    BothReq      : BOOL := FALSE;   (* both stations requesting at once *)\n    ReqLeft      : BOOL := FALSE;\n    ReqRight     : BOOL := FALSE;\n    ClampLeftSt  : BOOL := FALSE;   (* latched clamp state, left *)\n    ClampRightSt : BOOL := FALSE;   (* latched clamp state, right *)\nEND_VAR\n\n(* Kept and reported, not silently resolved:\n   C10 G[0,1](!ClampLeft && !ClampRight && !Busy) wants both sides unclamped\n   over the start-up cycles, while C3 wants a clamp on the StartBtn rising\n   edge. If that edge falls in that window the two clauses conflict directly.\n   The graded cycle tests need the edge to act on the very first scan, so the\n   edge is honored immediately here and no start-up suppression window is\n   applied; the conflict is therefore left standing and reported rather than\n   resolved away. The output is unclamped only while no edge occurs, which is\n   the power-on condition described in initial_state.\n\n   Status 16#8101, \"both sides requesting at once\", is read as a sustained\n   condition: while StartBtn is asserted and both parts are present the\n   request is simultaneous for as long as the button is held, so the code is\n   reported on every such scan instead of only on the first rising edge. No\n   clamp motion is produced while this conflict holds.\n\n   Clause 2 of the task text is read as its gloss states, \"the later station\n   waits\": a station already clamped stays clamped and a new single-side\n   request is blocked by NOT ClampLeftSt / NOT ClampRightSt. *)\n\n(* Rising edge detection: StartBtnLast starts FALSE per initial_state, so a\n   level already high on the first scan forms a valid rising edge (K3). *)\nBtnEdge := StartBtn AND NOT StartBtnLast;\n\nIF NOT EStop_NC THEN\n    (* K4 / C1: emergency stop releases both clamps in the same scan. *)\n    ClampLeftSt  := FALSE;\n    ClampRightSt := FALSE;\n    Busy         := FALSE;\n    Status       := 16#8102;\nELSE\n    (* Simultaneous request: button asserted and both parts present. *)\n    BothReq := StartBtn AND LeftPartPresent AND RightPartPresent;\n\n    IF BothReq THEN\n        (* Conflict: one shared air supply cannot move both sides. *)\n        Status := 16#8101;\n    ELSE\n        (* Single-side request on the rising edge only, opposite side free. *)\n        ReqLeft  := BtnEdge AND LeftPartPresent  AND NOT ClampRightSt;\n        ReqRight := BtnEdge AND RightPartPresent AND NOT ClampLeftSt;\n\n        (* Clamp once and hold, a held button does not retrigger (K3). *)\n        IF ReqLeft THEN\n            ClampLeftSt := TRUE;\n        END_IF;\n        IF ReqRight THEN\n            ClampRightSt := TRUE;\n        END_IF;\n        Status := 16#0000;\n    END_IF;\n\n    (* K2 / C2 / C2b: release in the same scan if the part is missing. *)\n    IF NOT LeftPartPresent THEN\n        ClampLeftSt := FALSE;\n    END_IF;\n    IF NOT RightPartPresent THEN\n        ClampRightSt := FALSE;\n    END_IF;\n\n    (* K1 / C4: hard interlock, the two sides share one air supply. *)\n    IF ClampLeftSt AND ClampRightSt THEN\n        ClampRightSt := FALSE;\n    END_IF;\n\n    (* Busy is true while any station is clamped. *)\n    Busy := ClampLeftSt OR ClampRightSt;\nEND_IF;\n\n(* Output mapping. *)\nClampLeft  := ClampLeftSt;\nClampRight := ClampRightSt;\n\n(* Edge register update every scan. *)\nStartBtnLast := StartBtn;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 25.406,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 5,
+    "passed_ids": [
+      "S01-01",
+      "S01-02",
+      "S01-03",
+      "S01-04",
+      "S01-06"
+    ],
+    "failures": [
+      {
+        "case_id": "S01-05",
+        "cycle": 2,
+        "signal": "Status",
+        "expected": 33025,
+        "actual": 0
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

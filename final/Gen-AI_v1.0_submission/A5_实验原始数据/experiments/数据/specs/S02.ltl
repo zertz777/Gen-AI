@@ -1,0 +1,11 @@
+# task: S02
+# meta: easy / A 开关量联锁
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(!EStop_NC -> (!MotorFwd && !MotorRev))    -- 急停当周期两个方向都必须断开（K4）
+C2: G(MotorFwd -> !MaintKey)    -- 检修钥匙插入时禁止正转（K3）
+C2b: G(MotorRev -> !MaintKey)    -- 检修钥匙插入时禁止反转（K3）
+C4: G(!(MotorFwd && MotorRev))    -- 正反转互斥（K1）
+C9: G(MotorFwd && !MotorRev -> G[0,10](!MotorRev))    -- 正转期间 200 ms 内不得出现反转（换向死区）（K2）
+C10: G[0,1](!MotorFwd && !MotorRev)    -- 上电首周期两个方向都不输出（初态）

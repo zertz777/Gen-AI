@@ -1,0 +1,64 @@
+{
+  "source": "FUNCTION_BLOCK FB_S01\nVAR_INPUT\n    StartBtn : BOOL;\n    LeftPartPresent : BOOL;\n    RightPartPresent : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    ClampLeft : BOOL := FALSE;\n    ClampRight : BOOL := FALSE;\n    Busy : BOOL := FALSE;\n    Status : WORD := 16#0000;\nEND_VAR\nVAR\n    StartBtnLast : BOOL := FALSE;\n    StartRise : BOOL := FALSE;\n    RequestLeft : BOOL := FALSE;\n    RequestRight : BOOL := FALSE;\n    InitialScans : USINT := 0;\nEND_VAR\n\n(*\n需求原文：\n双工位气动夹具用于同时定位两个零件，但气源只有一路，\n因此两个夹具不能同时动作。\n\n1. StartBtn 为上升沿触发：若左工位有零件\n   （LeftPartPresent = TRUE）而右夹具未在夹紧，\n   则左夹具 ClampLeft 夹紧；右侧对称。\n2. 夹紧动作只做一次保持，不随 StartBtn 电平反复动作；\n   要松开必须由同一按钮在另一工位动作时自动让位\n   （即后启动的工位会等待）。\n3. 任一工位没有零件（对应 PartPresent = FALSE）时，\n   该侧不允许夹紧。\n4. EStop_NC = FALSE（急停）时两侧夹具立即松开，\n   ClampLeft 与 ClampRight 同时为 FALSE，并清空忙标志。\n5. 任一时刻 ClampLeft 与 ClampRight 不得同时为 TRUE。\n6. Busy 表示当前已有工位在夹紧过程中；\n   Status 输出 16#0000 正常、16#8101 两侧同时请求、\n   16#8102 急停中。\n\n扫描周期：20 ms。\n\n待审语义冲突：\nA. C10 的 G[0,1] 要求前两个扫描输出均关闭，\n   与这两个扫描内启动上升沿立即夹紧的要求存在冲突。\n   本实现优先保持 C10；启动边沿仍采样，不延迟或重放。\nB. 自动让位、后启动等待没有规定释放条件、等待完成条件\n   或所需扫描数，且与“对侧未夹紧才允许启动”存在歧义。\n   本实现采用保守互锁：对侧已夹紧时不接受新的夹紧动作，\n   不擅自增加等待时间、排队规则或自动交接过程。\n   自动让位条款仍待审，不能据此声称完整功能正确。\nC. 两侧同时请求时没有指定仲裁工位。\n   本实现报告 16#8101，不新增夹紧，保留合法的已有夹紧。\n\n安全导致的松开优先于保持要求。\n无夹紧完成反馈或动作时间参数；\nBusy 按当前任一夹紧输出为 TRUE 计算。\n本源码未经过真实编译器或逐周期测试验证。\n*)\n\n(* 每次调用均采样边沿，包括急停及初始化期间。 *)\nStartRise := StartBtn AND NOT StartBtnLast;\nStartBtnLast := StartBtn;\n\nRequestLeft := StartRise AND LeftPartPresent;\nRequestRight := StartRise AND RightPartPresent;\n\nIF NOT EStop_NC THEN\n    (* 急停最高优先级，当扫描释放，不保留请求。 *)\n    ClampLeft := FALSE;\n    ClampRight := FALSE;\n    Busy := FALSE;\n    Status := 16#8102;\n\nELSIF InitialScans < 2 THEN\n    (* C10：以第一次调用为扫描 0，扫描 0、1 均禁止夹紧。 *)\n    ClampLeft := FALSE;\n    ClampRight := FALSE;\n    Busy := FALSE;\n    Status := 16#0000;\n\n    IF RequestLeft AND RequestRight THEN\n        Status := 16#8101;\n    END_IF;\n\nELSE\n    Status := 16#0000;\n\n    (* 零件丢失必须当扫描释放。 *)\n    IF NOT LeftPartPresent THEN\n        ClampLeft := FALSE;\n    END_IF;\n\n    IF NOT RightPartPresent THEN\n        ClampRight := FALSE;\n    END_IF;\n\n    (* 防御性互锁：非法双输出状态不进行工位仲裁，全部释放。 *)\n    IF ClampLeft AND ClampRight THEN\n        ClampLeft := FALSE;\n        ClampRight := FALSE;\n    END_IF;\n\n    IF RequestLeft AND RequestRight THEN\n        Status := 16#8101;\n\n    ELSIF RequestLeft THEN\n        IF NOT ClampRight THEN\n            ClampLeft := TRUE;\n        END_IF;\n\n    ELSIF RequestRight THEN\n        IF NOT ClampLeft THEN\n            ClampRight := TRUE;\n        END_IF;\n    END_IF;\n\n    (* 无新请求时保持此前合法夹紧状态。 *)\n    Busy := ClampLeft OR ClampRight;\nEND_IF;\n\n(* 上电保护按调用次数计数，急停期间也属于扫描周期。 *)\nIF InitialScans < 2 THEN\n    InitialScans := InitialScans + 1;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 25.062,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 2,
+    "passed_ids": [
+      "S01-03",
+      "S01-06"
+    ],
+    "failures": [
+      {
+        "case_id": "S01-01",
+        "cycle": 1,
+        "signal": "ClampLeft",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S01-02",
+        "cycle": 1,
+        "signal": "ClampRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S01-04",
+        "cycle": 1,
+        "signal": "ClampLeft",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S01-05",
+        "cycle": 2,
+        "signal": "Status",
+        "expected": 33025,
+        "actual": 0
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 2983,
+  "tag": "candidate_2"
+}

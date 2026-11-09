@@ -1,0 +1,10 @@
+# task: P06
+# meta: easy / A 开关量联锁
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(!AERATION_E_STOP_NC -> !BLOWER_RUN)    -- 急停当周期风机必须停（K1/K3）
+C2: G(BLOWER_RUN -> (DO_LOW && AERATION_E_STOP_NC))    -- 风机运行的双许可：溶解氧偏低且无急停（K2）
+C3: G(!DO_LOW -> X(!BLOWER_RUN))    -- 溶解氧恢复后下一周期必须停机并复位启动计时（K3）
+C6: G(BLOWER_RUN -> (BLOWER_RUN W !DO_LOW))    -- 需求持续期间风机保持运行，不因单周期抖动反复启停（K2/K3）
+C10: G[0,1](!BLOWER_RUN)    -- 上电首周期风机不运行（需先计满 5 s）（K1）

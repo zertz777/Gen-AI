@@ -1,0 +1,77 @@
+{
+  "source": "FUNCTION_BLOCK FB_P11\nVAR_INPUT\n    Mode : BOOL;\n    ForwardButton : BOOL;\n    ReverseButton : BOOL;\n    SensorA : BOOL;\n    SensorB : BOOL;\n    SensorC : BOOL;\n    ButtonA : BOOL;\n    ButtonB : BOOL;\n    ButtonC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MotorForward : BOOL := FALSE;\n    MotorReverse : BOOL := FALSE;\n    CompletionLight : BOOL := FALSE;\nEND_VAR\nVAR\n    (* 0: IDLE / A, 1: A->B, 2: B, 3: B->C, 4: C, 5: COMPLETE *)\n    StationState : INT := 0;\n    StartupScans : INT := 0;\n    PreviousMode : BOOL := FALSE;\n    PreviousButtonA : BOOL := FALSE;\n    PreviousButtonB : BOOL := FALSE;\n    PreviousButtonC : BOOL := FALSE;\n    ButtonARise : BOOL := FALSE;\n    ButtonBRise : BOOL := FALSE;\n    ButtonCRise : BOOL := FALSE;\nEND_VAR\n\n(*\n    Each invocation represents one 20 ms scan.\n    C10's explicit interval [0,1] is implemented as two inhibited scans.\n    Mode changes cancel transport sequencing, but do not clear a completed\n    product's light while SensorC remains TRUE.\n\n    Review limitation: the specification references emergency-stop testing,\n    but supplies no emergency-stop input or evaluable C1 requirement.\n    No emergency-stop behavior can be implemented from this interface.\n    Compilation and cycle-by-cycle functional validation are not claimed.\n*)\n\nButtonARise := ButtonA AND NOT PreviousButtonA;\nButtonBRise := ButtonB AND NOT PreviousButtonB;\nButtonCRise := ButtonC AND NOT PreviousButtonC;\n\nMotorForward := FALSE;\nMotorReverse := FALSE;\n\nIF StartupScans < 2 THEN\n    StartupScans := StartupScans + 1;\n    StationState := 0;\n    CompletionLight := FALSE;\nELSE\n    (* Completion remains latched independently of the selected mode. *)\n    IF NOT SensorC THEN\n        CompletionLight := FALSE;\n    END_IF;\n\n    IF Mode <> PreviousMode THEN\n        StationState := 0;\n    END_IF;\n\n    IF NOT Mode THEN\n        StationState := 0;\n\n        (* Simultaneous manual direction requests produce a stop. *)\n        MotorForward := ForwardButton AND NOT ReverseButton;\n        MotorReverse := ReverseButton AND NOT ForwardButton;\n    ELSE\n        IF CompletionLight THEN\n            StationState := 5;\n        END_IF;\n\n        CASE StationState OF\n            0:\n                IF SensorA AND ButtonARise THEN\n                    StationState := 1;\n                END_IF;\n\n            1:\n                IF SensorB THEN\n                    StationState := 2;\n                    IF ButtonBRise THEN\n                        StationState := 3;\n                    END_IF;\n                END_IF;\n\n            2:\n                IF SensorB AND ButtonBRise THEN\n                    StationState := 3;\n                END_IF;\n\n            3:\n                IF SensorC THEN\n                    StationState := 4;\n                    IF ButtonCRise THEN\n                        CompletionLight := TRUE;\n                        StationState := 5;\n                    END_IF;\n                END_IF;\n\n            4:\n                IF SensorC AND ButtonCRise THEN\n                    CompletionLight := TRUE;\n                    StationState := 5;\n                END_IF;\n\n            5:\n                IF NOT SensorC THEN\n                    StationState := 0;\n                END_IF;\n\n            ELSE\n                (* Invalid internal states recover stopped at A. *)\n                StationState := 0;\n        END_CASE;\n\n        (* Destination sensors stop transport in the current scan. *)\n        IF StationState = 1 THEN\n            MotorForward := NOT SensorB;\n        ELSIF StationState = 3 THEN\n            MotorForward := NOT SensorC;\n        END_IF;\n\n        MotorReverse := FALSE;\n    END_IF;\nEND_IF;\n\n(* Sample edges in all modes and during startup to prevent queued events. *)\nPreviousButtonA := ButtonA;\nPreviousButtonB := ButtonB;\nPreviousButtonC := ButtonC;\nPreviousMode := Mode;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 25.813,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 7,
+    "passed": 1,
+    "passed_ids": [
+      "P11-05"
+    ],
+    "failures": [
+      {
+        "case_id": "P11-01",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P11-02",
+        "cycle": 2,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P11-03",
+        "cycle": 2,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P11-04",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P11-06",
+        "cycle": 2,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P11-07",
+        "cycle": 2,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3395,
+  "tag": "candidate_1"
+}

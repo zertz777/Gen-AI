@@ -1,0 +1,66 @@
+task_id: S09
+title: CIP 三步清洗时序
+difficulty: medium
+category: C
+requirement: |-
+  CIP（就地清洗）用于食品管路的批次间清洗，必须按固定顺序与时长执行。
+
+  控制要求：
+  1. StartCIP 上升沿启动流程：Step 1 水洗（WaterValve = TRUE，PumpRun = TRUE）持续 30 s。
+  2. 30 s 到后自动进入 Step 2 碱洗（LyeValve = TRUE，PumpRun = TRUE）持续 60 s；StepDone 可作为提前结束信号，按上升沿生效。
+  3. Step 2 结束后进入 Step 3 清水（RinseValve = TRUE，PumpRun = TRUE）持续 30 s；结束后关闭全部阀门与泵，StepNo = 0。
+  4. 任何时刻三个阀门中最多一个为 TRUE；PumpRun 为 TRUE 的前提是至少有一个阀门打开。
+  5. EStop_NC = FALSE 时立即关闭全部阀门与泵，StepNo 归 0，流程作废，需重新 StartCIP。
+  6. Status：16#0000 正常、16#8901 步序非法、16#8902 急停中断。
+
+  扫描周期：20 ms（全组统一，见 docs/tasks_note.md）
+io_table:
+  - direction: IN
+    name: StartCIP
+    data_type: BOOL
+    description: 启动清洗（上升沿有效）
+  - direction: IN
+    name: StepDone
+    data_type: BOOL
+    description: 当前步提前完成（上升沿有效）
+  - direction: IN
+    name: EStop_NC
+    data_type: BOOL
+    description: 急停常闭触点，TRUE = 正常
+  - direction: OUT
+    name: WaterValve
+    data_type: BOOL
+    description: 水洗阀
+  - direction: OUT
+    name: LyeValve
+    data_type: BOOL
+    description: 碱洗阀
+  - direction: OUT
+    name: RinseValve
+    data_type: BOOL
+    description: 清水阀
+  - direction: OUT
+    name: PumpRun
+    data_type: BOOL
+    description: 循环泵
+  - direction: OUT
+    name: StepNo
+    data_type: INT
+    description: 当前步号 0—3
+  - direction: OUT
+    name: Status
+    data_type: WORD
+    description: 状态码
+initial_state: "三个阀门与泵全 FALSE；StepNo = 0；Status = 16#0000；步计时器 = 0；StartCIPLast = FALSE；StepDoneLast = FALSE。"
+constraints:
+  - K1 步序只能 0→1→2→3→0，不得跳步。
+  - K2 同一步内三个阀门互斥，最多一个为 TRUE。
+  - K3 PumpRun 为 TRUE 时至少有一个阀门为 TRUE（无空转）。
+  - K4 每步时长 30/60/30 s，StepDone 上升沿可提前结束当前步。
+  - K5 急停时全部输出 FALSE、StepNo 归 0。
+provenance: 自拟（食品工厂 CIP 就地清洗工艺卡：预洗—碱洗—漂洗三步，30/60/30 s 取自设备供应商清洗程序手册）；改编点：按真实 CIP 流程抽象出三步定时 + 阀门互斥 + 泵联锁；为什么这样改：顺序 + 定时 + 互斥三项约束同时出现，是 ST 状态机最典型的形态，且时长参数可直接写成逐周期用例；来源与审核记录见 data/provenance.csv 第 30 行
+spec_ref: data/specs/S09.ltl
+error_examples:
+  - 错误实现：三步共用同一个定时器且不复位。症状——碱洗刚开始就把上一段的 30 s 余量算进去，清洗时间不足。
+  - 错误实现：StepDone 用电平而不是上升沿。症状——同一个完成信号把连续两步都提前结束。
+notes: ""

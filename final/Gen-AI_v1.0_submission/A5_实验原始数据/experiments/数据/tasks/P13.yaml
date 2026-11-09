@@ -1,0 +1,51 @@
+task_id: P13
+title: Office HVAC Multi-mode Energy-Saving Control
+difficulty: medium
+category: B
+requirement: |-
+  Control an office-building supply fan and generate a temperature-setpoint adjustment from occupancy, operating mode and the energy-saving selection.
+
+  1. Valid HVAC_MODE_SELECTOR values are 0 (Auto), 1 (Comfort), 2 (Economy) and 3 (Night).
+  2. Start a 30-second delay only when occupancy is detected and Night mode is not selected. SUPPLY_FAN_RUN becomes TRUE only after these conditions remain satisfied for 30 seconds. Immediately stop the fan and reset timing if occupancy is lost or Night mode is selected. Wait the full 30 seconds again when the conditions recover.
+  3. Auto mode: use a 0°C adjustment when occupied. When unoccupied, use +3°C in energy-saving mode or +2°C in standard mode.
+  4. Comfort mode: use 0°C when occupied or +1°C when unoccupied. Economy mode: use 0°C when occupied or +4°C when unoccupied.
+  5. Night mode: use +4°C regardless of occupancy. The energy-saving selection affects only Auto mode.
+  6. Keep TEMP_SETPOINT_ADJUST within ±4°C. Initialize outputs to OFF and zero at power-up; update them from current inputs when normal calculation begins.
+  7. The start delay controls only the BOOL fan enable; no continuous speed ramp is required.
+
+  中文摘要：办公楼 HVAC 节能控制：按占用与模式（自动/舒适/经济/夜间）决定送风机启停与温度设定值修正，风机启动需 30 秒延时。
+
+  扫描周期：20 ms（全组统一，见 docs/tasks_note.md）
+io_table:
+  - direction: IN
+    name: OCCUPANCY_DETECTED
+    data_type: BOOL
+    description: Occupancy-detection result derived from the CO₂ sensor.
+  - direction: IN
+    name: ENERGY_SAVING_MODE
+    data_type: BOOL
+    description: TRUE selects energy saving; FALSE selects standard operation; affects Auto mode only.
+  - direction: IN
+    name: HVAC_MODE_SELECTOR
+    data_type: INT
+    description: 0 Auto, 1 Comfort, 2 Economy, 3 Night; callers supply a valid value.
+  - direction: OUT
+    name: SUPPLY_FAN_RUN
+    data_type: BOOL
+    description: Supply-fan run enable.
+  - direction: OUT
+    name: TEMP_SETPOINT_ADJUST
+    data_type: INT
+    description: Temperature-setpoint adjustment in °C.
+initial_state: SUPPLY_FAN_RUN = FALSE；TEMP_SETPOINT_ADJUST = 0；启动延时计时器清零。
+constraints:
+  - K1 只有「检测到占用且未选夜间模式」时才开始 30 s 启动延时；条件保持满 30 s 后 SUPPLY_FAN_RUN 才为 TRUE。
+  - K2 占用丢失或切到夜间模式时立即停风机并复位延时；条件恢复后必须重新计满 30 s。
+  - K3 温度修正按模式取值：自动 0/+3（节能）/+2（标准）、舒适 0/+1、经济 0/+4、夜间恒 +4；节能开关只影响自动模式。
+  - K4 TEMP_SETPOINT_ADJUST 必须限制在 ±4 °C 之内。
+provenance: 课程公共题库 P13（Office HVAC Multi-mode Energy-Saving Control）；原始导入后按 2026-11-01 本机冻结判据修订；来源与审核记录见 data/provenance.csv 第 14 行
+spec_ref: data/specs/P13.ltl
+error_examples:
+  - 错误实现：夜间模式仍按占用情况取修正值。症状——夜间有人加班时设定值不升高，节能策略失效。
+  - 错误实现：延时用 TON 但占用丢失时未复位。症状——人来了又走再回来，风机比预定时间早启动。
+notes: ""

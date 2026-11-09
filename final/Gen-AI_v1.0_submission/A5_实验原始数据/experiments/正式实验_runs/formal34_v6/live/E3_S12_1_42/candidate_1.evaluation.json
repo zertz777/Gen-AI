@@ -1,0 +1,173 @@
+{
+  "source": "FUNCTION_BLOCK FB_S12\nVAR_INPUT\n    EStop_NC : BOOL;\n    ResetBtn : BOOL;\n    StartBtn : BOOL;\n    DoorClosed : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MachineRun : BOOL := FALSE;\n    ShiftCount : UINT := 0;\n    AlarmLamp : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    ResetTrig : R_TRIG;\n    StartTrig : R_TRIG;\n    ResetEdge : BOOL := FALSE;\n    StartEdge : BOOL := FALSE;\n    ResetConfirmed : BOOL := FALSE;\n    RunCycles : UINT := 0;\nEND_VAR\n\n(* Conflicting spec note: C10 requires AlarmLamp=FALSE on the first scans,\n   but requirement 1 requires AlarmLamp=TRUE immediately when EStop_NC=FALSE.\n   EStop safety priority is retained here. *)\n\n(* Edge detection *)\nResetTrig(CLK := ResetBtn);\nStartTrig(CLK := StartBtn);\nResetEdge := ResetTrig.Q;\nStartEdge := StartTrig.Q;\n\n(* Safety priority and reset/start sequence *)\nIF NOT EStop_NC THEN\n    MachineRun := FALSE;\n    AlarmLamp := TRUE;\n    Status := WORD#16#8B01;\n    ResetConfirmed := FALSE;\nELSIF NOT DoorClosed THEN\n    MachineRun := FALSE;\n    AlarmLamp := FALSE;\n    Status := WORD#16#8B03;\n    ResetConfirmed := FALSE;\nELSE\n    AlarmLamp := FALSE;\n\n    IF NOT ResetConfirmed THEN\n        MachineRun := FALSE;\n        Status := WORD#16#8B02;\n        IF ResetEdge THEN\n            ResetConfirmed := TRUE;\n            Status := WORD#16#0000;\n        END_IF;\n    ELSE\n        Status := WORD#16#0000;\n        IF StartEdge THEN\n            MachineRun := TRUE;\n        END_IF;\n    END_IF;\nEND_IF;\n\n(* ShiftCount: 60 s = 3000 scans of 20 ms. Only run time advances accumulator. *)\nIF MachineRun THEN\n    IF RunCycles >= UINT#2999 THEN\n        RunCycles := 0;\n        IF ShiftCount < UINT#65535 THEN\n            ShiftCount := ShiftCount + UINT#1;\n        END_IF;\n    ELSE\n        RunCycles := RunCycles + UINT#1;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "fail",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 15,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 16,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 28,
+          "message": "需要程序名、函数或功能块实例替代 'ResetTrig'",
+          "raw": "需要程序名、函数或功能块实例替代 'ResetTrig'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 29,
+          "message": "需要程序名、函数或功能块实例替代 'StartTrig'",
+          "raw": "需要程序名、函数或功能块实例替代 'StartTrig'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 30,
+          "message": "不能将类型 '未知的类型: 'ResetTrig.Q'' 转换为类型'BOOL'",
+          "raw": "不能将类型 '未知的类型: 'ResetTrig.Q'' 转换为类型'BOOL'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 30,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 30,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 31,
+          "message": "不能将类型 '未知的类型: 'StartTrig.Q'' 转换为类型'BOOL'",
+          "raw": "不能将类型 '未知的类型: 'StartTrig.Q'' 转换为类型'BOOL'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 31,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 31,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        }
+      ],
+      "elapsed_s": 21.031,
+      "evidence_kind": "live"
+    },
+    "errors": [
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 15,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 16,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 28,
+        "message": "需要程序名、函数或功能块实例替代 'ResetTrig'",
+        "raw": "需要程序名、函数或功能块实例替代 'ResetTrig'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 29,
+        "message": "需要程序名、函数或功能块实例替代 'StartTrig'",
+        "raw": "需要程序名、函数或功能块实例替代 'StartTrig'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 30,
+        "message": "不能将类型 '未知的类型: 'ResetTrig.Q'' 转换为类型'BOOL'",
+        "raw": "不能将类型 '未知的类型: 'ResetTrig.Q'' 转换为类型'BOOL'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 30,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 30,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 31,
+        "message": "不能将类型 '未知的类型: 'StartTrig.Q'' 转换为类型'BOOL'",
+        "raw": "不能将类型 '未知的类型: 'StartTrig.Q'' 转换为类型'BOOL'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 31,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 31,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      }
+    ],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "skipped",
+    "total": 0,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": []
+  },
+  "repair_rounds": 0,
+  "token_count": 14388,
+  "tag": "candidate_1"
+}

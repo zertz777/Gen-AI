@@ -1,0 +1,58 @@
+task_id: P04
+title: Jam Pump Debouncing and Runtime Maintenance
+difficulty: easy
+category: D
+requirement: |-
+  Control a jam transfer pump on a food production line, including viscosity-signal debouncing, emergency-stop priority, runtime accumulation and a maintenance-due indication.
+
+  1. Accept the viscosity condition only after VISCOSITY_OK has remained TRUE for DebounceTime. Invalidate the condition immediately when the input becomes FALSE.
+  2. Allow VFD_RUN to be TRUE only when PASTE_E_STOP_NC is TRUE and the viscosity condition is valid. An emergency stop immediately disables the run output and clears any incomplete debounce timing.
+  3. Accumulate PUMP_RUNTIME_ACC using the actual invocation interval CycleTime only while VFD_RUN is TRUE. Preserve the accumulated time while the pump is stopped.
+  4. Set PUMP_MAINT_DUE when accumulated runtime reaches 500 hours. This indication is informational and must not affect pump operation or the safety permissive.
+  5. At power-up, initialize the run output to OFF, accumulated runtime to zero and the maintenance indication to FALSE.
+
+  中文摘要：酱料输送泵控制：粘度信号去抖、急停优先、运行时间累计与 500 小时维护提示。
+
+  扫描周期：20 ms（全组统一，见 docs/tasks_note.md）
+io_table:
+  - direction: IN
+    name: VISCOSITY_OK
+    data_type: BOOL
+    description: Raw signal indicating that viscosity is within the permitted range.
+  - direction: IN
+    name: PASTE_E_STOP_NC
+    data_type: BOOL
+    description: Normally closed emergency-stop circuit; TRUE permits operation and FALSE means emergency stop.
+  - direction: IN
+    name: DebounceTime
+    data_type: TIME
+    description: Required continuous valid duration for the viscosity signal; must be positive.
+  - direction: IN
+    name: CycleTime
+    data_type: TIME
+    description: Actual elapsed interval represented by this invocation; must be positive.
+  - direction: OUT
+    name: VFD_RUN
+    data_type: BOOL
+    description: Pump variable-frequency-drive run command.
+  - direction: OUT
+    name: PUMP_MAINT_DUE
+    data_type: BOOL
+    description: Maintenance indication when accumulated runtime reaches 500 hours.
+  - direction: OUT
+    name: PUMP_RUNTIME_ACC
+    data_type: LTIME
+    description: Accumulated enabled runtime, using a long-duration time type.
+initial_state: "VFD_RUN = FALSE；PUMP_RUNTIME_ACC = T#0s；PUMP_MAINT_DUE = FALSE；去抖计时器清零。"
+constraints:
+  - K1 PASTE_E_STOP_NC = FALSE 时 VFD_RUN 立即变为 FALSE，并清除未完成的去抖计时。
+  - K2 VISCOSITY_OK 必须连续为 TRUE 达 DebounceTime，粘度条件才算有效；输入一旦变 FALSE 立即作废。
+  - K3 VFD_RUN 为 TRUE 的必要条件是 PASTE_E_STOP_NC = TRUE 且粘度条件有效，二者缺一不可。
+  - K4 仅在 VFD_RUN = TRUE 时按 CycleTime 累加 PUMP_RUNTIME_ACC；泵停期间累计值保持不变。
+  - K5 累计到 500 小时后置 PUMP_MAINT_DUE；该提示只作信息输出，不得反过来影响 VFD_RUN 或安全允许。
+provenance: 课程公共题库 P04（Jam Pump Debouncing and Runtime Maintenance）；原文导入、变量名与需求未做任何改动；来源与审核记录见 data/provenance.csv 第 5 行
+spec_ref: data/specs/P04.ltl
+error_examples:
+  - 错误实现：把 PUMP_MAINT_DUE 串进 VFD_RUN 的使能条件。症状——累计满 500 小时后泵自动停机，产线断料。
+  - 错误实现：急停时只把 VFD_RUN 置 FALSE，未清去抖计时器。症状——急停复位后粘度条件被「立即」认为有效，泵无去抖直接启动。
+notes: ""

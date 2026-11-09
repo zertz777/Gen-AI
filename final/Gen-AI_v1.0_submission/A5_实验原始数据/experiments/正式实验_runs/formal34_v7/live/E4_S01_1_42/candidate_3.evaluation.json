@@ -1,0 +1,64 @@
+{
+  "source": "FUNCTION_BLOCK FB_S01\nVAR_INPUT\n    StartBtn : BOOL;\n    LeftPartPresent : BOOL;\n    RightPartPresent : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    ClampLeft : BOOL := FALSE;\n    ClampRight : BOOL := FALSE;\n    Busy : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    StartBtnLast : BOOL := FALSE;\n    StartRise : BOOL := FALSE;\n    StartupScans : USINT := 0;\n    PendingSide : USINT := 0; (* 0=无，1=左，2=右 *)\nEND_VAR\n\n(*\n待审语义：\n1. C10 的 G[0,1] 要求前两个扫描均不夹紧；原文要求启动上升沿\n   触发，未给出上电抑制例外。本实现按 C10 抑制前两个扫描，\n   同时更新边沿寄存器，不缓存这两个扫描中的启动请求。\n2. “右夹具未在夹紧才启动左侧”与“另一工位动作时自动让位”\n   未明确释放与接替时序。本实现采用释放当扫描、接替下一扫描，\n   待审期间不声称此时序已由原文唯一确定。\n3. 两侧同时请求的处理及 Status 保持方式未明确：\n   本实现空闲时拒绝同时请求；已有夹紧侧时允许另一侧排队让位。\n   上升沿且两侧均到位时报告 8101，仅保持当扫描。\n无真实编译或逐周期测试验证声明。\n*)\n\nStartRise := StartBtn AND NOT StartBtnLast;\nStartBtnLast := StartBtn;\nStatus := WORD#16#0000;\n\nIF StartupScans < 2 THEN\n    StartupScans := StartupScans + 1;\n    ClampLeft := FALSE;\n    ClampRight := FALSE;\n    Busy := FALSE;\n    PendingSide := 0;\n\n    IF NOT EStop_NC THEN\n        Status := WORD#16#8102;\n    END_IF;\n\nELSIF NOT EStop_NC THEN\n    (* 急停优先；不保留待执行请求，不在急停解除时自动重启。 *)\n    ClampLeft := FALSE;\n    ClampRight := FALSE;\n    Busy := FALSE;\n    PendingSide := 0;\n    Status := WORD#16#8102;\n\nELSE\n    (* 到位信号消失立即解除对应夹紧。 *)\n    IF NOT LeftPartPresent THEN\n        ClampLeft := FALSE;\n        IF PendingSide = 1 THEN\n            PendingSide := 0;\n        END_IF;\n    END_IF;\n\n    IF NOT RightPartPresent THEN\n        ClampRight := FALSE;\n        IF PendingSide = 2 THEN\n            PendingSide := 0;\n        END_IF;\n    END_IF;\n\n    IF StartRise AND LeftPartPresent AND RightPartPresent THEN\n        Status := WORD#16#8101;\n    END_IF;\n\n    IF PendingSide <> 0 THEN\n        (* 上一扫描已释放原夹具，本扫描执行一次接替。 *)\n        ClampLeft := FALSE;\n        ClampRight := FALSE;\n\n        IF (PendingSide = 1) AND LeftPartPresent THEN\n            ClampLeft := TRUE;\n        ELSIF (PendingSide = 2) AND RightPartPresent THEN\n            ClampRight := TRUE;\n        END_IF;\n\n        PendingSide := 0;\n\n    ELSIF StartRise THEN\n        IF ClampLeft THEN\n            IF RightPartPresent THEN\n                ClampLeft := FALSE;\n                ClampRight := FALSE;\n                PendingSide := 2;\n            END_IF;\n\n        ELSIF ClampRight THEN\n            IF LeftPartPresent THEN\n                ClampLeft := FALSE;\n                ClampRight := FALSE;\n                PendingSide := 1;\n            END_IF;\n\n        ELSE\n            IF LeftPartPresent AND NOT RightPartPresent THEN\n                ClampLeft := TRUE;\n                ClampRight := FALSE;\n            ELSIF RightPartPresent AND NOT LeftPartPresent THEN\n                ClampLeft := FALSE;\n                ClampRight := TRUE;\n            ELSE\n                (* 无零件或同时请求均不从空闲开始夹紧。 *)\n                ClampLeft := FALSE;\n                ClampRight := FALSE;\n            END_IF;\n        END_IF;\n    END_IF;\n\n    Busy := ClampLeft OR ClampRight OR (PendingSide <> 0);\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 25.312,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 2,
+    "passed_ids": [
+      "S01-03",
+      "S01-06"
+    ],
+    "failures": [
+      {
+        "case_id": "S01-01",
+        "cycle": 1,
+        "signal": "ClampLeft",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S01-02",
+        "cycle": 1,
+        "signal": "ClampRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S01-04",
+        "cycle": 1,
+        "signal": "ClampLeft",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S01-05",
+        "cycle": 1,
+        "signal": "Status",
+        "expected": 33025,
+        "actual": 0
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 2941,
+  "tag": "candidate_3"
+}

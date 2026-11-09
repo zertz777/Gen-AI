@@ -1,0 +1,157 @@
+{
+  "source": "TYPE ST_Pump :\nSTRUCT\n    priority : INT;\n    selection : BOOL;\n    RunComd : BOOL;\nEND_STRUCT\nEND_TYPE\n\nFUNCTION_BLOCK FB_P07\nVAR_INPUT\n    mode : BOOL;\n    start : BOOL;\n    stop : BOOL;\nEND_VAR\nVAR_IN_OUT\n    pumpGroup : ARRAY[1..5] OF ST_Pump;\nEND_VAR\nVAR\n    StartupScans : INT := 0;\n    RunningEnabled : BOOL := FALSE;\n    i : INT;\n    j : INT;\n    HigherRankCount : INT;\nEND_VAR\n\n(*\n必留：需求原文\nIn an industrial water supply system, there are 5 pumps, each of which\ncan be controlled independently. The system needs to support both manual\nand automatic operating modes.\nBased on the value of the mode variable, switch to the corresponding\noperating mode.\nIn manual mode, control the start and stop of the selected pump based on\nthe value of pumpGroup[1..5].selection.\nIn automatic mode, compare the priority of each pump, and automatically\nselect the 3 pumps with higher priority for water supply according to the\nmethod of three in use and two on standby.\n\n扫描周期：20 ms。\n结构映射：priority、selection、RunComd 为 ST_Pump 字段；\n保持指定骨架接口，不增加同名独立标量端口。\n只读取 priority 和 selection，只写入 RunComd。\n\n待审语义冲突：\n1. C4 约束只读输入 start、stop 不得同时有效，FB 无法保证该环境条件。\n   同时有效时按 K4 执行停止，不修改输入。\n2. K2 无条件要求自动模式恰有三台运行，与 stop 清除全部运行命令、\n   上电无运行命令及 start 启动语义冲突。本实现停止和上电抑制优先；\n   启动许可保持后，自动模式选出三台。\n3. C6 若逐泵解释为运行命令保持至 stop，则与手动取消选择、\n   模式切换及自动优先级变化后重新选泵存在冲突。\n   本实现保持组启动许可至 stop，但逐泵命令按当前模式和字段重算；\n   因而不声称满足上述情况下的逐泵 C6。\n4. C10 的 G[0,1] 与文字“上电首周期”范围不一致。\n   本实现按明确的扫描区间，在第 0、1 两个扫描清除全部命令；\n   此期间不记忆 start。\n\n未经过编译profile或逐周期测试验证。\n*)\n\nIF StartupScans < 2 THEN\n    StartupScans := StartupScans + 1;\n    RunningEnabled := FALSE;\n\n    FOR i := 1 TO 5 DO\n        pumpGroup[i].RunComd := FALSE;\n    END_FOR;\n\nELSE\n    (* stop 优先；start 为电平请求，启动许可保持至 stop。 *)\n    IF stop THEN\n        RunningEnabled := FALSE;\n    ELSIF start THEN\n        RunningEnabled := TRUE;\n    END_IF;\n\n    IF NOT RunningEnabled THEN\n        FOR i := 1 TO 5 DO\n            pumpGroup[i].RunComd := FALSE;\n        END_FOR;\n\n    ELSIF NOT mode THEN\n        FOR i := 1 TO 5 DO\n            pumpGroup[i].RunComd := pumpGroup[i].selection;\n        END_FOR;\n\n    ELSE\n        (* 排名计数无需优先级算术，避免 INT 极值溢出。\n           优先级相同则泵号较小者先；排名前三运行。 *)\n        FOR i := 1 TO 5 DO\n            HigherRankCount := 0;\n\n            FOR j := 1 TO 5 DO\n                IF pumpGroup[j].priority > pumpGroup[i].priority THEN\n                    HigherRankCount := HigherRankCount + 1;\n                ELSIF (pumpGroup[j].priority = pumpGroup[i].priority)\n                      AND (j < i) THEN\n                    HigherRankCount := HigherRankCount + 1;\n                END_IF;\n            END_FOR;\n\n            pumpGroup[i].RunComd := HigherRankCount < 3;\n        END_FOR;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 6,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P07_1_42\\tools\\candidate_1\\fast\\source.st:6-10..7-1: error: ';' missing at end of data type declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P07_1_42\\tools\\candidate_1\\fast\\source.st:6-10..7-1: error: ';' missing at end of data type declaration."
+        }
+      ],
+      "elapsed_s": 0.157,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 25.297,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 7,
+    "passed": 1,
+    "passed_ids": [
+      "P07-02"
+    ],
+    "failures": [
+      {
+        "case_id": "P07-01",
+        "cycle": 2,
+        "signal": "pumpGroup[].RunComd",
+        "expected": [
+          true,
+          false,
+          true,
+          false,
+          false
+        ],
+        "actual": [
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case_id": "P07-03",
+        "cycle": 1,
+        "signal": "pumpGroup[].RunComd",
+        "expected": [
+          true,
+          true,
+          true,
+          false,
+          false
+        ],
+        "actual": [
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case_id": "P07-04",
+        "cycle": 1,
+        "signal": "pumpGroup[].RunComd",
+        "expected": [
+          true,
+          false,
+          false,
+          false,
+          false
+        ],
+        "actual": [
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case_id": "P07-05",
+        "cycle": 1,
+        "signal": "pumpGroup[].RunComd",
+        "expected": [
+          true,
+          false,
+          false,
+          false,
+          false
+        ],
+        "actual": [
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case_id": "P07-06",
+        "cycle": 1,
+        "signal": "pumpGroup[].RunComd",
+        "expected": [
+          false,
+          true,
+          false,
+          true,
+          true
+        ],
+        "actual": [
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      },
+      {
+        "case_id": "P07-07",
+        "cycle": 1,
+        "signal": "pumpGroup[].RunComd",
+        "expected": [
+          false,
+          false,
+          true,
+          true,
+          true
+        ],
+        "actual": [
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 2840,
+  "tag": "candidate_1"
+}

@@ -1,0 +1,137 @@
+{
+  "task_id": "S12",
+  "title": "急停后安全重启与班次统计",
+  "difficulty": "medium",
+  "category": "D",
+  "requirement": "设备急停后不允许简单松手就恢复，必须经过一套确认流程。\n\n控制要求：\n1. EStop_NC = FALSE 时 MachineRun 立即 FALSE，AlarmLamp = TRUE，Status = 16#8B01。\n2. 急停解除后（EStop_NC = TRUE）进入待复位态：必须同时满足 DoorClosed = TRUE，且 ResetBtn 上升沿确认，再出现 StartBtn 上升沿，MachineRun 才允许为 TRUE。\n3. 上述三个条件必须按「门关 → 复位 → 启动」的顺序满足；复位后若门再次打开，必须重新复位。\n4. 急停期间 ShiftCount 冻结不变；重启后继续累加，不清零。\n5. MachineRun = TRUE 时每 60 s 使 ShiftCount 加 1（用于统计本班运行时长，单位分钟）。\n6. Status：16#0000 正常、16#8B01 急停、16#8B02 待复位、16#8B03 门未关。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）",
+  "io_table": [
+    {
+      "direction": "IN",
+      "name": "EStop_NC",
+      "data_type": "BOOL",
+      "description": "急停常闭触点，TRUE = 正常"
+    },
+    {
+      "direction": "IN",
+      "name": "ResetBtn",
+      "data_type": "BOOL",
+      "description": "复位按钮（上升沿有效）"
+    },
+    {
+      "direction": "IN",
+      "name": "StartBtn",
+      "data_type": "BOOL",
+      "description": "启动按钮（上升沿有效）"
+    },
+    {
+      "direction": "IN",
+      "name": "DoorClosed",
+      "data_type": "BOOL",
+      "description": "安全门关闭"
+    },
+    {
+      "direction": "OUT",
+      "name": "MachineRun",
+      "data_type": "BOOL",
+      "description": "设备运行"
+    },
+    {
+      "direction": "OUT",
+      "name": "ShiftCount",
+      "data_type": "UINT",
+      "description": "本班运行分钟数"
+    },
+    {
+      "direction": "OUT",
+      "name": "AlarmLamp",
+      "data_type": "BOOL",
+      "description": "报警灯"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "状态码"
+    }
+  ],
+  "initial_state": "MachineRun = FALSE；ShiftCount = 0；AlarmLamp = FALSE；Status = 16#0000；已复位标志 = FALSE；ResetBtnLast = StartBtnLast = FALSE。",
+  "constraints": [
+    "K1 EStop_NC = FALSE 时 MachineRun 必须为 FALSE。",
+    "K2 重启必须依次满足「门关 → 复位上升沿 → 启动上升沿」，缺一不可。",
+    "K3 门在复位后再次打开时，已复位标志失效，必须重新复位。",
+    "K4 急停期间 ShiftCount 保持不变；运行满 60 s 加 1。"
+  ],
+  "provenance": "改编自公开题（P05 Weld Gap Alarm and Startup Inhibition（课程题库））；改编点：把「上电抑制期」改造成「急停后三步重启确认」，并加入班次计数冻结/续算；为什么这样改：原题的抑制期是单向时间窗，这里换成有序的多条件确认，能把「顺序 + 边沿 + 保持」三类约束同时考出来；来源与审核记录见 data/provenance.csv 第 33 行",
+  "spec_ref": "data/specs/S12.ltl",
+  "error_examples": [
+    "错误实现：急停解除后自动重启。症状——操作员手还在设备里，设备自行启动，这是最严重的一类缺陷。",
+    "错误实现：急停时把 ShiftCount 清 0。症状——频繁急停的班次统计永远偏小，无法用于绩效核算。"
+  ],
+  "notes": "",
+  "spec_text": "# task: S12\n# meta: medium / D 故障与安全\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(!EStop_NC -> !MachineRun)    -- 急停当周期设备必须停（K1）\nC2: G(MachineRun -> DoorClosed)    -- 运行的许可：安全门关闭（K2）\nC3: G(StartBtn && !DoorClosed -> X(!MachineRun))    -- 门未关时按启动不得启动（三步确认缺一不可）（K2/K3）\nC4: G(!(MachineRun && AlarmLamp))    -- 报警期间不得运行（互斥）（K1）\nC10: G[0,1](!MachineRun && ShiftCount == 0 && !AlarmLamp)    -- 上电首周期不运行、计数为 0（初态）\n",
+  "spec_sha256": "193b114f27b53f36bc1e0c2b652d8320a43224fcf7b156b0a958e22485c2a3e6",
+  "task_version": "b9b51291",
+  "task_sha256": "b9b51291bde6fac21c16589bed41a3d4d7beceb959033262d44df927861fca3a",
+  "source_path": "data/tasks/S12.yaml",
+  "degraded": false,
+  "missing_fields": [],
+  "warnings": [],
+  "semantic_warnings": [],
+  "interface_io_table": [
+    {
+      "direction": "IN",
+      "name": "EStop_NC",
+      "data_type": "BOOL",
+      "description": "急停常闭触点，TRUE = 正常"
+    },
+    {
+      "direction": "IN",
+      "name": "ResetBtn",
+      "data_type": "BOOL",
+      "description": "复位按钮（上升沿有效）"
+    },
+    {
+      "direction": "IN",
+      "name": "StartBtn",
+      "data_type": "BOOL",
+      "description": "启动按钮（上升沿有效）"
+    },
+    {
+      "direction": "IN",
+      "name": "DoorClosed",
+      "data_type": "BOOL",
+      "description": "安全门关闭"
+    },
+    {
+      "direction": "OUT",
+      "name": "MachineRun",
+      "data_type": "BOOL",
+      "description": "设备运行"
+    },
+    {
+      "direction": "OUT",
+      "name": "ShiftCount",
+      "data_type": "UINT",
+      "description": "本班运行分钟数"
+    },
+    {
+      "direction": "OUT",
+      "name": "AlarmLamp",
+      "data_type": "BOOL",
+      "description": "报警灯"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "状态码"
+    }
+  ],
+  "type_declarations": "",
+  "type_origins": {},
+  "pou_name": "FB_S12",
+  "pou_kind": "FUNCTION_BLOCK",
+  "dialect_requirements": [],
+  "skeleton_compiled": false,
+  "scan_cycle_ms": 20
+}

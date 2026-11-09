@@ -1,0 +1,39 @@
+{
+  "source": "(*\n【必留：需求原文】\n双工位气动夹具用于同时定位两个零件，但气源只有一路，因此两个夹具不能同时动作。\n\n控制要求：\n1. StartBtn 为上升沿触发：若左工位有零件（LeftPartPresent = TRUE）而右夹具未在夹紧，则左夹具 ClampLeft 夹紧；右侧对称。\n2. 夹紧动作只做一次保持，不随 StartBtn 电平反复动作；要松开必须由同一按钮在另一工位动作时自动让位（即后启动的工位会等待）。\n3. 任一工位没有零件（对应 PartPresent = FALSE）时，该侧不允许夹紧。\n4. EStop_NC = FALSE（急停）时两侧夹具立即松开，ClampLeft 与 ClampRight 同时为 FALSE，并清空忙标志。\n5. 任一时刻 ClampLeft 与 ClampRight 不得同时为 TRUE。\n6. Busy 表示当前已有工位在夹紧过程中；Status 输出 16#0000 正常、16#8101 两侧同时请求、16#8102 急停中。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）\n\n【必留：接口、初态、约束与数据告警】\n{\n  \"task_id\": \"S01\",\n  \"title\": \"双工位气动夹具互锁\",\n  \"io_table\": [\n    {\n      \"direction\": \"IN\",\n      \"name\": \"StartBtn\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"启动按钮（上升沿有效）\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"LeftPartPresent\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"左工位零件到位\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"RightPartPresent\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"右工位零件到位\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"EStop_NC\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"急停常闭触点，TRUE = 正常\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"ClampLeft\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"左夹具夹紧输出\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"ClampRight\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"右夹具夹紧输出\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"Busy\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"有工位正在夹紧\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"Status\",\n      \"data_type\": \"WORD\",\n      \"description\": \"状态码\"\n    }\n  ],\n  \"initial_state\": \"ClampLeft = FALSE；ClampRight = FALSE；Busy = FALSE；Status = 16#0000；内部上升沿寄存器 StartBtnLast = FALSE。\",\n  \"constraints\": [\n    \"K1 ClampLeft 与 ClampRight 不得同时为 TRUE（互斥）。\",\n    \"K2 只有在对应工位零件到位且急停正常时，才允许该侧夹紧。\",\n    \"K3 夹紧由 StartBtn 上升沿触发一次，按住不放不得重复触发。\",\n    \"K4 EStop_NC = FALSE 时两侧输出立即清零，忙标志清除。\"\n  ],\n  \"semantic_warnings\": [],\n  \"warnings\": [],\n  \"missing_fields\": [],\n  \"dialect_requirements\": [],\n  \"type_origins\": {}\n}\n\n【必留：完整形式化规约；有界时序以扫描周期计】\n# task: S01\n# meta: easy / A 开关量联锁\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(!EStop_NC -> (!ClampLeft && !ClampRight))    -- 急停当周期两侧夹具必须松开（K4）\nC2: G(ClampLeft -> LeftPartPresent)    -- 夹紧的前提是对应工位有零件（左侧）（K2）\nC2b: G(ClampRight -> RightPartPresent)    -- 夹紧的前提是对应工位有零件（右侧）（K2）\nC4: G(!(ClampLeft && ClampRight))    -- 两侧夹具互斥（共用一路气源）（K1）\nC10: G[0,1](!ClampLeft && !ClampRight && !Busy)    -- 上电首周期两侧不夹紧、不忙（初态）\n*)\n\n(*\n本次修改：\n最新结果仍为 5/6 通过，S01-05 在 cycle 2 期望 Status =\n16#8101（十进制 33025），实际为 16#0000。\n仅将诊断改为按钮电平持续报告不足以解决已报告的问题。\n增加内部 ConflictLatched：有效上升沿时两侧零件均到位则置位；\n按钮释放不清除；任一侧零件离开或急停时清除。\nStatus 根据该标志持续报告双侧请求，夹紧和让位逻辑保持不变。\n不新增外部接口。\n\n边界选择及语义冲突：\n1. 失败摘要未包含输入轨迹，不能唯一确定预期的状态清除规则。\n   本次选择“已发生的双侧请求在两侧零件均到位期间保持诊断”；\n   不采用无请求时仅凭两侧有零件就报错，也不采用永久锁存。\n2. C10 若要求调用后的第 0、1 个采样点均不夹紧、不忙，\n   则与先前测试的早期夹紧要求冲突。本实现保留即时上升沿响应，\n   声明初始化保证调用前初态，不声称满足 C10 的调用后采样解释。\n   原规约保留，未提供完整采样约定。\n3. 空闲时两侧同时请求与互斥要求冲突。本实现拒绝同时夹紧，\n   保持两侧输出为 FALSE，并记录双侧请求诊断。\n4. 已夹紧一侧时，新上升沿且另一侧有零件，则原侧让位，\n   另一侧等待至下一扫描夹紧，输出断开间隔为一个扫描周期。\n5. “要松开必须由同一按钮”与零件丢失、急停强制松开冲突。\n   零件丢失和急停优先，取消对应保持或等待请求。\n6. 急停期间更新按钮历史并丢弃启动请求，清除内部动作和诊断状态。\n   按钮保持按下时，急停恢复不会自动重新夹紧。\n7. 未提供机械夹紧完成信号或动作时长。Busy 表示夹紧保持或\n   有效让位等待，不代表机械动作已经完成。\n   等待请求先于同周期新请求处理，输出互斥不等于机械运动互斥。\n\n验证说明：\n用户提供的结果对应修改前版本：检查通过，逐周期测试通过 5/6。\n当前环境没有命令执行工具，未重新运行编译或测试。\n本次修正尚待逐周期测试确认，不声称全部通过或功能已经验证。\n*)\n\nFUNCTION_BLOCK FB_S01\nVAR_INPUT\n    StartBtn : BOOL;\n    LeftPartPresent : BOOL;\n    RightPartPresent : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    ClampLeft : BOOL := FALSE;\n    ClampRight : BOOL := FALSE;\n    Busy : BOOL := FALSE;\n    Status : WORD := 16#0000;\nEND_VAR\nVAR\n    StartBtnLast : BOOL := FALSE;\n    StartRise : BOOL := FALSE;\n    ActiveSide : USINT := 0;\n    PendingSide : USINT := 0;\n    ConflictLatched : BOOL := FALSE;\nEND_VAR\n\n(* 工位编码：0 = 无；1 = 左侧；2 = 右侧。 *)\nStartRise := StartBtn AND NOT StartBtnLast;\nStartBtnLast := StartBtn;\n\n(* 所有输出均在本次扫描重新计算。 *)\nClampLeft := FALSE;\nClampRight := FALSE;\nBusy := FALSE;\nStatus := 16#0000;\n\nIF NOT EStop_NC THEN\n    (* 急停取消保持、等待及双侧请求诊断。 *)\n    ActiveSide := 0;\n    PendingSide := 0;\n    ConflictLatched := FALSE;\n    Status := 16#8102;\n\nELSE\n    (* 零件丢失当周期取消对应保持或等待。 *)\n    IF (ActiveSide = 1) AND NOT LeftPartPresent THEN\n        ActiveSide := 0;\n    ELSIF (ActiveSide = 2) AND NOT RightPartPresent THEN\n        ActiveSide := 0;\n    END_IF;\n\n    IF (PendingSide = 1) AND NOT LeftPartPresent THEN\n        PendingSide := 0;\n    ELSIF (PendingSide = 2) AND NOT RightPartPresent THEN\n        PendingSide := 0;\n    END_IF;\n\n    (* 双侧请求发生后，释放按钮不清除诊断。 *)\n    IF NOT LeftPartPresent OR NOT RightPartPresent THEN\n        ConflictLatched := FALSE;\n    ELSIF StartRise THEN\n        ConflictLatched := TRUE;\n    END_IF;\n\n    IF ConflictLatched THEN\n        Status := 16#8101;\n    END_IF;\n\n    IF PendingSide <> 0 THEN\n        (* 等待请求来自前一扫描，切换至少断开一个扫描。 *)\n        ActiveSide := PendingSide;\n        PendingSide := 0;\n\n    ELSIF StartRise THEN\n        CASE ActiveSide OF\n            0:\n                IF LeftPartPresent AND NOT RightPartPresent THEN\n                    ActiveSide := 1;\n                ELSIF RightPartPresent AND NOT LeftPartPresent THEN\n                    ActiveSide := 2;\n                END_IF;\n\n            1:\n                IF RightPartPresent THEN\n                    ActiveSide := 0;\n                    PendingSide := 2;\n                END_IF;\n\n            2:\n                IF LeftPartPresent THEN\n                    ActiveSide := 0;\n                    PendingSide := 1;\n                END_IF;\n\n        ELSE\n            ActiveSide := 0;\n            PendingSide := 0;\n        END_CASE;\n    END_IF;\n\n    (* 单一状态译码保证输出互斥，并再次检查当前零件到位条件。 *)\n    ClampLeft := (ActiveSide = 1) AND LeftPartPresent;\n    ClampRight := (ActiveSide = 2) AND RightPartPresent;\n    Busy := ClampLeft OR ClampRight\n        OR ((PendingSide = 1) AND LeftPartPresent)\n        OR ((PendingSide = 2) AND RightPartPresent);\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.266,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 22.937,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "S01-01",
+      "S01-02",
+      "S01-03",
+      "S01-04",
+      "S01-05",
+      "S01-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

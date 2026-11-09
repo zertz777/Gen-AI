@@ -1,0 +1,53 @@
+{
+  "source": "FUNCTION_BLOCK FB_P15\nVAR_INPUT\n    estop : BOOL;\n    opeMode : BOOL;\n    valveAStart : BOOL;\n    valveBStart : BOOL;\n    valveCStart : BOOL;\n    valveDStart : BOOL;\n    mixMotorStart : BOOL;\n    autoStart : BOOL;\n    processMode : BOOL;\n    levelSensor : INT;\n    mixMotorComplete : BOOL;\nEND_VAR\nVAR_OUTPUT\n    valveARun : BOOL;\n    valveBRun : BOOL;\n    valveCRun : BOOL;\n    valveDRun : BOOL;\n    mixMotorRun : BOOL;\nEND_VAR\nVAR\n    (* ---- 输入边沿检测 ---- *)\n    prevValveAStart  : BOOL;\n    prevValveBStart  : BOOL;\n    prevValveCStart  : BOOL;\n    prevValveDStart  : BOOL;\n    prevMixMotorStart: BOOL;\n    prevAutoStart    : BOOL;\n    prevOpeMode      : BOOL;\n\n    reValveAStart    : BOOL;\n    reValveBStart    : BOOL;\n    reValveCStart    : BOOL;\n    reValveDStart    : BOOL;\n    reMixMotorStart  : BOOL;\n    reAutoStart      : BOOL;\n\n    (* ---- 手动模式锁存 ---- *)\n    manValveA   : BOOL;\n    manValveB   : BOOL;\n    manValveC   : BOOL;\n    manValveD   : BOOL;\n    manMixMotor : BOOL;\n\n    (* ---- 自动模式状态 ---- *)\n    (* autoState: 0=空闲 1=开A进料 2=开B进料 3=开C进料 4=混料 5=出料 *)\n    autoState    : INT;\n    autoValveA   : BOOL;\n    autoValveB   : BOOL;\n    autoValveC   : BOOL;\n    autoValveD   : BOOL;\n    autoMixMotor : BOOL;\nEND_VAR\n\n(* ============================================================ *)\n(* 输入上升沿检测（每周期执行）                                   *)\n(* ============================================================ *)\nreValveAStart   := valveAStart   AND NOT prevValveAStart;\nreValveBStart   := valveBStart   AND NOT prevValveBStart;\nreValveCStart   := valveCStart   AND NOT prevValveCStart;\nreValveDStart   := valveDStart   AND NOT prevValveDStart;\nreMixMotorStart := mixMotorStart AND NOT prevMixMotorStart;\nreAutoStart     := autoStart     AND NOT prevAutoStart;\n\n(* ============================================================ *)\n(* C1 / C2 / K1 / K4: 急停（estop=FALSE）                       *)\n(* 当周期立即停止全部设备，内部步序复位到安全态；                *)\n(* 恢复后必须重新按 autoStart 从安全步开始，不续跑。             *)\n(* ============================================================ *)\nIF NOT estop THEN\n\n    valveARun   := FALSE;\n    valveBRun   := FALSE;\n    valveCRun   := FALSE;\n    valveDRun   := FALSE;\n    mixMotorRun := FALSE;\n\n    manValveA   := FALSE;\n    manValveB   := FALSE;\n    manValveC   := FALSE;\n    manValveD   := FALSE;\n    manMixMotor := FALSE;\n\n    autoValveA   := FALSE;\n    autoValveB   := FALSE;\n    autoValveC   := FALSE;\n    autoValveD   := FALSE;\n    autoMixMotor := FALSE;\n    autoState    := 0;\n\nELSE\n\n    (* -------------------------------------------------- *)\n    (* 模式切换：清空另一模式遗留的内部指令，避免跳变       *)\n    (* -------------------------------------------------- *)\n    IF opeMode <> prevOpeMode THEN\n        manValveA   := FALSE;\n        manValveB   := FALSE;\n        manValveC   := FALSE;\n        manValveD   := FALSE;\n        manMixMotor := FALSE;\n\n        autoValveA   := FALSE;\n        autoValveB   := FALSE;\n        autoValveC   := FALSE;\n        autoValveD   := FALSE;\n        autoMixMotor := FALSE;\n        autoState    := 0;\n    END_IF;\n\n    IF opeMode THEN\n        (* ================= 自动模式 (K3) ================= *)\n        CASE autoState OF\n\n            0:  (* 空闲：等待 autoStart 上升沿启动 *)\n                IF reAutoStart THEN\n                    autoValveA   := TRUE;\n                    autoValveB   := FALSE;\n                    autoValveC   := FALSE;\n                    autoValveD   := FALSE;\n                    autoMixMotor := FALSE;\n                    autoState    := 1;\n                END_IF;\n\n            1:  (* 阀 A 进料；液位到 50cm 关 A 开 B *)\n                IF levelSensor >= 50 THEN\n                    autoValveA := FALSE;\n                    autoValveB := TRUE;\n                    autoState  := 2;\n                END_IF;\n\n            2:  (* 阀 B 进料；液位到 80cm 关 B 后按 processMode 分流 *)\n                IF levelSensor >= 80 THEN\n                    autoValveB := FALSE;\n                    IF processMode THEN\n                        (* 需要第三组分：先开 C *)\n                        autoValveC := TRUE;\n                        autoState  := 3;\n                    ELSE\n                        (* 两组分：直接进入混料 *)\n                        autoMixMotor := TRUE;\n                        autoState    := 4;\n                    END_IF;\n                END_IF;\n\n            3:  (* 阀 C 进料；液位到 100cm 关 C 后启动混料 *)\n                IF levelSensor >= 100 THEN\n                    autoValveC   := FALSE;\n                    autoMixMotor := TRUE;\n                    autoState    := 4;\n                END_IF;\n\n            4:  (* 混料保持运行，直到收到完成信号 (C6) *)\n                IF mixMotorComplete THEN\n                    autoMixMotor := FALSE;\n                    autoValveD   := TRUE;\n                    autoState    := 5;\n                END_IF;\n\n            5:  (* 出料阀 D 保持开启，自动流程结束；再次 autoStart 重新开始 *)\n                IF reAutoStart THEN\n                    autoValveA   := TRUE;\n                    autoValveB   := FALSE;\n                    autoValveC   := FALSE;\n                    autoValveD   := FALSE;\n                    autoMixMotor := FALSE;\n                    autoState    := 1;\n                END_IF;\n\n        END_CASE;\n\n    ELSE\n        (* ================= 手动模式 (K2) ================= *)\n        (* 每个按钮上升沿翻转对应设备；同时保证 D 与 A/B/C 互斥 (C4) *)\n        IF reValveAStart THEN\n            manValveA := NOT manValveA;\n            IF manValveA THEN\n                manValveD := FALSE;\n            END_IF;\n        END_IF;\n\n        IF reValveBStart THEN\n            manValveB := NOT manValveB;\n            IF manValveB THEN\n                manValveD := FALSE;\n            END_IF;\n        END_IF;\n\n        IF reValveCStart THEN\n            manValveC := NOT manValveC;\n            IF manValveC THEN\n                manValveD := FALSE;\n            END_IF;\n        END_IF;\n\n        IF reValveDStart THEN\n            manValveD := NOT manValveD;\n            IF manValveD THEN\n                manValveA := FALSE;\n                manValveB := FALSE;\n                manValveC := FALSE;\n            END_IF;\n        END_IF;\n\n        IF reMixMotorStart THEN\n            manMixMotor := NOT manMixMotor;\n        END_IF;\n    END_IF;\n\n    (* -------------------------------------------------- *)\n    (* 输出合并：仅当前模式的状态参与输出                   *)\n    (* -------------------------------------------------- *)\n    IF opeMode THEN\n        valveARun   := autoValveA;\n        valveBRun   := autoValveB;\n        valveCRun   := autoValveC;\n        valveDRun   := autoValveD;\n        mixMotorRun := autoMixMotor;\n    ELSE\n        valveARun   := manValveA;\n        valveBRun   := manValveB;\n        valveCRun   := manValveC;\n        valveDRun   := manValveD;\n        mixMotorRun := manMixMotor;\n    END_IF;\n\n    (* C4: 出料阀 D 与配比阀 A/B/C 互斥（D 优先，作为最后保护） *)\n    IF valveDRun THEN\n        valveARun := FALSE;\n        valveBRun := FALSE;\n        valveCRun := FALSE;\n    END_IF;\n\nEND_IF;\n\n(* ============================================================ *)\n(* 每周期末无条件更新输入历史值                                   *)\n(* ============================================================ *)\nprevValveAStart   := valveAStart;\nprevValveBStart   := valveBStart;\nprevValveCStart   := valveCStart;\nprevValveDStart   := valveDStart;\nprevMixMotorStart := mixMotorStart;\nprevAutoStart     := autoStart;\nprevOpeMode       := opeMode;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.266,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 19.969,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 7,
+    "passed": 5,
+    "passed_ids": [
+      "P15-01",
+      "P15-02",
+      "P15-03",
+      "P15-04",
+      "P15-06"
+    ],
+    "failures": [
+      {
+        "case_id": "P15-05",
+        "cycle": 4,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P15-07",
+        "cycle": 1,
+        "signal": "valveARun",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

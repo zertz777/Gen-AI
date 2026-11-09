@@ -1,0 +1,70 @@
+{
+  "source": "FUNCTION_BLOCK FB_S13\nVAR_INPUT\n    LineRun : BOOL;\n    PartAtMerge : BOOL;\n    PartOnMain : BOOL;\n    JamSensor : BOOL;\n    ResetBtn : BOOL;\n    ModeAuto : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MainMotor : BOOL;\n    MergeMotor : BOOL;\n    SpeedHigh : BOOL;\n    JamAlarm : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    LineRunLast : BOOL := FALSE;\n    ResetBtnLast : BOOL := FALSE;\n    LineRunRising : BOOL := FALSE;\n    ResetBtnRising : BOOL := FALSE;\n    JamTimer : INT := 0;\n    PartHighTimer : INT := 0;\n    PartLowTimer : INT := 0;\n    FirstScan : BOOL := TRUE;\nEND_VAR\n\n(* CONFLICT REPORT:\n   Requirement 4 / K3 says JamSensor TRUE continuously for 2 s must alarm regardless of\n   LineRun, while formal C5 adds JamSensor && LineRun. This implementation follows the\n   stricter unconditional requirement 4 / K3 for safety; if LineRun is TRUE, C5 is also met.\n   Requirement 1 forces Status = 16#0000 when LineRun = FALSE, while requirement 4 / K3\n   requires Status = 16#8C01 for a latched jam. When both apply, LineRun = FALSE is applied\n   last for Status, while JamAlarm remains latched until the reset condition is met. *)\n\n(* C10: first scan safe initialisation. *)\nIF FirstScan THEN\n    MainMotor := FALSE;\n    MergeMotor := FALSE;\n    SpeedHigh := FALSE;\n    JamAlarm := FALSE;\n    Status := 16#0000;\n    JamTimer := 0;\n    PartHighTimer := 0;\n    PartLowTimer := 0;\n    LineRunLast := LineRun;\n    ResetBtnLast := ResetBtn;\n    FirstScan := FALSE;\nEND_IF;\n\nLineRunRising := LineRun AND NOT LineRunLast;\nResetBtnRising := ResetBtn AND NOT ResetBtnLast;\n\n(* Jam detection: 100 scans = 2 s at 20 ms. *)\nIF JamSensor THEN\n    IF JamTimer < 100 THEN\n        JamTimer := JamTimer + 1;\n    END_IF;\nELSE\n    JamTimer := 0;\nEND_IF;\n\nIF JamTimer >= 100 THEN\n    JamAlarm := TRUE;\nEND_IF;\n\n(* Reset: JamSensor = FALSE and ResetBtn rising edge clears latched alarm/status. *)\nIF ResetBtnRising AND NOT JamSensor THEN\n    JamAlarm := FALSE;\n    Status := 16#0000;\nEND_IF;\n\n(* Automatic start of main motor on LineRun rising edge when no latched jam. *)\nIF ModeAuto AND LineRunRising AND NOT JamAlarm THEN\n    MainMotor := TRUE;\nEND_IF;\n\n(* Automatic merge motor is allowed only when main motor runs, no part at merge, no jam. *)\nIF ModeAuto THEN\n    IF LineRun AND MainMotor AND NOT PartAtMerge AND NOT JamAlarm THEN\n        MergeMotor := TRUE;\n    ELSE\n        MergeMotor := FALSE;\n    END_IF;\nEND_IF;\n\n(* Safety priorities: jam stops both motors and forces low speed. *)\nIF JamAlarm THEN\n    MainMotor := FALSE;\n    MergeMotor := FALSE;\n    SpeedHigh := FALSE;\n    PartHighTimer := 0;\n    PartLowTimer := 0;\nEND_IF;\n\n(* Anti-collision interlock: material at merge point forbids merge motor. *)\nIF PartAtMerge THEN\n    MergeMotor := FALSE;\nEND_IF;\n\n(* Total stop: LineRun FALSE has highest priority. *)\nIF NOT LineRun THEN\n    MainMotor := FALSE;\n    MergeMotor := FALSE;\n    SpeedHigh := FALSE;\n    Status := 16#0000;\nEND_IF;\n\n(* Speed stage: 150 scans = 3 s high, 250 scans = 5 s low. *)\nIF MainMotor THEN\n    IF PartOnMain THEN\n        PartLowTimer := 0;\n        IF PartHighTimer < 150 THEN\n            PartHighTimer := PartHighTimer + 1;\n        END_IF;\n        IF PartHighTimer >= 150 THEN\n            SpeedHigh := TRUE;\n        END_IF;\n    ELSE\n        PartHighTimer := 0;\n        IF PartLowTimer < 250 THEN\n            PartLowTimer := PartLowTimer + 1;\n        END_IF;\n        IF PartLowTimer >= 250 THEN\n            SpeedHigh := FALSE;\n        END_IF;\n    END_IF;\nELSE\n    PartHighTimer := 0;\n    PartLowTimer := 0;\nEND_IF;\n\n(* Final status code. *)\nIF NOT LineRun THEN\n    Status := 16#0000;\nELSIF JamAlarm THEN\n    Status := 16#8C01;\nELSE\n    Status := 16#0000;\nEND_IF;\n\nLineRunLast := LineRun;\nResetBtnLast := ResetBtn;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.266,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.765,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 1,
+    "passed_ids": [
+      "S13-06"
+    ],
+    "failures": [
+      {
+        "case_id": "S13-01",
+        "cycle": 1,
+        "signal": "MainMotor",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S13-02",
+        "cycle": 1,
+        "signal": "MainMotor",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S13-03",
+        "cycle": 1,
+        "signal": "MainMotor",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S13-04",
+        "cycle": 1,
+        "signal": "MainMotor",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S13-05",
+        "cycle": 1,
+        "signal": "MainMotor",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 23816,
+  "tag": "candidate_2"
+}

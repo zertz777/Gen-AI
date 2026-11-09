@@ -1,0 +1,2 @@
+{"ts": "2026-10-31T15:38:58.264691+00:00", "event": "evaluation", "tag": "baseline", "compile_status": "pass", "test_status": "tool_error", "test_passed": 0, "test_total": 0}
+{"ts": "2026-10-31T15:38:58.264691+00:00", "event": "stop", "reason": "tool_error"}
