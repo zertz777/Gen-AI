@@ -1,0 +1,46 @@
+{
+  "source": "FUNCTION_BLOCK FB_S05\nVAR_INPUT\n    FlowPulse : BOOL;\n    ShiftReset : BOOL;\n    CycleTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    TotalVolume : LREAL := LREAL#0.0;\n    ShiftVolume : LREAL := LREAL#0.0;\n    PulseCount : UDINT := UDINT#0;\n    OverflowFlag : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    FlowPulseLast : BOOL := FALSE;\n    ShiftResetLast : BOOL := FALSE;\n    FlowRise : BOOL := FALSE;\n    ResetRise : BOOL := FALSE;\nEND_VAR\n\n(*\n    待审事项：接口和规约不支持无歧义的完整实现。\n\n    1. FlowPulse 每次调用仅提供一个 BOOL 采样值。不同的扫描间\n       脉冲序列可能产生完全相同的采样值；CycleTime 也不能提供\n       隐藏的上升沿数量。因此无法检测同一扫描内的多个上升沿，\n       无法可靠实现 K4 的 16#8501。未用采样周期或连续高电平\n       伪造脉冲过快判据，也未新增接口。该要求仍待审。\n\n    2. 原文要求每个脉冲使 ShiftVolume 增加 0.5 L，同时要求\n       TotalVolume 在 1000000.0 L 饱和。饱和后持续有脉冲且\n       未清班时，ShiftVolume 最终会超过 TotalVolume，与 C6\n       冲突。下面保留原文的独立班次累计，不暗中截断班次流量。\n\n    3. C10 要求上电首周期输出为零，与首周期 FlowPulse=TRUE\n       时按初始 FlowPulseLast=FALSE 计数冲突。下面保留零初态\n       及每次调用的上升沿处理，不屏蔽首周期有效上升沿。\n\n    4. 同周期脉冲上升沿与清班上升沿的执行顺序未指定。\n       下面累计总量仍计入脉冲，班次清零最后执行；顺序待审。\n\n    5. UDINT 无法无限执行加一。下面在其上限饱和以避免回绕；\n       超出表示范围后的计数行为及状态码未在题面定义，待审。\n\n    本代码未声明已经通过编译或逐周期功能验证。\n*)\n\nFlowRise := FlowPulse AND NOT FlowPulseLast;\nResetRise := ShiftReset AND NOT ShiftResetLast;\n\n(* 总量上限与永久保持的溢出标志。 *)\nIF TotalVolume >= LREAL#1000000.0 THEN\n    TotalVolume := LREAL#1000000.0;\n    OverflowFlag := TRUE;\nEND_IF;\n\nIF FlowRise THEN\n    IF PulseCount < UDINT#4294967295 THEN\n        PulseCount := PulseCount + UDINT#1;\n    END_IF;\n\n    ShiftVolume := ShiftVolume + LREAL#0.5;\n\n    IF NOT OverflowFlag THEN\n        IF TotalVolume >= LREAL#999999.5 THEN\n            TotalVolume := LREAL#1000000.0;\n            OverflowFlag := TRUE;\n        ELSE\n            TotalVolume := TotalVolume + LREAL#0.5;\n        END_IF;\n    END_IF;\nEND_IF;\n\n(* 班次清零不改变累计总量及溢出锁存。 *)\nIF ResetRise THEN\n    ShiftVolume := LREAL#0.0;\n    PulseCount := UDINT#0;\nEND_IF;\n\n(* 16#0000 仅表示未发现总量溢出，不证明没有漏采脉冲。\n   当前接口无法可靠判定 16#8501，见上述待审事项。 *)\nIF OverflowFlag THEN\n    Status := WORD#16#8502;\nELSE\n    Status := WORD#16#0000;\nEND_IF;\n\nFlowPulseLast := FlowPulse;\nShiftResetLast := ShiftReset;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.547,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 5,
+    "passed_ids": [
+      "S05-01",
+      "S05-02",
+      "S05-03",
+      "S05-04",
+      "S05-05"
+    ],
+    "failures": [
+      {
+        "case_id": "S05-06",
+        "cycle": 2,
+        "signal": "TotalVolume",
+        "expected": 1.0,
+        "actual": 0.5
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 2943,
+  "tag": "candidate_2"
+}

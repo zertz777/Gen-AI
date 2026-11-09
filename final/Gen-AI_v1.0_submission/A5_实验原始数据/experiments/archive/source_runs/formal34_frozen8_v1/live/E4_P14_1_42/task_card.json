@@ -1,0 +1,65 @@
+{
+  "task_id": "P14",
+  "title": "IPv4 Parsing with Format and Range Checks",
+  "difficulty": "medium",
+  "category": "B",
+  "requirement": "Design a PLC function block in Structured Text (ST) that parses a dotted-decimal IPv4 string into a 32-bit unsigned integer.\n\n1. ipText must contain four nonempty decimal-digit segments separated by periods. Each segment must have a value from 0 through 255.\n2. Assemble the address in network byte order: the first segment occupies the most significant 8 bits and the fourth occupies the least significant 8 bits. Write the result to ipValue.\n3. Set ipValue to 0 for malformed input, a nondigit segment, an incorrect segment count or any out-of-range segment. The valid address 0.0.0.0 also produces 0.\n\n中文摘要：IPv4 点分十进制解析：校验四段、纯数字与 0—255 范围，按网络字节序组装为 32 位无符号整数，非法输入输出 0。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）",
+  "io_table": [
+    {
+      "direction": "IN",
+      "name": "ipText",
+      "data_type": "STRING(254)",
+      "description": "IPv4 text to parse, with a capacity of 254 characters. A valid dotted-decimal address requires at most 15 characters."
+    },
+    {
+      "direction": "OUT",
+      "name": "ipValue",
+      "data_type": "UDINT",
+      "description": "32-bit address in network byte order; zero for invalid input."
+    }
+  ],
+  "initial_state": "ipValue = 0；解析状态机处于等待第 1 段。",
+  "constraints": [
+    "K1 输入必须是四段、段间以点分隔、每段非空且全部为十进制数字。",
+    "K2 每段数值必须在 0—255 之间（含端点）。",
+    "K3 按网络字节序组装：第 1 段占最高 8 位，第 4 段占最低 8 位。",
+    "K4 段数不对、含非数字字符、任一段越界时一律输出 ipValue = 0；合法地址 0.0.0.0 也输出 0，本接口不要求区分两种情况。"
+  ],
+  "provenance": "课程公共题库 P14（IPv4 Parsing with Format and Range Checks）；原始导入后按 2026-11-01 本机冻结判据修订；来源与审核记录见 data/provenance.csv 第 15 行",
+  "spec_ref": "data/specs/P14.ltl",
+  "error_examples": [
+    "错误实现：允许空段（如 192.168..1）。症状——空段被当 0，非法地址被解析成合法值。",
+    "错误实现：按小端组装。症状——10.0.0.1 解析成 16#0100000A，与网络字节序相反。"
+  ],
+  "notes": "",
+  "spec_text": "# task: P14\n# meta: medium / B 模拟量与数据处理\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n#\n# note: 本题是纯组合逻辑（输入字符串 → 输出整数），不含状态与时序。规约层只能约束值域与上电初值；分段合法性、越界判定等语义正确性由 tests/cases/P14.csv 逐条覆盖，不强行凑成恒真条款。\n\nC2: G(ipValue <= 16#FFFFFFFF)    -- 输出必须落在 32 位无符号整数域内（不得溢出）（K3）\nC10: G[0,0](ipValue == 0)    -- 上电当拍输出 0（初态）\n",
+  "spec_sha256": "88809f98d5297414f5acde8026be96e34f3d8c7dfb2c44c7115a1ac7681aba29",
+  "task_version": "57db5684",
+  "task_sha256": "57db5684e0a87f00a8c58e48c7ce82f4158ee5b797702716e19bc98c6c798426",
+  "source_path": "data/tasks/P14.yaml",
+  "degraded": false,
+  "missing_fields": [],
+  "warnings": [],
+  "semantic_warnings": [],
+  "interface_io_table": [
+    {
+      "direction": "IN",
+      "name": "ipText",
+      "data_type": "STRING(254)",
+      "description": "IPv4 text to parse, with a capacity of 254 characters. A valid dotted-decimal address requires at most 15 characters."
+    },
+    {
+      "direction": "OUT",
+      "name": "ipValue",
+      "data_type": "UDINT",
+      "description": "32-bit address in network byte order; zero for invalid input."
+    }
+  ],
+  "type_declarations": "",
+  "type_origins": {},
+  "pou_name": "FB_P14",
+  "pou_kind": "FUNCTION_BLOCK",
+  "dialect_requirements": [],
+  "skeleton_compiled": false,
+  "scan_cycle_ms": 20
+}

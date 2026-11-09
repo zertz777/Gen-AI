@@ -1,0 +1,39 @@
+{
+  "source": "(*\n  P06 Aeration Blower Delayed Start\n  Scan cycle: 20 ms -> 5 s start delay = 250 scans.\n\n  Conflict report:\n  Formal C6 (G(BLOWER_RUN -> (BLOWER_RUN W !DO_LOW))) and C1/K3 emergency-stop\n  priority can conflict if AERATION_E_STOP_NC falls while DO_LOW remains TRUE and\n  BLOWER_RUN is TRUE. This implementation applies the task's emergency-stop priority:\n  AERATION_E_STOP_NC = FALSE forces BLOWER_RUN = FALSE immediately.\n*)\nFUNCTION_BLOCK FB_P06\nVAR_INPUT\n    DO_LOW : BOOL;\n    AERATION_E_STOP_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    BLOWER_RUN : BOOL;\n    AERATION_BLOWER_CYCLE_COUNT : UINT;\nEND_VAR\nVAR\n    initDone : BOOL := FALSE;\n    prevBlowerRun : BOOL := FALSE;\n    startDelayCount : UINT := 0;\nEND_VAR\n\n(* Power-up initial state. *)\nIF NOT initDone THEN\n    BLOWER_RUN := FALSE;\n    AERATION_BLOWER_CYCLE_COUNT := 0;\n    prevBlowerRun := FALSE;\n    startDelayCount := 0;\n    initDone := TRUE;\nEND_IF;\n\n(* Safety priority: emergency stop active. *)\nIF NOT AERATION_E_STOP_NC THEN\n    BLOWER_RUN := FALSE;\n    startDelayCount := 0;\n\n(* Demand lost: stop immediately and reset start delay. *)\nELSIF NOT DO_LOW THEN\n    BLOWER_RUN := FALSE;\n    startDelayCount := 0;\n\nELSE\n    (* Both permissive conditions are TRUE. Count scans up to 5 s. *)\n    IF startDelayCount < UINT#250 THEN\n        startDelayCount := startDelayCount + UINT#1;\n    END_IF;\n\n    IF startDelayCount >= UINT#250 THEN\n        BLOWER_RUN := TRUE;\n    ELSE\n        BLOWER_RUN := FALSE;\n    END_IF;\nEND_IF;\n\n(* Count one FALSE->TRUE transition of BLOWER_RUN. Saturation at UINT max. *)\nIF BLOWER_RUN AND NOT prevBlowerRun THEN\n    IF AERATION_BLOWER_CYCLE_COUNT < UINT#65535 THEN\n        AERATION_BLOWER_CYCLE_COUNT := AERATION_BLOWER_CYCLE_COUNT + UINT#1;\n    END_IF;\nEND_IF;\n\nprevBlowerRun := BLOWER_RUN;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.234,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.547,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P06-01",
+      "P06-02",
+      "P06-03",
+      "P06-04",
+      "P06-05",
+      "P06-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 10902,
+  "tag": "candidate_1"
+}

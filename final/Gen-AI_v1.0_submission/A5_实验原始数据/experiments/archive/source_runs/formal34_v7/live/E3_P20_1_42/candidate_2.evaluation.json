@@ -1,0 +1,89 @@
+{
+  "source": "TYPE E_P20_State :\n(\n    IDLE,\n    MOVE_TO_WASH,\n    WAIT_WASH,\n    MOVE_TO_WEIGHT,\n    WAIT_WEIGHT,\n    MOVE_TO_FIRING,\n    WAIT_FIRING,\n    MOVE_TO_OUTPUT,\n    AT_OUTPUT,\n    REJECT_WAIT\n);\nEND_TYPE\n\nFUNCTION_BLOCK FB_P20\nVAR_INPUT\n    Mode : BOOL;\n    ForwardButton : BOOL;\n    ReverseButton : BOOL;\n    SensorFeed : BOOL;\n    SensorWash : BOOL;\n    SensorWeight : BOOL;\n    SensorFiring : BOOL;\n    SensorOutput : BOOL;\n    washComplete : BOOL;\n    weightComplete : BOOL;\n    weight : REAL;\n    firingComplete : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MotorForward : BOOL;\n    MotorReverse : BOOL;\n    kick : BOOL;\n    CompletionLight : BOOL;\n    firingTemp : REAL;\nEND_VAR\nVAR\n    FirstScan : BOOL := TRUE;\n    State : E_P20_State := IDLE;\n    KickedAtOutput : BOOL := FALSE;\n    RejectPending : BOOL := FALSE;\nEND_VAR\n\n(* CONFLICT NOTICE: The original text says an unqualified weight at the weighing station\n   initiates kick. The formal specification C2 requires G(kick -> SensorOutput), and K4\n   places kick at the finished-product station. This implementation follows C2/K4:\n   kick is only a one-scan pulse at the finished-product station before CompletionLight.\n   An unqualified weight sets RejectPending and stops at the weighing station without\n   energizing kick, to avoid violating C2. The conflict is preserved and reported. *)\n\nIF FirstScan THEN\n    MotorForward := FALSE;\n    MotorReverse := FALSE;\n    kick := FALSE;\n    CompletionLight := FALSE;\n    firingTemp := 0.0;\n    FirstScan := FALSE;\nELSE\n    MotorForward := FALSE;\n    MotorReverse := FALSE;\n    kick := FALSE;\n    CompletionLight := FALSE;\n\n    IF NOT Mode THEN\n        (* Manual mode: interlocked forward/reverse jog control *)\n        MotorForward := ForwardButton AND NOT ReverseButton;\n        MotorReverse := ReverseButton AND NOT ForwardButton;\n        kick := FALSE;\n        CompletionLight := FALSE;\n    ELSE\n        (* Automatic mode: sequential station state machine *)\n        CASE State OF\n        IDLE:\n            IF SensorFeed THEN\n                MotorForward := TRUE;\n                State := MOVE_TO_WASH;\n            END_IF;\n\n        MOVE_TO_WASH:\n            MotorForward := TRUE;\n            IF SensorWash THEN\n                MotorForward := FALSE;\n                State := WAIT_WASH;\n            END_IF;\n\n        WAIT_WASH:\n            IF SensorWash AND washComplete THEN\n                MotorForward := TRUE;\n                State := MOVE_TO_WEIGHT;\n            END_IF;\n\n        MOVE_TO_WEIGHT:\n            MotorForward := TRUE;\n            IF SensorWeight THEN\n                MotorForward := FALSE;\n                State := WAIT_WEIGHT;\n            END_IF;\n\n        WAIT_WEIGHT:\n            IF SensorWeight AND weightComplete THEN\n                IF (weight >= 100.0) AND (weight <= 200.0) THEN\n                    firingTemp := 500.0 + (weight - 100.0) * 0.5;\n                    MotorForward := TRUE;\n                    State := MOVE_TO_FIRING;\n                ELSE\n                    RejectPending := TRUE;\n                    State := REJECT_WAIT;\n                    MotorForward := FALSE;\n                    MotorReverse := FALSE;\n                    kick := FALSE;\n                END_IF;\n            END_IF;\n\n        MOVE_TO_FIRING:\n            MotorForward := TRUE;\n            IF SensorFiring THEN\n                MotorForward := FALSE;\n                State := WAIT_FIRING;\n            END_IF;\n\n        WAIT_FIRING:\n            IF SensorFiring AND firingComplete THEN\n                MotorForward := TRUE;\n                State := MOVE_TO_OUTPUT;\n            END_IF;\n\n        MOVE_TO_OUTPUT:\n            MotorForward := TRUE;\n            IF SensorOutput THEN\n                MotorForward := FALSE;\n                State := AT_OUTPUT;\n            END_IF;\n\n        AT_OUTPUT:\n            IF SensorOutput THEN\n                IF NOT KickedAtOutput THEN\n                    kick := TRUE;\n                    KickedAtOutput := TRUE;\n                    CompletionLight := FALSE;\n                ELSE\n                    kick := FALSE;\n                    CompletionLight := TRUE;\n                END_IF;\n            ELSE\n                kick := FALSE;\n                CompletionLight := FALSE;\n                KickedAtOutput := FALSE;\n                RejectPending := FALSE;\n                State := IDLE;\n            END_IF;\n\n        REJECT_WAIT:\n            MotorForward := FALSE;\n            MotorReverse := FALSE;\n            kick := FALSE;\n            CompletionLight := FALSE;\n            IF NOT SensorWeight THEN\n                RejectPending := FALSE;\n                State := IDLE;\n            END_IF;\n\n        ELSE\n            State := IDLE;\n        END_CASE;\n    END_IF;\n\n    (* Final safety interlocks *)\n    IF MotorForward AND MotorReverse THEN\n        MotorForward := FALSE;\n        MotorReverse := FALSE;\n    END_IF;\n\n    IF kick AND NOT SensorOutput THEN\n        kick := FALSE;\n    END_IF;\n\n    IF CompletionLight THEN\n        kick := FALSE;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.219,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.844,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 8,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "P20-01",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P20-02",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P20-03",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P20-04",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P20-05",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P20-06",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P20-07",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P20-08",
+        "cycle": 1,
+        "signal": "kick",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 23785,
+  "tag": "candidate_2"
+}

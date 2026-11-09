@@ -1,0 +1,44 @@
+task_id: P06
+title: Aeration Blower Delayed Start
+difficulty: easy
+category: A
+requirement: |-
+  Control a wastewater-treatment aeration blower with a low-dissolved-oxygen demand, a 5-second start delay, emergency-stop priority and start-cycle counting.
+
+  1. Start delay timing when both DO_LOW and AERATION_E_STOP_NC are TRUE. Allow BLOWER_RUN to become TRUE only after these conditions have remained satisfied for 5 seconds.
+  2. If DO_LOW becomes FALSE or an emergency stop occurs, immediately disable BLOWER_RUN and reset the start timer, whether timing is incomplete or complete. A new demand must wait the full 5 seconds again.
+  3. Increment AERATION_BLOWER_CYCLE_COUNT once on each FALSE-to-TRUE transition of BLOWER_RUN. Do not count repeatedly during continuous operation.
+  4. At power-up, initialize the blower to OFF and the start count to zero. The start delay gates a BOOL enable; no continuous speed ramp is required.
+
+  中文摘要：曝气风机延时启动：溶解氧偏低且无急停持续 5 秒才启动，条件消失立即停机并复位计时，按启动次数计数。
+
+  扫描周期：20 ms（全组统一，见 docs/tasks_note.md）
+io_table:
+  - direction: IN
+    name: DO_LOW
+    data_type: BOOL
+    description: Dissolved oxygen is below its threshold and aeration is needed.
+  - direction: IN
+    name: AERATION_E_STOP_NC
+    data_type: BOOL
+    description: TRUE means the emergency stop is inactive; FALSE means it is active.
+  - direction: OUT
+    name: BLOWER_RUN
+    data_type: BOOL
+    description: Blower motor-contactor run command.
+  - direction: OUT
+    name: AERATION_BLOWER_CYCLE_COUNT
+    data_type: UINT
+    description: Count of actual blower starts.
+initial_state: BLOWER_RUN = FALSE；AERATION_BLOWER_CYCLE_COUNT = 0；启动延时计时器清零。
+constraints:
+  - K1 延时计时只在 DO_LOW = TRUE 且 AERATION_E_STOP_NC = TRUE 时进行。
+  - K2 上述两个条件同时满足并持续满 5 s 后才允许 BLOWER_RUN = TRUE。
+  - K3 DO_LOW 变 FALSE 或急停发生时，BLOWER_RUN 立即 FALSE、启动计时复位；下次需求须重新计满 5 s。
+  - K4 AERATION_BLOWER_CYCLE_COUNT 只在 BLOWER_RUN 的 FALSE→TRUE 沿加 1，连续运行期间不得重复计数。
+provenance: 课程公共题库 P06（Aeration Blower Delayed Start）；原文导入、变量名与需求未做任何改动；来源与审核记录见 data/provenance.csv 第 7 行
+spec_ref: data/specs/P06.ltl
+error_examples:
+  - 错误实现：用 TON 但条件失效时不复位。症状——DO_LOW 抖动两次后累计「凑够」5 秒，风机提前启动。
+  - 错误实现：在 BLOWER_RUN 为 TRUE 的每个周期都加计数。症状——运行 10 分钟计数涨到几万。
+notes: ""

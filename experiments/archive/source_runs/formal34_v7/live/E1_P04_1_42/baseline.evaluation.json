@@ -1,0 +1,40 @@
+{
+  "source": "FUNCTION_BLOCK FB_P04\nVAR_INPUT\n    VISCOSITY_OK : BOOL;\n    PASTE_E_STOP_NC : BOOL;\n    DebounceTime : TIME;\n    CycleTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    VFD_RUN : BOOL;\n    PUMP_MAINT_DUE : BOOL;\n    PUMP_RUNTIME_ACC : LTIME;\nEND_VAR\nVAR\n    DebounceElapsed : TIME;   (* 粘度信号连续有效累计时间 (K2)，TIME 域 *)\n    ViscosityValid : BOOL;    (* 去抖后的粘度有效条件 *)\n    CycleTimeLT : LTIME;      (* 本周期调用间隔，显式转为 LTIME 供 LTIME 域累加 *)\nEND_VAR\n\n(* -------------------------------------------------------------------- *)\n(* 上电初态 (K5 / C10)：                                                *)\n(*   VFD_RUN = FALSE, PUMP_RUNTIME_ACC = 0, PUMP_MAINT_DUE = FALSE,       *)\n(*   去抖计时清零。由 IEC 冷启动的非保持变量默认值保证（BOOL=FALSE，     *)\n(*   数值时间型=0），因此无需单独占用一个扫描周期做初始化。              *)\n(* -------------------------------------------------------------------- *)\n\n(* 显式转换本周期实际调用间隔，之后仅在 LTIME 域内做同类型算术。 *)\nCycleTimeLT := TIME_TO_LTIME(CycleTime);\n\n(* -------------------------------------------------------------------- *)\n(* K1/K2：急停有效或粘度原始信号为 FALSE 时立即清零未完成的去抖计时；    *)\n(* 仅在安全回路允许且粘度信号为 TRUE 时累计，保证“连续为真”语义。        *)\n(* -------------------------------------------------------------------- *)\nIF PASTE_E_STOP_NC AND VISCOSITY_OK THEN\n    DebounceElapsed := DebounceElapsed + CycleTime;\nELSE\n    DebounceElapsed := T#0ms;\nEND_IF;\n\n(* 连续达到 DebounceTime 才算有效；输入一旦变 FALSE 立即作废。            *)\nViscosityValid := VISCOSITY_OK AND (DebounceElapsed >= DebounceTime);\n\n(* -------------------------------------------------------------------- *)\n(* K1/K3：急停优先。仅当无急停且粘度条件有效时 VFD_RUN 才为 TRUE。        *)\n(* -------------------------------------------------------------------- *)\nVFD_RUN := PASTE_E_STOP_NC AND ViscosityValid;\n\n(* -------------------------------------------------------------------- *)\n(* K4：仅 VFD_RUN = TRUE 时按 CycleTime 累加；停机期间保持不变。          *)\n(* 全程 LTIME 同类型运算，避免 TIME → LTIME 隐式赋值转换。                *)\n(* -------------------------------------------------------------------- *)\nIF VFD_RUN THEN\n    PUMP_RUNTIME_ACC := PUMP_RUNTIME_ACC + CycleTimeLT;\nEND_IF;\n\n(* -------------------------------------------------------------------- *)\n(* K5：累计到 500h 置位维护提示，仅信息输出，不影响 VFD_RUN/安全允许。    *)\n(* -------------------------------------------------------------------- *)\nIF PUMP_RUNTIME_ACC >= LTIME#500h THEN\n    PUMP_MAINT_DUE := TRUE;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": null,
+          "message": "Fast compiler exited nonzero; inspect stdout.txt/stderr.txt",
+          "raw": "Fast compiler exited nonzero; inspect stdout.txt/stderr.txt"
+        }
+      ],
+      "elapsed_s": 1.672,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 17.218,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "tool_error",
+    "total": 0,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

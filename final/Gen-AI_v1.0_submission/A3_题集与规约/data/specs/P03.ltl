@@ -1,0 +1,14 @@
+# task: P03
+# meta: easy / D 故障与安全
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+#
+# 命题映射（I/O 名 -> 派生命题）：
+# alias: paramsValid := loLevel < hiLevel && hystWindow < (hiLevel - loLevel)
+
+C1: G(error -> X(!hiAlarm && !loAlarm))    -- 参数错误时不得输出报警，且下一周期保持关断（错误优先于报警）（K1/K2）
+C2: G(hiAlarm || loAlarm -> paramsValid)    -- 任何报警都要求参数合法（无合法参数不得报警）（K1/K2）
+C4: G(!(hiAlarm && loAlarm))    -- 高报与低报互斥（同一时刻不可能既高又低）（K3/K4）
+C7: G(hiAlarm -> (hiAlarm W Value < hiLevel - hystWindow))    -- 高报只在回落到 hiLevel - hystWindow 以下才允许复位（滞回）（K3）
+C7b: G(loAlarm -> (loAlarm W Value > loLevel + hystWindow))    -- 低报只在回升到 loLevel + hystWindow 以上才允许复位（滞回）（K4）
+C10: G[0,1](!hiAlarm && !loAlarm && !error && status == 16#0000)    -- 上电首周期无报警、无错误、状态码为 0（初态）

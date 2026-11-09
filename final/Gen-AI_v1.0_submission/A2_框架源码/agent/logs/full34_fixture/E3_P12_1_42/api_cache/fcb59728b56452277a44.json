@@ -1,0 +1,14 @@
+{
+  "choices": [
+    {
+      "message": {
+        "content": "FUNCTION_BLOCK FB_P12\nVAR_INPUT\n    THICKNESS_FAULT : BOOL;\n    THICKNESS_SIGNAL_VALID : BOOL;\n    CUTTING_RUN : BOOL;\n    FaultTimestamp : DINT;\n    CycleTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    THICKNESS_ALARM : BOOL;\n    Slab_Fault_Counter : UINT;\n    Slab_Runtime_Accumulator : LTIME;\n    Slab_Fault_History : ARRAY[0..4] OF DINT;\nEND_VAR\n(* Add a VAR block for internal state/timers before the implementation, if needed. *)\n(* SKELETON ONLY: replace this RETURN with scan logic and required initial state. *)\nRETURN;\nEND_FUNCTION_BLOCK\n\n(* FIXTURE_COMPILE_FAIL *)\n"
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0
+  },
+  "fixture": true
+}

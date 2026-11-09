@@ -1,0 +1,68 @@
+{
+  "source": "FUNCTION_BLOCK FB_S06\nVAR_INPUT\n    TempPV : REAL;\n    SetTemp : REAL;\n    Segment : INT;\n    LoadReduceReq : BOOL;\nEND_VAR\nVAR_OUTPUT\n    HeatOn : BOOL := FALSE;\n    FanOn : BOOL := FALSE;\n    OverTempAlarm : BOOL := FALSE;\n    LoadReduce : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    StartupScans : INT := 0;\n    TargetTemp : REAL := 0.0;\n    InvalidSegment : BOOL := FALSE;\n    InvalidSegmentPrev : BOOL := FALSE;\n    AutoReduce : BOOL := FALSE;\n    HeatDemand : BOOL := FALSE;\nEND_VAR\n\n(*\n    需求冲突保留并报告，待审：\n    1. 原文要求超温先降载而不是直接断电；C1/C4 却要求降载时\n       HeatOn 必须关断。接口没有降载完成反馈或功率调节输出，\n       无法表达并验证分阶段降载。本实现按保护互斥关断加热，\n       不声称满足“先降载而不是直接断电”的时序要求。\n    2. 原文报警/降载回落阈值基于分段目标，C7 报警保持条件\n       却基于 SetTemp 且使用 <=。自动降载按原文严格 < 释放；\n       报警仅在两个释放条件均满足时释放，作为待审保守处理。\n    3. 原文非法段号当周期报错，C8 要求下一周期报错。\n       本实现当周期报错并延续到下一周期，错误码优先于超温码。\n    4. C10 的 G[0,1] 按第 0、1 两次调用均关断输出处理；\n       这会暂时覆盖启动期间温控、超温和上位机降载请求。\n    5. FanOn 在逻辑中先于 HeatOn 赋值，满足 C2 输出联锁；\n       无风机反馈，不能证明物理风机已经运行后才加热。\n\n    每次调用为 20 ms。未声称经过编译或逐周期功能验证。\n*)\n\nInvalidSegment := (Segment < 0) OR (Segment > 2);\n\nCASE Segment OF\n    0:\n        TargetTemp := SetTemp * 0.5;\n    1:\n        TargetTemp := SetTemp * 0.8;\n    2:\n        TargetTemp := SetTemp;\nELSE\n    TargetTemp := SetTemp * 0.5;\nEND_CASE;\n\nIF StartupScans < 2 THEN\n    StartupScans := StartupScans + 1;\n\n    HeatDemand := FALSE;\n    AutoReduce := FALSE;\n    HeatOn := FALSE;\n    FanOn := FALSE;\n    OverTempAlarm := FALSE;\n    LoadReduce := FALSE;\nELSE\n    (* 自动降载：严格超过 +10 置位，严格低于 -3 释放。 *)\n    IF TempPV > (TargetTemp + 10.0) THEN\n        AutoReduce := TRUE;\n    ELSIF TempPV < (TargetTemp - 3.0) THEN\n        AutoReduce := FALSE;\n    END_IF;\n\n    (* 报警保持，同时保留原文及 C7 的回落条件。 *)\n    IF TempPV > (TargetTemp + 10.0) THEN\n        OverTempAlarm := TRUE;\n    ELSIF (TempPV < (TargetTemp - 3.0))\n        AND (TempPV <= (SetTemp - 3.0)) THEN\n        OverTempAlarm := FALSE;\n    END_IF;\n\n    (* 自动降载与外部请求独立；请求有效期间不撤销降载。 *)\n    LoadReduce := AutoReduce OR LoadReduceReq;\n\n    (* 死区内保持实际加热状态；保护动作清除加热保持状态。 *)\n    IF LoadReduce THEN\n        HeatDemand := FALSE;\n    ELSIF TempPV < (TargetTemp - 5.0) THEN\n        HeatDemand := TRUE;\n    ELSIF TempPV > (TargetTemp + 5.0) THEN\n        HeatDemand := FALSE;\n    END_IF;\n\n    (* 同一扫描内先更新风机命令，再更新加热命令。 *)\n    FanOn := HeatDemand AND NOT LoadReduce;\n    HeatOn := HeatDemand AND FanOn AND NOT LoadReduce;\nEND_IF;\n\nIF InvalidSegment OR InvalidSegmentPrev THEN\n    Status := WORD#16#8601;\nELSIF AutoReduce OR OverTempAlarm THEN\n    Status := WORD#16#8602;\nELSE\n    Status := WORD#16#0000;\nEND_IF;\n\nInvalidSegmentPrev := InvalidSegment;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 25.265,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 5,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "S06-01",
+        "cycle": 1,
+        "signal": "HeatOn",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S06-02",
+        "cycle": 1,
+        "signal": "HeatOn",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S06-03",
+        "cycle": 1,
+        "signal": "HeatOn",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S06-04",
+        "cycle": 1,
+        "signal": "OverTempAlarm",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S06-05",
+        "cycle": 1,
+        "signal": "LoadReduce",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3161,
+  "tag": "candidate_3"
+}

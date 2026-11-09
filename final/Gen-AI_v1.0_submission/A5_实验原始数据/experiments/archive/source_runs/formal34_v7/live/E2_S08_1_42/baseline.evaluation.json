@@ -1,0 +1,38 @@
+{
+  "source": "(*\n【必留：需求原文】\n分拣线按产品高度分到左右两条支线，阈值来自配方。切换配方必须在线上无料时进行。\n\n控制要求：\n1. RecipeSelect 为 1—3 时对应三组配方：1 = 左 30 mm / 右 60 mm；2 = 左 50 mm / 右 90 mm；3 = 左 70 mm / 右 120 mm（阈值为分界高度）。\n2. ChangeoverReq 上升沿时，若 Busy = FALSE 且当前无料（PartHeight = 0.0），则 ActiveRecipe 切换为 RecipeSelect，Busy 置 TRUE 并保持 2 s 后自动清除。\n3. Busy = TRUE 期间 SortLeft 与 SortRight 必须都为 FALSE。\n4. RecipeSelect 不在 1—3 时拒绝切换，ActiveRecipe 保持不变，Status = 16#8801。\n5. 正常分拣：PartHeight 小于左阈值时 SortLeft = TRUE；大于等于左阈值且小于右阈值时 SortRight = TRUE；超过右阈值时不动作并置 Status = 16#8802（超规格）。\n6. 上电时 ActiveRecipe = 1，Busy = FALSE。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）\n\n【必留：接口、初态、约束与数据告警】\n{\n  \"task_id\": \"S08\",\n  \"title\": \"分拣线配方切换\",\n  \"io_table\": [\n    {\n      \"direction\": \"IN\",\n      \"name\": \"RecipeSelect\",\n      \"data_type\": \"INT\",\n      \"description\": \"请求的配方号 1—3\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"ChangeoverReq\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"切换请求（上升沿有效）\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"PartHeight\",\n      \"data_type\": \"REAL\",\n      \"description\": \"当前产品高度（mm），0 表示无料\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"EStop_NC\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"急停常闭触点，TRUE = 正常\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"ActiveRecipe\",\n      \"data_type\": \"INT\",\n      \"description\": \"当前生效配方号\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"SortLeft\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"分到左支线\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"SortRight\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"分到右支线\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"Busy\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"切换进行中\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"Status\",\n      \"data_type\": \"WORD\",\n      \"description\": \"状态码\"\n    }\n  ],\n  \"initial_state\": \"ActiveRecipe = 1；SortLeft = FALSE；SortRight = FALSE；Busy = FALSE；Status = 16#0000；ChangeoverReqLast = FALSE。\",\n  \"constraints\": [\n    \"K1 Busy = TRUE 期间 SortLeft 与 SortRight 均为 FALSE。\",\n    \"K2 只有在无料且非忙时才允许切换配方。\",\n    \"K3 RecipeSelect 非法（不在 1—3）时 ActiveRecipe 不变，仅置错误码。\",\n    \"K4 分拣两路互斥，且同一产品只能分到一条支线。\"\n  ],\n  \"semantic_warnings\": [],\n  \"warnings\": [],\n  \"missing_fields\": [],\n  \"dialect_requirements\": [],\n  \"type_origins\": {}\n}\n\n【必留：完整形式化规约；有界时序以扫描周期计】\n# task: S08\n# meta: hard / C 状态机与节拍\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(Busy -> (!SortLeft && !SortRight))    -- 切换配方期间禁止分拣（切换优先于分拣）（K1）\nC2: G(SortLeft -> PartHeight > 0.0)    -- 分拣的前提是线上有料（K4）\nC4: G(!(SortLeft && SortRight))    -- 左右分拣互斥（K4）\nC9: G(Busy -> G[0,100](Busy))    -- 切换状态至少保持 2 s（防止请求抖动造成反复切换）（K2）\nC10: G[0,1](!SortLeft && !SortRight && !Busy && ActiveRecipe == 1)    -- 上电首周期默认配方 1、不分拣（初态）\n\n实现说明与冲突报告：\n1. 初态由变量声明的初值提供，第一次调用即处理当前输入。\n   ChangeoverReqLast 初值为 FALSE，因此第一次调用中\n   ChangeoverReq=TRUE 会形成上升沿。不屏蔽初始化后的执行扫描。\n2. C9 按字面要求每个 Busy 周期的后续 100 周期均为 Busy。\n   因而 Busy 一旦成立便不能再清除，与需求 2 的 2 s 后自动清除冲突。\n   本实现采用有限 2 s 切换，不声称满足原始 C9。\n   若在扫描 n 接受请求，则 n 至 n+99 输出 Busy=TRUE，\n   在 n+100 清除并提交目标，两个扫描时刻相差 2000 ms。\n   因此在 cycle=1 接受请求时，在 cycle=101 完成切换。\n3. C10 的闭区间 [0,1] 覆盖两个扫描，与“上电首周期”的注释不一致。\n   提供的逐周期测试要求首个执行扫描即可分拣或开始切换，\n   与首个执行扫描强制禁止分拣和切换的 C10 字面要求冲突。\n   本实现按测试反馈将初态解释为第一次调用前的状态，\n   保留原始 C10，不声称同时满足该公式。\n4. 先前测试要求接受切换时 ActiveRecipe 仍保持旧配方。\n   本实现采用内部 PendingRecipe 锁存已接受的目标，\n   Busy 期间保持旧 ActiveRecipe，2 s 结束后提交。\n   这与需求 2 中接受请求时立即更新 ActiveRecipe 的原文冲突，\n   原文保留，不声称同时满足两种时序。\n5. 最新测试 S08-02 在 cycle=101 期望 ActiveRecipe=2，\n   实际为 1。旧实现会在完成时重新检查无料、急停及配方合法性，\n   任一条件不满足便取消已接受的目标。\n   本次删除完成时的输入复查及取消逻辑，计时结束后\n   无条件提交请求接受时锁存的合法 PendingRecipe。\n   后续 RecipeSelect、PartHeight、EStop_NC 的变化不取消该事务。\n   无料、非忙及合法配方检查仅用于接受新请求。\n   如果 K2 要求 ActiveRecipe 实际更新的扫描也必须无料，\n   本实现与该解释冲突；如果 K3 要求当前 RecipeSelect 非法时\n   连先前已接受的切换也不得完成，本实现同样与该解释冲突。\n   保留原始约束，不声称同时满足上述严格解释。\n   测试摘要未提供 cycle=101 的完整输入，仍需复测确认。\n6. 恰好等于右阈值时，原文没有给出动作或错误码；\n   本实现两路均不动作且不置超规格码，严格保留“超过”的比较。\n   PartHeight<=0.0 时不分拣，负高度没有另行新增错误码。\n7. EStop_NC 的动作策略没有明文规定。\n   本实现 FALSE 时禁止分拣及接受新切换；\n   已开始的 Busy 继续计时，完成时仍提交已接受的目标。\n   ActiveRecipe 不因急停复位，恢复时不合成新的请求沿。\n8. 非法 RecipeSelect 的 16#8801 每扫描生效，\n   优先于超规格码，禁止接受非法的新切换请求；\n   已接受的合法目标仍可在完成扫描提交。\n   分拣使用当前有效配方。Status 不锁存。\n9. 先前 S08-01 要求连续有料期间高度跨越分界后输出新方向。\n   本实现不使用 PartRoute，按当前高度逐扫描互斥分拣。\n   没有产品标识或独立到料信号，无法识别跨扫描的同一产品；\n   因此只能保证每扫描左右互斥，不能证明同一物理产品\n   在高度变化的多个扫描中永远不会收到不同方向信号。\n   若 K4 要求跨扫描锁定，则与该测试反馈及逐扫描分拣存在冲突。\n10. 用户提供的上个版本编译检查通过，逐周期测试为 4/5，\n    通过项为 S08-01、S08-03、S08-04、S08-05。\n    当前对话没有测试执行工具，未重新编译或运行此修改版本；\n    上个版本编译通过不能证明本版本编译通过或功能正确。\n*)\n\nFUNCTION_BLOCK FB_S08\nVAR_INPUT\n    RecipeSelect : INT;\n    ChangeoverReq : BOOL;\n    PartHeight : REAL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    ActiveRecipe : INT := 1;\n    SortLeft : BOOL := FALSE;\n    SortRight : BOOL := FALSE;\n    Busy : BOOL := FALSE;\n    Status : WORD := 16#0000;\nEND_VAR\nVAR\n    ChangeoverReqLast : BOOL := FALSE;\n    ChangeoverRise : BOOL := FALSE;\n    BusyScansRemaining : INT := 0;\n    PendingRecipe : INT := 1;\n    RecipeValid : BOOL := FALSE;\n    LeftThreshold : REAL := 30.0;\n    RightThreshold : REAL := 60.0;\nEND_VAR\n\n(* 每扫描先关闭输出，只有允许分拣的路径才能重新开启。 *)\nSortLeft := FALSE;\nSortRight := FALSE;\nStatus := 16#0000;\n\nChangeoverRise := ChangeoverReq AND NOT ChangeoverReqLast;\nChangeoverReqLast := ChangeoverReq;\nRecipeValid := (RecipeSelect >= 1) AND (RecipeSelect <= 3);\n\nIF NOT RecipeValid THEN\n    Status := 16#8801;\nEND_IF;\n\n(* 已忙时只处理计时，不接受或缓存新的请求沿。 *)\nIF Busy THEN\n    IF BusyScansRemaining > 0 THEN\n        BusyScansRemaining := BusyScansRemaining - 1;\n    END_IF;\n\n    IF BusyScansRemaining = 0 THEN\n        (* 提交已接受的合法目标，不重新检查或采样当前请求输入。 *)\n        ActiveRecipe := PendingRecipe;\n        Busy := FALSE;\n    END_IF;\nELSIF ChangeoverRise\n    AND RecipeValid\n    AND EStop_NC\n    AND (PartHeight = 0.0) THEN\n    PendingRecipe := RecipeSelect;\n    Busy := TRUE;\n    BusyScansRemaining := 100;\nEND_IF;\n\nCASE ActiveRecipe OF\n    1:\n        LeftThreshold := 30.0;\n        RightThreshold := 60.0;\n    2:\n        LeftThreshold := 50.0;\n        RightThreshold := 90.0;\n    3:\n        LeftThreshold := 70.0;\n        RightThreshold := 120.0;\nEND_CASE;\n\n(* 每扫描根据当前高度分拣，不推断跨扫描的产品身份。 *)\nIF EStop_NC AND NOT Busy AND (PartHeight > 0.0) THEN\n    IF PartHeight < LeftThreshold THEN\n        SortLeft := TRUE;\n    ELSIF PartHeight < RightThreshold THEN\n        SortRight := TRUE;\n    ELSIF PartHeight > RightThreshold THEN\n        IF RecipeValid THEN\n            Status := 16#8802;\n        END_IF;\n    END_IF;\nEND_IF;\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 22.969,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 5,
+    "passed": 5,
+    "passed_ids": [
+      "S08-01",
+      "S08-02",
+      "S08-03",
+      "S08-04",
+      "S08-05"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

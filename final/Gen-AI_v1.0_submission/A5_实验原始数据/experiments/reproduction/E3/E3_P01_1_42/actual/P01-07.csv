@@ -1,0 +1,4 @@
+case_id,cycle,Pump_Motor,Filling_Valve,Capping_Machine,Packing_Machine,Completion_Light
+P01-07,1,FALSE,FALSE,FALSE,FALSE,FALSE
+P01-07,2,TRUE,FALSE,FALSE,FALSE,FALSE
+P01-07,3,FALSE,FALSE,FALSE,FALSE,FALSE

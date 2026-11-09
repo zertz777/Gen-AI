@@ -1,0 +1,33 @@
+--- before.st
++++ after.st
+@@ -53,7 +53,29 @@
+                     segmentValue := UDINT#0;
+                 END_IF;
+             ELSE
+-                digitPosition := FIND('0123456789', character);
++                IF character = '0' THEN
++                    digitPosition := 1;
++                ELSIF character = '1' THEN
++                    digitPosition := 2;
++                ELSIF character = '2' THEN
++                    digitPosition := 3;
++                ELSIF character = '3' THEN
++                    digitPosition := 4;
++                ELSIF character = '4' THEN
++                    digitPosition := 5;
++                ELSIF character = '5' THEN
++                    digitPosition := 6;
++                ELSIF character = '6' THEN
++                    digitPosition := 7;
++                ELSIF character = '7' THEN
++                    digitPosition := 8;
++                ELSIF character = '8' THEN
++                    digitPosition := 9;
++                ELSIF character = '9' THEN
++                    digitPosition := 10;
++                ELSE
++                    digitPosition := 0;
++                END_IF;
+ 
+                 IF digitPosition = 0 THEN
+                     valid := FALSE;

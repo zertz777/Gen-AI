@@ -1,0 +1,186 @@
+{
+  "task_id": "S07",
+  "title": "灌装四工位节拍控制",
+  "difficulty": "hard",
+  "category": "C",
+  "requirement": "灌装线由进瓶、灌装、封盖、包装四个工位组成，按固定节拍顺序推进。\n\n控制要求：\n1. StartBtn 上升沿启动整线，Conveyor = TRUE 进入进瓶工位；EStop_NC = FALSE 时立即停止全部输出并回到 Step 0。\n2. 工步顺序：0 进瓶（等 BottleIn）→ 1 灌装（FillValve 开，等 FillDone）→ 2 封盖（CapMotor 开，等 CapDone）→ 3 包装（PackCyl 开，等 PackDone）→ 回到 0。\n3. 每一步自进入起计时，超过 5 s 未收到完成信号则置 Status = 16#8701、保持当前步不动、关闭该步输出（等待人工处理）。\n4. 每完成一瓶（PackDone 且回到 Step 0）CycleCount 加 1。\n5. 同一时刻四个执行器输出中最多一个为 TRUE。\n6. Status：16#0000 正常、16#8701 工步超时、16#8702 急停。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）",
+  "io_table": [
+    {
+      "direction": "IN",
+      "name": "BottleIn",
+      "data_type": "BOOL",
+      "description": "进瓶到位"
+    },
+    {
+      "direction": "IN",
+      "name": "FillDone",
+      "data_type": "BOOL",
+      "description": "灌装完成"
+    },
+    {
+      "direction": "IN",
+      "name": "CapDone",
+      "data_type": "BOOL",
+      "description": "封盖完成"
+    },
+    {
+      "direction": "IN",
+      "name": "PackDone",
+      "data_type": "BOOL",
+      "description": "包装完成"
+    },
+    {
+      "direction": "IN",
+      "name": "StartBtn",
+      "data_type": "BOOL",
+      "description": "启动按钮（上升沿有效）"
+    },
+    {
+      "direction": "IN",
+      "name": "EStop_NC",
+      "data_type": "BOOL",
+      "description": "急停常闭触点，TRUE = 正常"
+    },
+    {
+      "direction": "OUT",
+      "name": "Conveyor",
+      "data_type": "BOOL",
+      "description": "输送电机"
+    },
+    {
+      "direction": "OUT",
+      "name": "FillValve",
+      "data_type": "BOOL",
+      "description": "灌装阀"
+    },
+    {
+      "direction": "OUT",
+      "name": "CapMotor",
+      "data_type": "BOOL",
+      "description": "封盖电机"
+    },
+    {
+      "direction": "OUT",
+      "name": "PackCyl",
+      "data_type": "BOOL",
+      "description": "包装气缸"
+    },
+    {
+      "direction": "OUT",
+      "name": "CycleCount",
+      "data_type": "UINT",
+      "description": "完成瓶数"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "状态码"
+    }
+  ],
+  "initial_state": "四个执行器输出全 FALSE；CycleCount = 0；Step = 0；Status = 16#0000；步计时器 = 0；StartBtnLast = FALSE。",
+  "constraints": [
+    "K1 工步只能按 0→1→2→3→0 推进，不得跳步或回退（除急停复位）。",
+    "K2 每一步必须在收到对应完成信号后才推进到下一步。",
+    "K3 单步超过 5 s 未完成时置 16#8701、关闭该步输出、保持步号不变。",
+    "K4 Conveyor/FillValve/CapMotor/PackCyl 同一时刻最多一个为 TRUE。",
+    "K5 EStop_NC = FALSE 时全部输出 FALSE、Step 归 0、立即返回。"
+  ],
+  "provenance": "改编自公开题（P01 Automated Filling Line Control（课程题库））；改编点：把「操作员逐工步按确认按钮」改为「传感器完成信号」，并补上 5 s 工步超时与瓶数计数；为什么这样改：人工确认版本无法自动化评测；换成传感器信号后每一步都有客观判据，且超时处理是节拍控制的核心缺陷来源；来源与审核记录见 data/provenance.csv 第 28 行",
+  "spec_ref": "data/specs/S07.ltl",
+  "error_examples": [
+    "错误实现：用延时替代完成信号推进。症状——瓶子没到位就开灌装阀，物料喷到输送带上。",
+    "错误实现：超时后自动跳到下一步。症状——未灌满的瓶子进入封盖，缺陷被下游工位掩盖。"
+  ],
+  "notes": "",
+  "spec_text": "# task: S07\n# meta: hard / C 状态机与节拍\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(!EStop_NC -> (!Conveyor && !FillValve && !CapMotor && !PackCyl))    -- 急停当周期四路执行器全停（K5）\nC2: G(FillValve -> BottleIn)    -- 开灌装阀的前提是瓶子到位（K2）\nC4: G(!(Conveyor && FillValve) && !(Conveyor && CapMotor) && !(Conveyor && PackCyl) && !(FillValve && CapMotor) && !(FillValve && PackCyl) && !(CapMotor && PackCyl))    -- 四路执行器两两互斥（单工步动作）（K4）\nC6: G(FillValve -> (FillValve W FillDone))    -- 灌装阀保持到灌装完成信号出现（K2）\nC9: G(FillValve -> G[0,5](FillValve))    -- 灌装动作至少保持 100 ms（防抖，避免单周期抖动误判完成）（K3）\nC10: G[0,1](!Conveyor && !FillValve && !CapMotor && !PackCyl)    -- 上电首周期无动作（初态）\n",
+  "spec_sha256": "4c17089828c8125af93dc0a962f452ebac0a4ec4ca3620ea8d13ddb835fe3fa7",
+  "task_version": "33dd7452",
+  "task_sha256": "33dd7452e68125e0c5f17ba5a402ed46177610dd72ac3cefafd9a5ded961c252",
+  "source_path": "data/tasks/S07.yaml",
+  "degraded": false,
+  "missing_fields": [],
+  "warnings": [],
+  "semantic_warnings": [],
+  "interface_io_table": [
+    {
+      "direction": "IN",
+      "name": "BottleIn",
+      "data_type": "BOOL",
+      "description": "进瓶到位"
+    },
+    {
+      "direction": "IN",
+      "name": "FillDone",
+      "data_type": "BOOL",
+      "description": "灌装完成"
+    },
+    {
+      "direction": "IN",
+      "name": "CapDone",
+      "data_type": "BOOL",
+      "description": "封盖完成"
+    },
+    {
+      "direction": "IN",
+      "name": "PackDone",
+      "data_type": "BOOL",
+      "description": "包装完成"
+    },
+    {
+      "direction": "IN",
+      "name": "StartBtn",
+      "data_type": "BOOL",
+      "description": "启动按钮（上升沿有效）"
+    },
+    {
+      "direction": "IN",
+      "name": "EStop_NC",
+      "data_type": "BOOL",
+      "description": "急停常闭触点，TRUE = 正常"
+    },
+    {
+      "direction": "OUT",
+      "name": "Conveyor",
+      "data_type": "BOOL",
+      "description": "输送电机"
+    },
+    {
+      "direction": "OUT",
+      "name": "FillValve",
+      "data_type": "BOOL",
+      "description": "灌装阀"
+    },
+    {
+      "direction": "OUT",
+      "name": "CapMotor",
+      "data_type": "BOOL",
+      "description": "封盖电机"
+    },
+    {
+      "direction": "OUT",
+      "name": "PackCyl",
+      "data_type": "BOOL",
+      "description": "包装气缸"
+    },
+    {
+      "direction": "OUT",
+      "name": "CycleCount",
+      "data_type": "UINT",
+      "description": "完成瓶数"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "状态码"
+    }
+  ],
+  "type_declarations": "",
+  "type_origins": {},
+  "pou_name": "FB_S07",
+  "pou_kind": "FUNCTION_BLOCK",
+  "dialect_requirements": [],
+  "skeleton_compiled": false,
+  "scan_cycle_ms": 20
+}

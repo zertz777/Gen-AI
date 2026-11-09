@@ -1,0 +1,68 @@
+{
+  "source": "FUNCTION_BLOCK FB_P10\nVAR_INPUT\n    TemperatureSensorInput : REAL;\n    SetTemperature : REAL;\nEND_VAR\nVAR_OUTPUT\n    CurrentTemperature : REAL;\n    SetTempDisplay : REAL;\n    HeaterStatus : BOOL;\n    OverheatProtection : BOOL;\n    HeaterOutput : BOOL;\nEND_VAR\nVAR\n    FirstScan : BOOL := TRUE;\n    SensorFaultNow : BOOL := FALSE;\n    SensorFaultInhibit : BOOL := FALSE;\n    HeaterRunTimer : UINT := 0;\n    OverheatTimer : UINT := 0;\nEND_VAR\nVAR CONSTANT\n    OVERHEAT_TRIGGER_SCANS : UINT := 250; (* 5 s / 20 ms *)\n    OVERHEAT_HOLD_SCANS : UINT := 150;    (* 3 s / 20 ms *)\nEND_VAR\n\n(* 显示当前温度与设定温度 *)\nCurrentTemperature := TemperatureSensorInput;\nSetTempDisplay := SetTemperature;\n\n(* 当前周期传感器越界判定：< 0 或 > 100 视为故障 *)\nSensorFaultNow := (TemperatureSensorInput < 0.0) OR (TemperatureSensorInput > 100.0);\n\n(* 上电首周期安全初态：不加热、无过热保护 *)\nIF FirstScan THEN\n    HeaterOutput := FALSE;\n    HeaterStatus := FALSE;\n    OverheatProtection := FALSE;\n    HeaterRunTimer := 0;\n    OverheatTimer := 0;\n    FirstScan := FALSE;\nELSE\n    (* 安全优先级 1：过热保护优先，保护期间强制关断加热 *)\n    IF OverheatProtection THEN\n        HeaterOutput := FALSE;\n        HeaterRunTimer := 0;\n\n        (* 过热保护至少保持 3 s 才能解除；解除周期仍不重新加热 *)\n        IF OverheatTimer >= OVERHEAT_HOLD_SCANS THEN\n            OverheatProtection := FALSE;\n            OverheatTimer := 0;\n        ELSE\n            OverheatTimer := OverheatTimer + 1;\n        END_IF;\n    ELSE\n        (* 安全优先级 2：传感器故障优先于温控。\n           当前越界或上一周期越界，本周期均禁止加热。 *)\n        IF SensorFaultNow OR SensorFaultInhibit THEN\n            HeaterOutput := FALSE;\n            HeaterRunTimer := 0;\n        ELSE\n            (* 温度控制：低于设定值加热；大于或等于设定值停止加热 *)\n            IF TemperatureSensorInput < SetTemperature THEN\n                HeaterOutput := TRUE;\n            ELSE\n                HeaterOutput := FALSE;\n            END_IF;\n\n            (* 连续加热计时；超过 5 s 触发过热保护并强制关断 *)\n            IF HeaterOutput THEN\n                IF HeaterRunTimer >= OVERHEAT_TRIGGER_SCANS THEN\n                    OverheatProtection := TRUE;\n                    HeaterOutput := FALSE;\n                    HeaterRunTimer := 0;\n                    OverheatTimer := 0;\n                ELSE\n                    HeaterRunTimer := HeaterRunTimer + 1;\n                END_IF;\n            ELSE\n                HeaterRunTimer := 0;\n            END_IF;\n        END_IF;\n    END_IF;\nEND_IF;\n\n(* 本周期越界则下一周期仍禁止加热，满足 C7/C7b 的 X(!HeaterOutput) *)\nSensorFaultInhibit := SensorFaultNow;\n\n(* 加热器状态显示与实际输出一致 *)\nHeaterStatus := HeaterOutput;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.234,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.016,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 5,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "P10-01",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P10-02",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P10-03",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P10-04",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P10-05",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 17878,
+  "tag": "candidate_2"
+}

@@ -1,0 +1,70 @@
+{
+  "source": "FUNCTION_BLOCK FB_S02\nVAR_INPUT\n    FwdBtn : BOOL;\n    RevBtn : BOOL;\n    MaintKey : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MotorFwd : BOOL := FALSE;\n    MotorRev : BOOL := FALSE;\n    RunLamp : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    StartupScans : UINT := UINT#2;\n    LastDirection : INT := INT#0;\n    RequestedDirection : INT := INT#0;\n    OffHistory : UINT := UINT#0;\n    DeadRemaining : UINT := UINT#0;\n    MaintPhase : UINT := UINT#0;\nEND_VAR\n\n(*\n    待审语义冲突：\n    1. 要求1的即时启动与 C10 的 G[0,1] 禁止输出冲突。\n       此实现按 C10 的闭区间解释，前两个调用周期禁止电机输出。\n    2. 两按钮同时有效时，要求1未定义仲裁；同时启动违反 K1。\n       此实现安全停机，不擅自赋予某一方向优先级。\n    3. C9 在急停后仍然有效，因此清空死区计时不能同时删除\n       最近方向输出的历史。急停清零 DeadRemaining；\n       OffHistory 独立保存连续断开历史，以维持 C9。\n    正常态 RunLamp 按运行指示灯含义显示任一电机输出。\n    未经真实编译器验证，未声称通过逐周期功能测试。\n\n    时间约定：\n    每次调用为20 ms。换向断开当周期不计为已过去20 ms。\n    连续断开十个完整周期后才允许相反方向。\n*)\n\n(* 根据上一周期实际输出累计连续断开历史，最大200 ms。 *)\nIF MotorFwd OR MotorRev THEN\n    OffHistory := UINT#0;\nELSIF OffHistory < UINT#10 THEN\n    OffHistory := OffHistory + UINT#1;\nEND_IF;\n\nRequestedDirection := INT#0;\nIF FwdBtn AND NOT RevBtn THEN\n    RequestedDirection := INT#1;\nELSIF RevBtn AND NOT FwdBtn THEN\n    RequestedDirection := INT#2;\nEND_IF;\n\n(* 每周期默认安全断开，只有通过所有联锁才赋值启动。 *)\nMotorFwd := FALSE;\nMotorRev := FALSE;\nRunLamp := FALSE;\nStatus := WORD#16#0000;\n\n(* 检修闪灯：50个扫描一个周期，25周期灭、25周期亮。 *)\nIF MaintKey THEN\n    RunLamp := MaintPhase >= UINT#25;\n    IF MaintPhase >= UINT#49 THEN\n        MaintPhase := UINT#0;\n    ELSE\n        MaintPhase := MaintPhase + UINT#1;\n    END_IF;\nELSE\n    MaintPhase := UINT#0;\nEND_IF;\n\n(* 安全优先级：急停 > 检修 > 上电抑制 > 方向控制。 *)\nIF NOT EStop_NC THEN\n    DeadRemaining := UINT#0;\n    Status := WORD#16#8202;\n\nELSIF MaintKey THEN\n    DeadRemaining := UINT#0;\n    Status := WORD#16#8201;\n\nELSIF StartupScans > UINT#0 THEN\n    DeadRemaining := UINT#0;\n\nELSIF RequestedDirection = INT#0 THEN\n    DeadRemaining := UINT#0;\n\nELSIF (LastDirection <> INT#0)\n      AND (RequestedDirection <> LastDirection)\n      AND (OffHistory < UINT#10) THEN\n    DeadRemaining := UINT#10 - OffHistory;\n    Status := WORD#16#8203;\n\nELSE\n    DeadRemaining := UINT#0;\n\n    IF RequestedDirection = INT#1 THEN\n        MotorFwd := TRUE;\n        LastDirection := INT#1;\n    ELSIF RequestedDirection = INT#2 THEN\n        MotorRev := TRUE;\n        LastDirection := INT#2;\n    END_IF;\nEND_IF;\n\nIF StartupScans > UINT#0 THEN\n    StartupScans := StartupScans - UINT#1;\nEND_IF;\n\nIF NOT MaintKey THEN\n    RunLamp := MotorFwd OR MotorRev;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.11,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 1,
+    "passed_ids": [
+      "S02-05"
+    ],
+    "failures": [
+      {
+        "case_id": "S02-01",
+        "cycle": 1,
+        "signal": "MotorFwd",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S02-02",
+        "cycle": 1,
+        "signal": "MotorFwd",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S02-03",
+        "cycle": 1,
+        "signal": "RunLamp",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S02-04",
+        "cycle": 1,
+        "signal": "MotorFwd",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S02-06",
+        "cycle": 1,
+        "signal": "MotorFwd",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3208,
+  "tag": "candidate_2"
+}

@@ -1,0 +1,68 @@
+{
+  "source": "FUNCTION_BLOCK FB_P10\nVAR_INPUT\n    TemperatureSensorInput : REAL;\n    SetTemperature : REAL;\nEND_VAR\nVAR_OUTPUT\n    CurrentTemperature : REAL;\n    SetTempDisplay : REAL;\n    HeaterStatus : BOOL := FALSE;\n    OverheatProtection : BOOL := FALSE;\n    HeaterOutput : BOOL := FALSE;\nEND_VAR\nVAR\n    StartupScans : UINT := 0;\n    SensorFault : BOOL := FALSE;\n    PreviousSensorFault : BOOL := FALSE;\n    HeatElapsedScans : UINT := 0;\n    ProtectionElapsedScans : UINT := 0;\n    ProtectionDelayElapsed : BOOL := FALSE;\n    HeatDemand : BOOL := FALSE;\nEND_VAR\n\n(*\n    每次调用对应20 ms；计时累计相邻调用之间的输出保持时间。\n    连续加热严格超过5 s：251个扫描间隔。\n    保护等待至少3 s：150个扫描间隔。\n\n    规约冲突，需评审：\n    C9 = G(P -> G[0,150](P)) 对每个保护有效周期重复施加，\n    因而保护一旦触发就必须永久保持，并非仅在触发沿保持3 s。\n    若题意要求等待3 s后自动解除，则与C9字面含义冲突。\n    本实现保留C9字面约束：记录3 s等待完成，但不自动解除保护。\n    接口未提供复位输入，故不自行增加解除条件或接口。\n\n    C7/C7b要求故障后的下一周期仍关断；因此当前故障和\n    上周期故障均参与联锁，即使传感器本周期已经恢复。\n    C10按闭区间[0,1]解释，前两次调用均禁止加热。\n    安全联锁优先于K1温控；温度等于设定值时保持加热需求。\n    未声明经过编译或逐周期功能验证。\n*)\n\nCurrentTemperature := TemperatureSensorInput;\nSetTempDisplay := SetTemperature;\n\nSensorFault :=\n    (TemperatureSensorInput < 0.0) OR\n    (TemperatureSensorInput > 100.0);\n\nIF StartupScans < 2 THEN\n    StartupScans := StartupScans + 1;\n    HeaterOutput := FALSE;\n    HeaterStatus := FALSE;\n    OverheatProtection := FALSE;\n    HeatDemand := FALSE;\n    HeatElapsedScans := 0;\n    ProtectionElapsedScans := 0;\n    ProtectionDelayElapsed := FALSE;\nELSE\n    (* 对上周期实际加热输出累计已经经过的20 ms。 *)\n    IF HeaterOutput THEN\n        IF HeatElapsedScans < 251 THEN\n            HeatElapsedScans := HeatElapsedScans + 1;\n        END_IF;\n    ELSE\n        HeatElapsedScans := 0;\n    END_IF;\n\n    (* 保护触发周期不计入已经经过的保护等待时间。 *)\n    IF OverheatProtection THEN\n        IF ProtectionElapsedScans < 150 THEN\n            ProtectionElapsedScans := ProtectionElapsedScans + 1;\n        END_IF;\n        ProtectionDelayElapsed := ProtectionElapsedScans >= 150;\n    ELSIF HeatElapsedScans > 250 THEN\n        OverheatProtection := TRUE;\n        ProtectionElapsedScans := 0;\n        ProtectionDelayElapsed := FALSE;\n    END_IF;\n\n    IF TemperatureSensorInput < SetTemperature THEN\n        HeatDemand := TRUE;\n    ELSIF TemperatureSensorInput > SetTemperature THEN\n        HeatDemand := FALSE;\n    END_IF;\n\n    IF OverheatProtection OR SensorFault OR PreviousSensorFault THEN\n        HeaterOutput := FALSE;\n        HeatDemand := FALSE;\n    ELSE\n        HeaterOutput := HeatDemand;\n    END_IF;\n\n    IF NOT HeaterOutput THEN\n        HeatElapsedScans := 0;\n    END_IF;\n\n    HeaterStatus := HeaterOutput;\nEND_IF;\n\nPreviousSensorFault := SensorFault;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 25.641,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 5,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "P10-01",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P10-02",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P10-03",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P10-04",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P10-05",
+        "cycle": 1,
+        "signal": "HeaterStatus",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 2989,
+  "tag": "candidate_2"
+}

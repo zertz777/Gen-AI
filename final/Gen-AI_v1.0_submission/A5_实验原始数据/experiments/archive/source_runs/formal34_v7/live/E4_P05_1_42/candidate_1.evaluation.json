@@ -1,0 +1,39 @@
+{
+  "source": "FUNCTION_BLOCK FB_P05\nVAR_INPUT\n    Gap_Exceeded : BOOL;\n    Weld_E_Stop_NC : BOOL;\n    DebounceTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    Operator_Alert : BOOL := FALSE;\n    Weld_Soft_Start_Active : BOOL := TRUE;\nEND_VAR\nVAR\n    InitializationElapsed : TIME := T#0ms;\n    DebounceElapsed : TIME := T#0ms;\nEND_VAR\n\n(*\n需求原文：\nControl a weld-gap alarm with power-up monitoring inhibition,\ninput debouncing during normal monitoring and emergency-stop priority.\n\n1. Gap_Exceeded indicates that the scanner has detected a weld gap\n   exceeding the permitted 1.5 mm value.\n2. Begin with a 5-second initialization inhibition period after power-up.\n   During this period, Operator_Alert is FALSE,\n   Weld_Soft_Start_Active is TRUE, and gap-signal debounce time\n   does not accumulate.\n3. Resume gap monitoring after initialization. Allow the alarm only after\n   Gap_Exceeded has remained TRUE for DebounceTime. When the signal\n   becomes FALSE, switch off the alarm and clear debounce timing.\n4. When Weld_E_Stop_NC is FALSE, the emergency stop takes priority over\n   initialization and normal monitoring. Operator_Alert must immediately\n   become FALSE and any incomplete debounce timing must be cleared.\n5. Weld_Soft_Start_Active indicates only the power-up inhibition period;\n   it does not represent a continuous speed ramp.\n\n形式化规约：\nC1: G(!Weld_E_Stop_NC -> !Operator_Alert)\nC2: G(Operator_Alert -> Weld_E_Stop_NC)\nC6: G(Operator_Alert -> (Operator_Alert W !Gap_Exceeded))\nC9: G(Operator_Alert -> G[0,25](Operator_Alert))\nC10: G[0,1](!Operator_Alert && Weld_Soft_Start_Active)\n\n待审语义冲突：\n- C6 要求间隙未恢复时保持报警，与 K4/C1 要求急停立即撤销\n  已有报警冲突。\n- C9 要求报警至少保持 500 ms，与 K3 要求间隙恢复立即撤销、\n  K4/C1 要求急停立即撤销冲突。\n本实现采用题面明示的急停优先级及 K1 至 K4，不增加最小脉宽\n保持逻辑；不能声称同时满足上述冲突规约。\n源码未经过真实编译器及逐周期测试验证。\n\n扫描约定：\n每次调用代表一个 20 ms 区间，前 250 次调用处于初始化抑制期，\n第 251 次调用开始监视。有效间隙扫描每次累计 20 ms。\n初始化计时不因急停暂停或重新开始。\nDebounceTime 必须为正；非正值不报警并清除去抖计时。\n*)\n\nWeld_Soft_Start_Active := InitializationElapsed < T#5s;\n\nIF Weld_Soft_Start_Active THEN\n    InitializationElapsed := InitializationElapsed + T#20ms;\nEND_IF;\n\n(* 急停优先；抑制状态仍仅反映上电初始化时间。 *)\nIF NOT Weld_E_Stop_NC THEN\n    Operator_Alert := FALSE;\n    DebounceElapsed := T#0ms;\n\nELSIF Weld_Soft_Start_Active THEN\n    Operator_Alert := FALSE;\n    DebounceElapsed := T#0ms;\n\nELSIF NOT Gap_Exceeded THEN\n    Operator_Alert := FALSE;\n    DebounceElapsed := T#0ms;\n\nELSIF DebounceTime <= T#0ms THEN\n    Operator_Alert := FALSE;\n    DebounceElapsed := T#0ms;\n\nELSE\n    (* 饱和累计，避免在 TIME 上限附近加法溢出。 *)\n    IF DebounceElapsed < DebounceTime THEN\n        IF (DebounceTime - DebounceElapsed) <= T#20ms THEN\n            DebounceElapsed := DebounceTime;\n        ELSE\n            DebounceElapsed := DebounceElapsed + T#20ms;\n        END_IF;\n    END_IF;\n\n    Operator_Alert := DebounceElapsed >= DebounceTime;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.937,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P05-01",
+      "P05-02",
+      "P05-03",
+      "P05-04",
+      "P05-05",
+      "P05-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 2736,
+  "tag": "candidate_1"
+}

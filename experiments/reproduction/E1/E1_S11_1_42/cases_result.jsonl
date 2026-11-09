@@ -1,0 +1,5 @@
+{"task_id": "S11", "case_id": "S11-01", "status": "pass", "mismatch": null, "latency_s": 0.002}
+{"task_id": "S11", "case_id": "S11-02", "status": "fail", "mismatch": {"cycle": 2, "variable": "ControlValue", "expected": 0.0, "actual": 50.0}, "latency_s": 0.002}
+{"task_id": "S11", "case_id": "S11-03", "status": "fail", "mismatch": {"cycle": 2, "variable": "ControlValue", "expected": 0.0, "actual": 50.0}, "latency_s": 0.012}
+{"task_id": "S11", "case_id": "S11-04", "status": "fail", "mismatch": {"cycle": 25, "variable": "AlarmLamp", "expected": true, "actual": false}, "latency_s": 0.002}
+{"task_id": "S11", "case_id": "S11-05", "status": "fail", "mismatch": {"cycle": 2, "variable": "Status", "expected": 0, "actual": 35329}, "latency_s": 0.001}

@@ -1,0 +1,46 @@
+{
+  "source": "FUNCTION_BLOCK FB_S05\nVAR_INPUT\n    FlowPulse : BOOL;\n    ShiftReset : BOOL;\n    CycleTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    TotalVolume : LREAL := LREAL#0.0;\n    ShiftVolume : LREAL := LREAL#0.0;\n    PulseCount : UDINT := UDINT#0;\n    OverflowFlag : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    FlowPulseLast : BOOL := FALSE;\n    ShiftResetLast : BOOL := FALSE;\n    FlowRise : BOOL := FALSE;\n    ResetRise : BOOL := FALSE;\nEND_VAR\n\n(*\n    待审事项（未声称已通过编译或逐周期功能验证）：\n\n    1. FlowPulse 每扫描仅提供一个 BOOL 样本。CycleTime 即使为\n       T#20ms，也不能揭示扫描间发生的多个上升沿。\n       K4 所需的多脉冲检测及对应 16#8501 无法由本接口可靠实现；\n       不以电平持续时间或 CycleTime 偏差伪造脉冲过快判断。\n\n    2. 总量封顶后，原文要求当班量继续每脉冲增加 0.5 L，\n       与 C6 的 ShiftVolume <= TotalVolume 存在冲突。\n       以下保留原文的独立当班累计，不暗中截断当班量；\n       因此不能宣称满足 C6。\n\n    3. 若 C10 要求执行首扫描后仍为零，则与首扫描输入为 TRUE\n       时按 K1 计上升沿冲突。以下按给定初态初始化，\n       首扫描仍执行边沿计数，不屏蔽首扫描输入。\n\n    4. PulseCount 达 UDINT 上限后无法继续表达“加 1”。\n       以下采用饱和防回绕；该数值边界行为仍须需求确认。\n\n    同扫描出现计量与班次复位上升沿时：\n    先计量，再清当班量和当班计数；总量保留本扫描计量。\n*)\n\nFlowRise := FlowPulse AND NOT FlowPulseLast;\nResetRise := ShiftReset AND NOT ShiftResetLast;\n\nIF FlowRise THEN\n    IF PulseCount < UDINT#4294967295 THEN\n        PulseCount := PulseCount + UDINT#1;\n    END_IF;\n\n    ShiftVolume := ShiftVolume + LREAL#0.5;\n\n    IF NOT OverflowFlag THEN\n        IF TotalVolume < LREAL#999999.5 THEN\n            TotalVolume := TotalVolume + LREAL#0.5;\n        ELSE\n            TotalVolume := LREAL#1000000.0;\n            OverflowFlag := TRUE;\n        END_IF;\n    END_IF;\nEND_IF;\n\nIF ResetRise THEN\n    ShiftVolume := LREAL#0.0;\n    PulseCount := UDINT#0;\nEND_IF;\n\nIF TotalVolume >= LREAL#1000000.0 THEN\n    OverflowFlag := TRUE;\nEND_IF;\n\n(* 溢出永久保持；班次复位不清除总量、溢出标志或溢出状态。 *)\nIF OverflowFlag THEN\n    Status := WORD#16#8502;\nELSE\n    (* 无可观测的多脉冲证据；此状态不保证不存在漏采脉冲。 *)\n    Status := WORD#16#0000;\nEND_IF;\n\nFlowPulseLast := FlowPulse;\nShiftResetLast := ShiftReset;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.266,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 25.703,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 5,
+    "passed_ids": [
+      "S05-01",
+      "S05-02",
+      "S05-03",
+      "S05-04",
+      "S05-05"
+    ],
+    "failures": [
+      {
+        "case_id": "S05-06",
+        "cycle": 2,
+        "signal": "TotalVolume",
+        "expected": 1.0,
+        "actual": 0.5
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 2855,
+  "tag": "candidate_3"
+}

@@ -1,0 +1,58 @@
+{
+  "source": "FUNCTION_BLOCK FB_S13\nVAR_INPUT\n    LineRun : BOOL;\n    PartAtMerge : BOOL;\n    PartOnMain : BOOL;\n    JamSensor : BOOL;\n    ResetBtn : BOOL;\n    ModeAuto : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MainMotor : BOOL := FALSE;\n    MergeMotor : BOOL := FALSE;\n    SpeedHigh : BOOL := FALSE;\n    JamAlarm : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    LineRunLast : BOOL := FALSE;\n    ResetBtnLast : BOOL := FALSE;\n    LineRunRise : BOOL := FALSE;\n    ResetBtnRise : BOOL := FALSE;\n    ResetAccepted : BOOL := FALSE;\n    JamCount : UINT := UINT#0;\n    PartTrueCount : UINT := UINT#0;\n    PartFalseCount : UINT := UINT#0;\nEND_VAR\n\n(*\n    每次调用代表一个20 ms扫描；计数在第100、150、250个\n    连续满足条件的扫描达到阈值，计数器饱和，避免溢出。\n\n    待审语义冲突（输入告警列表虽为空，以下差异仍存在）：\n    1. C5由单次JamSensor且LineRun触发未来报警义务，\n       不要求连续100周期；需求原文要求连续堵料才报警。\n    2. C7由单次有料触发未来升档义务，不要求连续有料，\n       也没有后续停机的取消条件；原文要求运行且连续150周期。\n    3. C10要求初始区间输出全停，与首次调用LineRun为TRUE时\n       按LineRunLast=FALSE识别上升沿并立即启动存在冲突。\n    4. LineRun=FALSE时Status必须为0000，与报警锁存期间\n       Status保持8C01的解读存在冲突。\n    5. C6使用当前复位电平约束下一周期报警；原文采用当前\n       ResetBtn上升沿清报警，两者的边沿和跨周期语义不等价。\n    6. 手动点动没有对应输入接口；本块在手动模式不生成\n       自动启动、送料恢复或换档，只保留输出并施加安全联锁。\n\n    实现采用需求原文的连续计数、当前扫描边沿及总停优先语义；\n    不额外插入上电屏蔽周期，不声称同时满足上述冲突规约。\n    未经真实编译器与逐周期测试验证。\n*)\n\n(* 所有模式下采集边沿；模式切换本身不构成启动边沿。 *)\nLineRunRise := LineRun AND NOT LineRunLast;\nResetBtnRise := ResetBtn AND NOT ResetBtnLast;\nResetAccepted := ResetBtnRise AND NOT JamSensor;\n\n(* 堵料监测不因停线或手动模式而停止。 *)\nIF JamSensor THEN\n    IF JamCount < UINT#100 THEN\n        JamCount := JamCount + UINT#1;\n    END_IF;\nELSE\n    JamCount := UINT#0;\nEND_IF;\n\nIF JamCount >= UINT#100 THEN\n    JamAlarm := TRUE;\nEND_IF;\n\n(* 有效复位优先于启动；同一扫描的启动边沿不会被采用。 *)\nIF ResetAccepted THEN\n    JamAlarm := FALSE;\n    Status := WORD#16#0000;\n    MainMotor := FALSE;\n    MergeMotor := FALSE;\n    SpeedHigh := FALSE;\n    PartTrueCount := UINT#0;\n    PartFalseCount := UINT#0;\nEND_IF;\n\n(* 总停、报警、复位均高于自动运行。 *)\nIF NOT LineRun THEN\n    MainMotor := FALSE;\n    MergeMotor := FALSE;\n    SpeedHigh := FALSE;\n    Status := WORD#16#0000;\n    PartTrueCount := UINT#0;\n    PartFalseCount := UINT#0;\n\nELSIF JamAlarm THEN\n    MainMotor := FALSE;\n    MergeMotor := FALSE;\n    SpeedHigh := FALSE;\n    Status := WORD#16#8C01;\n    PartTrueCount := UINT#0;\n    PartFalseCount := UINT#0;\n\nELSIF ResetAccepted THEN\n    (* 输出已清零；必须在以后扫描出现新的LineRun上升沿。 *)\n    Status := WORD#16#0000;\n\nELSIF ModeAuto THEN\n    Status := WORD#16#0000;\n\n    IF LineRunRise THEN\n        MainMotor := TRUE;\n    END_IF;\n\n    MergeMotor := MainMotor AND NOT PartAtMerge;\n\n    IF PartOnMain THEN\n        PartFalseCount := UINT#0;\n\n        IF MainMotor THEN\n            IF PartTrueCount < UINT#150 THEN\n                PartTrueCount := PartTrueCount + UINT#1;\n            END_IF;\n\n            IF PartTrueCount >= UINT#150 THEN\n                SpeedHigh := TRUE;\n            END_IF;\n        ELSE\n            PartTrueCount := UINT#0;\n        END_IF;\n    ELSE\n        PartTrueCount := UINT#0;\n\n        IF PartFalseCount < UINT#250 THEN\n            PartFalseCount := PartFalseCount + UINT#1;\n        END_IF;\n\n        IF PartFalseCount >= UINT#250 THEN\n            SpeedHigh := FALSE;\n        END_IF;\n    END_IF;\n\nELSE\n    (* 手动模式不自动改变运行或档位；连续换档计数重新开始。 *)\n    Status := WORD#16#0000;\n    PartTrueCount := UINT#0;\n    PartFalseCount := UINT#0;\nEND_IF;\n\n(* 最终防撞与主从联锁：任何模式均不得旁路。 *)\nIF PartAtMerge OR NOT MainMotor THEN\n    MergeMotor := FALSE;\nEND_IF;\n\nLineRunLast := LineRun;\nResetBtnLast := ResetBtn;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.234,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 14.907,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 3,
+    "passed_ids": [
+      "S13-01",
+      "S13-02",
+      "S13-06"
+    ],
+    "failures": [
+      {
+        "case_id": "S13-03",
+        "cycle": 101,
+        "signal": "MainMotor",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S13-04",
+        "cycle": 101,
+        "signal": "MainMotor",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S13-05",
+        "cycle": 151,
+        "signal": "SpeedHigh",
+        "expected": false,
+        "actual": true
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3588,
+  "tag": "candidate_3"
+}

@@ -1,0 +1,34 @@
+{
+  "case_id": "C04_missing_dependency",
+  "kind": "missing_dependency",
+  "expected": "fail",
+  "note": "故意引用未定义依赖类型；实际诊断可能为未声明/未知类型，不断言一定归类为缺库",
+  "status": "fail",
+  "elapsed_s": 0.078,
+  "source_sha256": "8b67b9d358d2481cd1a4b238ea233627ea1fbd89ac48fbbdaaf74cd065202e33",
+  "errors": [
+    {
+      "code": "E_COMPILE",
+      "severity": "error",
+      "line": 3,
+      "message": ".\\validation\\matiec_live_r2\\C04_missing_dependency\\source.st:3-8..3-41: error: invalid specification in variable declaration.",
+      "raw": ".\\validation\\matiec_live_r2\\C04_missing_dependency\\source.st:3-8..3-41: error: invalid specification in variable declaration."
+    },
+    {
+      "code": "E_SYNTAX",
+      "severity": "error",
+      "line": 5,
+      "message": ".\\validation\\matiec_live_r2\\C04_missing_dependency\\source.st:5-4..5-4: error: syntax error",
+      "raw": ".\\validation\\matiec_live_r2\\C04_missing_dependency\\source.st:5-4..5-4: error: syntax error"
+    },
+    {
+      "code": "E_SYNTAX",
+      "severity": "error",
+      "line": null,
+      "message": "Parsing failed because of too many consecutive syntax errors. Bailing out!",
+      "raw": "Parsing failed because of too many consecutive syntax errors. Bailing out!"
+    }
+  ],
+  "evidence_kind": "live_fast_compiler",
+  "functional_tests_run": false
+}

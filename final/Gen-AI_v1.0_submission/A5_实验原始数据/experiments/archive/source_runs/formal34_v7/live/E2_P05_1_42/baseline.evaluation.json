@@ -1,0 +1,39 @@
+{
+  "source": "(*\n【必留：需求原文】\nControl a weld-gap alarm with power-up monitoring inhibition, input debouncing during normal monitoring and emergency-stop priority.\n\n1. Gap_Exceeded indicates that the scanner has detected a weld gap exceeding the permitted 1.5 mm value.\n2. Begin with a 5-second initialization inhibition period after power-up. During this period, Operator_Alert is FALSE, Weld_Soft_Start_Active is TRUE, and gap-signal debounce time does not accumulate.\n3. Resume gap monitoring after initialization. Allow the alarm only after Gap_Exceeded has remained TRUE for DebounceTime. When the signal becomes FALSE, switch off the alarm and clear debounce timing.\n4. When Weld_E_Stop_NC is FALSE, the emergency stop takes priority over initialization and normal monitoring. Operator_Alert must immediately become FALSE and any incomplete debounce timing must be cleared.\n5. Weld_Soft_Start_Active indicates only the power-up inhibition period; it does not represent a continuous speed ramp.\n\n中文摘要：焊缝间隙报警：上电后 5 秒抑制期内不报警，抑制结束后间隙超限需去抖才报警，急停优先于一切。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）\n\n【必留：接口、初态、约束与数据告警】\n{\n  \"task_id\": \"P05\",\n  \"title\": \"Weld Gap Alarm and Startup Inhibition\",\n  \"io_table\": [\n    {\n      \"direction\": \"IN\",\n      \"name\": \"Gap_Exceeded\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Scanner indication that the gap exceeds 1.5 mm.\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"Weld_E_Stop_NC\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"TRUE means the emergency stop is inactive; FALSE means it is active.\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"DebounceTime\",\n      \"data_type\": \"TIME\",\n      \"description\": \"Gap-signal debounce duration during normal monitoring; must be positive.\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"Operator_Alert\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Audible and visual alarm command.\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"Weld_Soft_Start_Active\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"Monitoring-inhibition status during the 5-second power-up initialization.\"\n    }\n  ],\n  \"initial_state\": \"Operator_Alert = FALSE；Weld_Soft_Start_Active = TRUE（抑制期开始）；去抖计时器清零。\",\n  \"constraints\": [\n    \"K1 上电后进入 5 s 初始化抑制期，期间 Weld_Soft_Start_Active = TRUE、Operator_Alert = FALSE，且去抖计时不累计。\",\n    \"K2 抑制期结束后恢复监视：Gap_Exceeded 连续为 TRUE 达 DebounceTime 才置 Operator_Alert。\",\n    \"K3 Gap_Exceeded 变 FALSE 时立即复位 Operator_Alert 并清去抖计时。\",\n    \"K4 Weld_E_Stop_NC = FALSE 时急停优先于抑制期与正常监视：Operator_Alert 立即 FALSE，未完成的去抖计时清除。\"\n  ],\n  \"semantic_warnings\": [],\n  \"warnings\": [],\n  \"missing_fields\": [],\n  \"dialect_requirements\": [],\n  \"type_origins\": {}\n}\n\n【必留：完整形式化规约；有界时序以扫描周期计】\n# task: P05\n# meta: easy / A 开关量联锁\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(!Weld_E_Stop_NC -> !Operator_Alert)    -- 急停当周期必须清报警（急停优先于抑制期与监视）（K4）\nC2: G(Operator_Alert -> Weld_E_Stop_NC)    -- 报警的前提是急停正常（不得在急停状态下报警）（K4）\nC6: G(Operator_Alert -> (Operator_Alert W !Gap_Exceeded))    -- 间隙恢复后报警才允许撤销（报警保持）（K3）\nC9: G(Operator_Alert -> G[0,25](Operator_Alert))    -- 报警一旦置位至少保持 500 ms（去抖后的最小脉宽）（K2）\nC10: G[0,1](!Operator_Alert && Weld_Soft_Start_Active)    -- 上电首周期处于抑制期：不报警、软启动有效（K1）\n\n实现变更：\n以固定 20 ms 扫描计时替换占位 RETURN，加入初始化抑制、\n正常监视去抖、间隙恢复复位以及急停优先逻辑，不修改外部接口。\n\n规约冲突报告：\n1. C6 不允许在 Gap_Exceeded 仍为 TRUE 时撤销已置位的报警，\n   但 C1、C2、K4 要求急停当周期清报警，两者存在冲突。\n2. C9 无条件要求报警在当前及后续 25 个周期保持 TRUE，\n   与该窗口内急停必须清报警的 C1、K4 冲突，\n   也与该窗口内间隙恢复必须清报警的 K3 冲突。\n3. C9 中的嵌套 G 对每个报警为 TRUE 的周期重新施加保持要求，\n   并不等同于仅在上升沿触发一次的最小脉宽要求。\n因此不存在对任意输入序列同时满足全部条款的实现。\n本实现保留上述原始条款，按明确的急停优先要求及需求原文\n执行 K1 至 K4，不实现与即时复位冲突的 C6/C9 无条件保持。\n\n扫描边界约定：\n每次调用计入一个 20 ms 区间。\n前 250 次调用输出初始化抑制有效；第 251 次开始正常监视。\n初始化计时不因急停暂停或重启，急停解除不会启动新的抑制期。\n正常监视中，每个有效的连续 TRUE 扫描计入 20 ms；\n第 CEIL(DebounceTime / 20 ms) 个有效扫描允许报警。\n抑制期的最后一个扫描不累计去抖时间。\n急停清除全部去抖计时；解除急停后必须重新完成去抖。\nDebounceTime 必须为正；非法值禁止报警并清除计时。\n未报警时使用当前 DebounceTime；已报警后保持到间隙恢复、\n急停或 DebounceTime 非法，不因正值参数变化撤销报警。\n计时达到目标后饱和，避免持续 TRUE 引起 TIME 累加溢出。\n内部变量不得配置为掉电保持；实例重新初始化即开始上电抑制。\n\n验证状态：\n当前对话未提供可执行测试环境、已配置测试命令或编译 profile，\n无法运行编译或逐周期测试。以下源码未经过真实编译器验证，\n也未声称功能已验证正确。\n*)\n\nFUNCTION_BLOCK FB_P05\nVAR_INPUT\n    Gap_Exceeded : BOOL;\n    Weld_E_Stop_NC : BOOL;\n    DebounceTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    Operator_Alert : BOOL := FALSE;\n    Weld_Soft_Start_Active : BOOL := TRUE;\nEND_VAR\nVAR\n    InitializationElapsed : TIME := T#0ms;\n    DebounceElapsed : TIME := T#0ms;\nEND_VAR\n\n(* 根据扫描开始时的累计时间决定本扫描是否仍处于抑制期。 *)\nWeld_Soft_Start_Active := InitializationElapsed < T#5s;\n\nIF Weld_Soft_Start_Active THEN\n    InitializationElapsed := InitializationElapsed + T#20ms;\nEND_IF;\n\n(* 急停优先，且不影响独立的上电初始化计时。 *)\nIF NOT Weld_E_Stop_NC THEN\n    Operator_Alert := FALSE;\n    DebounceElapsed := T#0ms;\n\nELSIF Weld_Soft_Start_Active THEN\n    Operator_Alert := FALSE;\n    DebounceElapsed := T#0ms;\n\nELSIF NOT Gap_Exceeded THEN\n    Operator_Alert := FALSE;\n    DebounceElapsed := T#0ms;\n\nELSIF DebounceTime <= T#0ms THEN\n    (* 非法参数采用禁止报警的确定性处理。 *)\n    Operator_Alert := FALSE;\n    DebounceElapsed := T#0ms;\n\nELSIF NOT Operator_Alert THEN\n    (* 先比较剩余时间，避免直接累加在 TIME 上界发生溢出。 *)\n    IF DebounceElapsed >= DebounceTime THEN\n        DebounceElapsed := DebounceTime;\n        Operator_Alert := TRUE;\n    ELSIF (DebounceTime - DebounceElapsed) <= T#20ms THEN\n        DebounceElapsed := DebounceTime;\n        Operator_Alert := TRUE;\n    ELSE\n        DebounceElapsed := DebounceElapsed + T#20ms;\n        Operator_Alert := FALSE;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 22.797,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P05-01",
+      "P05-02",
+      "P05-03",
+      "P05-04",
+      "P05-05",
+      "P05-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

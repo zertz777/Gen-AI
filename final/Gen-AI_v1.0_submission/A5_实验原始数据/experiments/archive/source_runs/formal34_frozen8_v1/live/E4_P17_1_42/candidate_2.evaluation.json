@@ -1,0 +1,107 @@
+{
+  "source": "TYPE ST_Recipe :\nSTRUCT\n    recipeID : INT;\n    ingredientType : INT;\n    ingredientRatio : REAL;\n    productionTemperature : REAL;\nEND_STRUCT\nEND_TYPE\n\nFUNCTION_BLOCK FB_P17\nVAR_INPUT\n    addRecipe : BOOL;\n    deleteRecipe : BOOL;\n    modifyRecipe : BOOL;\n    queryRecipe : BOOL;\n    recipeIn : ST_Recipe;\n    recipeID : INT;\n    ingredientType : INT;\n    ingredientRatio : REAL;\n    productionTemperature : REAL;\nEND_VAR\nVAR_OUTPUT\n    recipeAdded : BOOL := FALSE;\n    recipeDeleted : BOOL := FALSE;\n    recipeModified : BOOL := FALSE;\n    recipeQueryResult : ST_Recipe;\n    error : BOOL := FALSE;\n    status : WORD := WORD#16#0000;\nEND_VAR\nVAR_IN_OUT\n    recipe : ARRAY[1..10] OF ST_Recipe;\nEND_VAR\nVAR\n    initialized : BOOL := FALSE;\n    previousAdd : BOOL := FALSE;\n    previousDelete : BOOL := FALSE;\n    previousModify : BOOL := FALSE;\n    previousQuery : BOOL := FALSE;\n    addEdge : BOOL;\n    deleteEdge : BOOL;\n    modifyEdge : BOOL;\n    queryEdge : BOOL;\n    i : INT;\n    foundIndex : INT;\n    emptyIndex : INT;\n    operation : INT;\nEND_VAR\n\n(*\n    每次调用代表一个20 ms扫描；请求采用上升沿，成功标志为单扫描脉冲。\n    错误及状态码保持到下一个被处理的请求。\n\n    待审事项：\n    1. I/O表比骨架多四个标量输入；全部保留接口。\n       按需求原文使用recipeIn字段，标量输入不替代结构字段。\n    2. K1“写入只能落到空位”与原文“修改替换已有配方”冲突。\n       此实现按原文执行原位修改；K1的空位限制用于新增。\n    3. 同时请求的仲裁未规定。本实现一次仅处理一个上升沿，\n       优先级为删除、修改、新增、查询；其他同时上升沿不排队。\n    4. 编号0为空位，不作为可查询、删除或修改的配方。\n       新增0按原文比较规则：有空位报重复，无空位报满库。\n       原题未提供独立的无效编号错误码。\n    5. C10要求首扫描无错误、无成功，首扫描不执行请求。\n       首扫描仍为高的请求在第二扫描作为首次上升沿处理；\n       仅在首扫描出现的请求不执行，启动请求行为待审。\n    6. IN_OUT数据库的全空初态由调用方提供；不擅自清空外部数据。\n       本源码未声称经过编译或逐周期功能验证。\n*)\n\nrecipeAdded := FALSE;\nrecipeDeleted := FALSE;\nrecipeModified := FALSE;\n\nIF NOT initialized THEN\n    error := FALSE;\n    status := WORD#16#0000;\n    recipeQueryResult.recipeID := 0;\n    recipeQueryResult.ingredientType := 0;\n    recipeQueryResult.ingredientRatio := REAL#0.0;\n    recipeQueryResult.productionTemperature := REAL#0.0;\n\n    previousAdd := FALSE;\n    previousDelete := FALSE;\n    previousModify := FALSE;\n    previousQuery := FALSE;\n    initialized := TRUE;\nELSE\n    addEdge := addRecipe AND NOT previousAdd;\n    deleteEdge := deleteRecipe AND NOT previousDelete;\n    modifyEdge := modifyRecipe AND NOT previousModify;\n    queryEdge := queryRecipe AND NOT previousQuery;\n\n    previousAdd := addRecipe;\n    previousDelete := deleteRecipe;\n    previousModify := modifyRecipe;\n    previousQuery := queryRecipe;\n\n    operation := 0;\n    IF deleteEdge THEN\n        operation := 1;\n    ELSIF modifyEdge THEN\n        operation := 2;\n    ELSIF addEdge THEN\n        operation := 3;\n    ELSIF queryEdge THEN\n        operation := 4;\n    END_IF;\n\n    IF operation <> 0 THEN\n        error := FALSE;\n        status := WORD#16#0000;\n        foundIndex := 0;\n        emptyIndex := 0;\n\n        FOR i := 1 TO 10 DO\n            IF (recipe[i].recipeID = 0) AND (emptyIndex = 0) THEN\n                emptyIndex := i;\n            END_IF;\n\n            IF (recipeIn.recipeID <> 0)\n                AND (recipe[i].recipeID = recipeIn.recipeID)\n                AND (foundIndex = 0) THEN\n                foundIndex := i;\n            END_IF;\n        END_FOR;\n\n        CASE operation OF\n            1:\n                IF foundIndex = 0 THEN\n                    error := TRUE;\n                    status := WORD#16#8004;\n                ELSE\n                    recipe[foundIndex].recipeID := 0;\n                    recipeDeleted := TRUE;\n                END_IF;\n\n            2:\n                IF foundIndex = 0 THEN\n                    error := TRUE;\n                    status := WORD#16#8005;\n                ELSE\n                    recipe[foundIndex] := recipeIn;\n                    recipeModified := TRUE;\n                END_IF;\n\n            3:\n                IF (foundIndex <> 0)\n                    OR ((recipeIn.recipeID = 0) AND (emptyIndex <> 0)) THEN\n                    error := TRUE;\n                    status := WORD#16#8002;\n                ELSIF emptyIndex = 0 THEN\n                    error := TRUE;\n                    status := WORD#16#8003;\n                ELSE\n                    recipe[emptyIndex] := recipeIn;\n                    recipeAdded := TRUE;\n                END_IF;\n\n            4:\n                IF foundIndex = 0 THEN\n                    error := TRUE;\n                    status := WORD#16#8001;\n                ELSE\n                    recipeQueryResult := recipe[foundIndex];\n                END_IF;\n        END_CASE;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 7,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P17_1_42\\tools\\candidate_2\\fast\\source.st:7-10..8-1: error: ';' missing at end of data type declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P17_1_42\\tools\\candidate_2\\fast\\source.st:7-10..8-1: error: ';' missing at end of data type declaration."
+        }
+      ],
+      "elapsed_s": 0.265,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 37.969,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 8,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "P17-01",
+        "cycle": 1,
+        "signal": "recipeQueryResult",
+        "expected": {
+          "recipeID": 1,
+          "ingredientType": 10,
+          "ingredientRatio": 0.5,
+          "productionTemperature": 100.0
+        },
+        "actual": {
+          "ingredientRatio": 0.0,
+          "ingredientType": 0,
+          "productionTemperature": 0.0,
+          "recipeID": 0
+        }
+      },
+      {
+        "case_id": "P17-02",
+        "cycle": 1,
+        "signal": "error",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P17-03",
+        "cycle": 1,
+        "signal": "recipeAdded",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P17-04",
+        "cycle": 1,
+        "signal": "error",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P17-05",
+        "cycle": 1,
+        "signal": "error",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P17-06",
+        "cycle": 1,
+        "signal": "error",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P17-07",
+        "cycle": 1,
+        "signal": "recipeAdded",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P17-08",
+        "cycle": 1,
+        "signal": "recipeAdded",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 4179,
+  "tag": "candidate_2"
+}

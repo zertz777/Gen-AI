@@ -1,0 +1,58 @@
+{
+  "source": "(*\n【需求原文】\n称重传感器长时间运行会出现零点漂移，需要在空秤时重新标定零点。\n\n控制要求：\n1. ZeroBtn 的上升沿把当前 RawWeight 采样为零点 ZeroOffset，同时清 DriftAlarm。\n2. CompensatedWeight = (RawWeight - ZeroOffset) * 0.01（单位 kg，0.01 为标定系数），每个扫描周期更新。\n3. 当 (RawWeight - ZeroOffset) 的绝对值超过 200（即 2 kg）时置 DriftAlarm = TRUE；回到 ±150 以内才复位（滞回）。\n4. 上电时 ZeroOffset = 0，DriftAlarm = FALSE。\n5. Status：16#0000 正常、16#8401 零点漂移、16#8402 采样值超量程（RawWeight 超出 -32768..32767 的可用段）。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）\n\n【接口、初态、约束与数据告警】\n{\n  \"task_id\": \"S04\",\n  \"title\": \"称重零点漂移补偿\",\n  \"io_table\": [\n    {\n      \"direction\": \"IN\",\n      \"name\": \"RawWeight\",\n      \"data_type\": \"INT\",\n      \"description\": \"称重传感器原始值\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"ZeroBtn\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"零点标定按钮（上升沿有效）\"\n    },\n    {\n      \"direction\": \"IN\",\n      \"name\": \"CalibWeight\",\n      \"data_type\": \"REAL\",\n      \"description\": \"标准砝码重量（kg），仅作显示\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"CompensatedWeight\",\n      \"data_type\": \"REAL\",\n      \"description\": \"补偿后的重量（kg）\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"ZeroOffset\",\n      \"data_type\": \"INT\",\n      \"description\": \"当前零点原始值\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"DriftAlarm\",\n      \"data_type\": \"BOOL\",\n      \"description\": \"零点漂移报警\"\n    },\n    {\n      \"direction\": \"OUT\",\n      \"name\": \"Status\",\n      \"data_type\": \"WORD\",\n      \"description\": \"状态码\"\n    }\n  ],\n  \"initial_state\": \"ZeroOffset = 0；CompensatedWeight = 0.0；DriftAlarm = FALSE；Status = 16#0000；ZeroBtnLast = FALSE。\",\n  \"constraints\": [\n    \"K1 ZeroOffset 只在 ZeroBtn 上升沿更新，按住或松开时保持不变。\",\n    \"K2 CompensatedWeight 每周期按 (RawWeight - ZeroOffset) * 0.01 计算，不使用上一周期的结果。\",\n    \"K3 漂移判据带 50 单位滞回：超过 ±200 置位，回到 ±150 内复位。\",\n    \"K4 上电后未标定前 ZeroOffset 必须为 0，不得沿用断电前的值。\"\n  ],\n  \"semantic_warnings\": [],\n  \"warnings\": [],\n  \"missing_fields\": [],\n  \"dialect_requirements\": [],\n  \"type_origins\": {}\n}\n\n【完整形式化规约；有界时序以扫描周期计】\n# task: S04\n# meta: medium / B 模拟量与数据处理\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n#\n# 命题映射（I/O 名 -> 派生命题）：\n# alias: zeroDelta := RawWeight - ZeroOffset\n# alias: driftOut := RawWeight - ZeroOffset >= 200 || ZeroOffset - RawWeight >= 200\n# alias: driftBack := RawWeight - ZeroOffset <= 150 && ZeroOffset - RawWeight <= 150\n#\n# note: 称重补偿属模拟量处理，题目未设急停；信号断线/失效的降级由 tests/cases/S04.csv 覆盖，规约层只约束换算与滞回。\n\nC4: G(CompensatedWeight == (RawWeight - ZeroOffset) * 0.01)    -- 输出必须等于换算式（不得沿用上一周期的结果）（K2）\nC2: G(DriftAlarm -> driftOut)    -- 报警的前提是偏差确实超限（不得空报）（K3）\nC6: G(DriftAlarm -> (DriftAlarm W driftBack))    -- 偏差回落到 ±150 以内才允许撤警（滞回保持）（K3）\nC7: G(DriftAlarm && driftBack -> X(!DriftAlarm))    -- 偏差回到 ±150 死区内就必须下一周期撤报（不得滞留）（K3）\nC10: G[0,1](ZeroOffset == 0 && !DriftAlarm && CompensatedWeight == 0.0)    -- 上电首周期零点为 0、无报警（K4）\n\n【本次编译修复】\n需要修改声明：提供的权威编译结果表明，当前编译 profile\n不接受 VAR_OUTPUT NON_RETAIN 和 VAR NON_RETAIN 的写法，\n导致各声明块的首个变量未被正确解析，进而产生未声明变量、\n无效赋值目标和 BOOL 表达式等连带错误。\n本次改为骨架使用的 VAR_OUTPUT 和 VAR，保留显式初值，\n不修改接口名称、方向、类型或扫描逻辑，不引入厂商扩展。\n\n普通变量声明不单独保证运行时的断电重初始化行为。\n部署时必须确认 FB 实例不处于 RETAIN/PERSISTENT 存储中，\n并确认上电时执行声明初值初始化，以满足 K4。\n不能通过每扫描重置 ZeroOffset 代替启动初始化，否则违反 K1。\n\n已收到测试命令及旧版失败日志，但当前对话没有可执行工具，\n无法在此运行该 Windows 命令。修改版尚未经过真实编译器和\n逐周期测试验证；fast pass 不代表权威编译或功能正确。\n\n【未消除的语义冲突】\nCalibWeight 仅作显示，不参与标定系数计算。\n\n1. 原文要求绝对偏差严格超过 200 才置位；driftOut 使用大于等于\n   200，边界不一致。本实现采用原文的严格大于 200。\n2. C2 禁止在绝对偏差小于 200 时报警，但 C6 和 K3 要求已经置位\n   的报警在 150 到 200 之间保持。两者不能对所有输入序列同时成立。\n   本实现保留 K3 的滞回：绝对偏差小于等于 150 当周期复位，\n   大于 150 且小于等于 200 保持上一周期报警。\n3. C10 若约束调用后的首两个扫描输出，则与非零输入下的 C4、\n   超限报警以及首扫描 ZeroBtn 上升沿采样存在冲突。\n   本实现将给定初态用于首次调用之前，首扫描立即执行采样、\n   换算和报警逻辑，不跳过扫描。\n4. RawWeight 的 INT 接口不能表示超出 -32768 到 32767 的输入。\n   保留 16#8402 的范围判断及其状态优先级，但该分支对合法 INT\n   输入不可达；接口外发生的截断或转换错误无法由本块检测。\n*)\n\nFUNCTION_BLOCK FB_S04\nVAR_INPUT\n    RawWeight : INT;\n    ZeroBtn : BOOL;\n    CalibWeight : REAL;\nEND_VAR\nVAR_OUTPUT\n    CompensatedWeight : REAL := REAL#0.0;\n    ZeroOffset : INT := INT#0;\n    DriftAlarm : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    ZeroBtnLast : BOOL := FALSE;\n    RawValue : DINT := DINT#0;\n    ZeroDelta : DINT := DINT#0;\nEND_VAR\n\n(* 首扫描输入为 TRUE 时，也按上升沿执行零点采样。 *)\nIF ZeroBtn AND NOT ZeroBtnLast THEN\n    ZeroOffset := RawWeight;\n    DriftAlarm := FALSE;\nEND_IF;\nZeroBtnLast := ZeroBtn;\n\n(* 先提升至 DINT 再相减，避免两个 INT 极值相减溢出。 *)\nRawValue := INT_TO_DINT(RawWeight);\nZeroDelta := RawValue - INT_TO_DINT(ZeroOffset);\n\n(* 使用本扫描采样后的零点计算重量。 *)\nCompensatedWeight := DINT_TO_REAL(ZeroDelta) * REAL#0.01;\n\n(* 严格超过 200 置位；回到闭区间 [-150, 150] 复位。 *)\nIF (ZeroDelta > DINT#200) OR (ZeroDelta < DINT#-200) THEN\n    DriftAlarm := TRUE;\nELSIF (ZeroDelta >= DINT#-150) AND (ZeroDelta <= DINT#150) THEN\n    DriftAlarm := FALSE;\nEND_IF;\n\n(* 超量程状态优先；合法 INT 输入不会进入该分支。 *)\nIF (RawValue < DINT#-32768) OR (RawValue > DINT#32767) THEN\n    Status := WORD#16#8402;\nELSIF DriftAlarm THEN\n    Status := WORD#16#8401;\nELSE\n    Status := WORD#16#0000;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.235,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.547,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 3,
+    "passed_ids": [
+      "S04-02",
+      "S04-04",
+      "S04-05"
+    ],
+    "failures": [
+      {
+        "case_id": "S04-01",
+        "cycle": 1,
+        "signal": "DriftAlarm",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S04-03",
+        "cycle": 2,
+        "signal": "DriftAlarm",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S04-06",
+        "cycle": 3,
+        "signal": "DriftAlarm",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

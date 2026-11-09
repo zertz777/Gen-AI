@@ -1,0 +1,3 @@
+.\validation\matiec_live_r2\task_P17_skeleton\source.st:7-10..8-1: error: ';' missing at end of data type declaration.
+
+1 error(s) found. Bailing out!

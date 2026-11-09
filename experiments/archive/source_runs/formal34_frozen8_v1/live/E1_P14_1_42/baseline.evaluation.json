@@ -1,0 +1,54 @@
+{
+  "source": "FUNCTION_BLOCK FB_P14\nVAR_INPUT\n    ipText : STRING(254);\nEND_VAR\nVAR_OUTPUT\n    ipValue : UDINT;\nEND_VAR\nVAR\n    (* 内部中间量：全部显式声明，无动态内存、无文件/网络操作 *)\n    i      : INT;       (* 字符下标（本运行环境为 0 基） *)\n    c      : BYTE;      (* 当前字符编码 *)\n    dig    : UDINT;     (* 当前字符对应的数字值 *)\n    segIdx : INT;       (* 当前段序号 1..4 *)\n    segVal : UDINT;     (* 当前段累计值 *)\n    segLen : INT;       (* 当前段已读数字个数 *)\n    tmp    : UDINT;     (* 越界保护用临时值 *)\n    ok     : BOOL;      (* 合法性标志 *)\n    part   : ARRAY[1..4] OF UDINT; (* 四段数值暂存 *)\nEND_VAR\n\n(* ==================================================================\n   纯组合逻辑：每个 20ms 扫描周期都从初值重新解析 ipText，\n   不保留跨周期状态，故上电当拍 ipValue 为 0（C10）。\n   不调用任何字符串库函数（LEN/MID/FIND 在本工程未定义）。\n   注意：本运行环境的 STRING 下标为 0 基，故循环自 0 起。\n   ================================================================== *)\n\nipValue := 0;\n\npart[1] := 0;\npart[2] := 0;\npart[3] := 0;\npart[4] := 0;\n\nsegIdx := 1;\nsegVal := 0;\nsegLen := 0;\nok     := TRUE;\n\nFOR i := 0 TO 253 DO\n    c := ipText[i];\n\n    IF c = 0 THEN\n        (* 字符串结束符；短于容量的位置均为 0 *)\n        EXIT;\n    END_IF;\n\n    IF c = 46 THEN\n        (* '.' 段分隔：校验前段非空并保存该段 *)\n        IF segLen = 0 THEN\n            ok := FALSE;              (* 空段 *)\n        END_IF;\n\n        IF segIdx <= 4 THEN\n            part[segIdx] := segVal;\n        ELSE\n            ok := FALSE;              (* 段数超过 4 *)\n        END_IF;\n\n        segIdx := segIdx + 1;\n        segVal := 0;\n        segLen := 0;\n\n    ELSIF (c >= 48) AND (c <= 57) THEN\n        (* '0'..'9' *)\n        segLen := segLen + 1;\n\n        dig := BYTE_TO_UDINT(c) - 48;\n        tmp := segVal * 10 + dig;\n\n        IF tmp > 255 THEN\n            ok := FALSE;              (* 段值越界；不再累加以避免溢出 *)\n        ELSE\n            segVal := tmp;\n        END_IF;\n\n    ELSE\n        ok := FALSE;                  (* 含非数字字符 *)\n    END_IF;\nEND_FOR;\n\n(* 收尾：处理最后一段并校验段数恰为 4 *)\nIF segLen = 0 THEN\n    ok := FALSE;                      (* 末段为空或输入为空串 *)\nEND_IF;\n\nIF segIdx <= 4 THEN\n    part[segIdx] := segVal;\nELSE\n    ok := FALSE;\nEND_IF;\n\nIF segIdx <> 4 THEN\n    ok := FALSE;                      (* 段数不等于 4 *)\nEND_IF;\n\n(* 组装：网络字节序，第 1 段最高 8 位、第 4 段最低 8 位 *)\nIF ok THEN\n    ipValue := part[1] * 16777216\n             + part[2] * 65536\n             + part[3] * 256\n             + part[4];\nELSE\n    ipValue := 0;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 3,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P14_1_42\\tools\\baseline\\fast\\source.st:3-19..3-20: error: ';' missing at end of input variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P14_1_42\\tools\\baseline\\fast\\source.st:3-19..3-20: error: ';' missing at end of input variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 3,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P14_1_42\\tools\\baseline\\fast\\source.st:3-20..3-24: error: invalid input variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P14_1_42\\tools\\baseline\\fast\\source.st:3-20..3-24: error: invalid input variable(s) declaration."
+        }
+      ],
+      "elapsed_s": 0.14,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 19.641,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P14-01",
+      "P14-02",
+      "P14-03",
+      "P14-04",
+      "P14-05",
+      "P14-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

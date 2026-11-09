@@ -1,0 +1,9 @@
+# task: S11
+# meta: hard / D 故障与安全
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(DegradedMode -> ControlValue == FallbackValue)    -- 降级期间输出必须是备用值（不得继续输出失效测量值）（K4）
+C2: G(DegradedMode && SensorValid -> G[0,150](DegradedMode))    -- 信号恢复后仍须保持降级至少 3 s（150 个周期）才允许退出，防止接线抖动反复切换（K3）
+C6: G(DegradedMode -> AlarmLamp)    -- 降级期间报警灯常亮（K5）
+C10: G[0,1](!DegradedMode && !SensorValid && ControlValue == 0.0 && !AlarmLamp)    -- 上电首周期未降级、信号无效、输出 0（安全默认），报警灯灭（初态）

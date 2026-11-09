@@ -1,0 +1,117 @@
+{
+  "source": "TYPE ST_AnalogChannel :\nSTRUCT\n    enable : BOOL;\n    hiLIM : REAL;\n    loLIM : REAL;\n    bipolar : BOOL;\n    measuringMode : INT;\n    retVal : WORD;\n    outputValue : REAL;\nEND_STRUCT\nEND_TYPE\n\nFUNCTION_BLOCK FB_P08\nVAR_INPUT\n    count : DINT;\nEND_VAR\nVAR_IN_OUT\n    analogValues : ARRAY[*] OF INT;\n    channels : ARRAY[*] OF ST_AnalogChannel;\nEND_VAR\nVAR\n    i : DINT;\n    n : DINT;\n    aLo : DINT;\n    aHi : DINT;\n    cLo : DINT;\n    cHi : DINT;\n    aLen : DINT;\n    cLen : DINT;\n    chIdx : DINT;\n    avIdx : DINT;\n    rawReal : REAL;\n    tmpOut : REAL;\n    zeroOut : BOOL;\n    firstScan : BOOL := TRUE;\nEND_VAR\n\n(* K1: 以两个数组各自的下界为基准，确定本次可处理通道数 *)\naLo := LOWER_BOUND(analogValues, 1);\naHi := UPPER_BOUND(analogValues, 1);\ncLo := LOWER_BOUND(channels, 1);\ncHi := UPPER_BOUND(channels, 1);\n\naLen := aHi - aLo + 1;\ncLen := cHi - cLo + 1;\n\nIF aLen < cLen THEN\n    n := aLen;\nELSE\n    n := cLen;\nEND_IF;\n\nIF count < n THEN\n    n := count;\nEND_IF;\n\nIF n < 0 THEN\n    n := 0;\nEND_IF;\n\n(* C10: 上电当拍不输出工程量 *)\nIF firstScan THEN\n    zeroOut := TRUE;\n    firstScan := FALSE;\nELSE\n    zeroOut := FALSE;\nEND_IF;\n\nFOR i := 0 TO n - 1 DO\n    chIdx := cLo + i;\n    avIdx := aLo + i;\n\n    tmpOut := 0.0;\n\n    IF NOT channels[chIdx].enable THEN\n        (* C1: 未使能通道安全默认，不输出非零工程量 *)\n        channels[chIdx].retVal := 16#0000;\n    ELSIF (channels[chIdx].measuringMode < 0) OR (channels[chIdx].measuringMode > 2) THEN\n        (* K5 / 条款6: 非法模式仅跳过当前通道 *)\n        channels[chIdx].retVal := 16#8001;\n    ELSIF channels[chIdx].hiLIM <= channels[chIdx].loLIM THEN\n        (* K5 / 条款7: 上下限错误仅跳过当前通道 *)\n        channels[chIdx].retVal := 16#8002;\n    ELSE\n        rawReal := INT_TO_REAL(analogValues[avIdx]);\n\n        CASE channels[chIdx].measuringMode OF\n            0:\n                (* K3: 非温度线性标定 *)\n                IF channels[chIdx].bipolar THEN\n                    tmpOut := ((rawReal + 27648.0) / 55296.0)\n                              * (channels[chIdx].hiLIM - channels[chIdx].loLIM)\n                              + channels[chIdx].loLIM;\n                ELSE\n                    tmpOut := (rawReal / 27648.0)\n                              * (channels[chIdx].hiLIM - channels[chIdx].loLIM)\n                              + channels[chIdx].loLIM;\n                END_IF;\n            1:\n                (* K4: 标准温度，1/10 *)\n                tmpOut := rawReal / 10.0;\n            2:\n                (* K4: 气候温度，1/100 *)\n                tmpOut := rawReal / 100.0;\n        ELSE\n            tmpOut := 0.0;\n        END_CASE;\n\n        channels[chIdx].retVal := 16#0000;\n    END_IF;\n\n    (* C6 / C10: 出错通道或上电当拍输出 0 *)\n    IF zeroOut THEN\n        channels[chIdx].outputValue := 0.0;\n    ELSIF (channels[chIdx].retVal = 16#8001) OR (channels[chIdx].retVal = 16#8002) THEN\n        channels[chIdx].outputValue := 0.0;\n    ELSE\n        channels[chIdx].outputValue := tmpOut;\n    END_IF;\nEND_FOR;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 10,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:10-10..11-1: error: ';' missing at end of data type declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:10-10..11-1: error: ';' missing at end of data type declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 18,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:18-26..18-26: error: invalid subrange list defined in array specification.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:18-26..18-26: error: invalid subrange list defined in array specification."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 19,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:19-22..19-22: error: invalid subrange list defined in array specification.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:19-22..19-22: error: invalid subrange list defined in array specification."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 39,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:39-19..39-20: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:39-19..39-20: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 39,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:39-20..39-36: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:39-20..39-36: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 40,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:40-18..40-19: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:40-18..40-19: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 40,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:40-19..40-35: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:40-19..40-35: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 41,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:41-18..41-19: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:41-18..41-19: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 41,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:41-19..41-31: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:41-19..41-31: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 42,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:42-18..42-19: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:42-18..42-19: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 42,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:42-19..42-31: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E1_P08_1_42\\tools\\baseline\\fast\\source.st:42-19..42-31: error: invalid statement in ST statement."
+        }
+      ],
+      "elapsed_s": 0.172,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 27.281,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P08-01",
+      "P08-02",
+      "P08-03",
+      "P08-04",
+      "P08-05",
+      "P08-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

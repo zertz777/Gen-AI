@@ -1,0 +1,188 @@
+{
+  "source": "FUNCTION_BLOCK FB_P14\nVAR_INPUT\n    ipText : STRING(254);\nEND_VAR\nVAR_OUTPUT\n    ipValue : UDINT := UDINT#0;\nEND_VAR\nVAR\n    firstScan : BOOL := TRUE;\n    textLength : INT;\n    position : INT;\n    character : STRING(1);\n    digitIndex : INT;\n    segmentCount : INT := 1;\n    segmentValue : UDINT := UDINT#0;\n    assembledValue : UDINT := UDINT#0;\n    hasDigit : BOOL := FALSE;\n    valid : BOOL;\nEND_VAR\n\n(*\n    待审语义冲突：\n    纯组合解析要求每拍输出当前输入的解析值，但 C10 要求上电当拍\n    输出 0；当首拍输入为合法非零地址时，两者不能同时满足。\n    本实现保留显式 C10：首拍输出 0，从第二拍起逐拍完整解析。\n    未经编译 profile 或逐周期测试验证。\n\n    不施加 15 字符长度限制：K1/K2 未禁止前导零，\n    因此按 STRING(254) 中实际内容逐字符校验。\n*)\n\nipValue := UDINT#0;\n\nIF firstScan THEN\n    firstScan := FALSE;\n    segmentCount := 1;\n    segmentValue := UDINT#0;\n    assembledValue := UDINT#0;\n    hasDigit := FALSE;\nELSE\n    textLength := LEN(ipText);\n    segmentCount := 1;\n    segmentValue := UDINT#0;\n    assembledValue := UDINT#0;\n    hasDigit := FALSE;\n    valid := textLength > 0;\n\n    FOR position := 1 TO textLength DO\n        IF valid THEN\n            character := MID(ipText, 1, position);\n\n            IF character = '.' THEN\n                IF (NOT hasDigit) OR (segmentCount >= 4) THEN\n                    valid := FALSE;\n                ELSE\n                    assembledValue :=\n                        assembledValue * UDINT#256 + segmentValue;\n                    segmentCount := segmentCount + 1;\n                    segmentValue := UDINT#0;\n                    hasDigit := FALSE;\n                END_IF;\n            ELSE\n                digitIndex := FIND('0123456789', character);\n\n                IF digitIndex = 0 THEN\n                    valid := FALSE;\n                ELSE\n                    (* segmentValue 在此前始终不超过 255，\n                       此处最大中间值为 2559，不会发生 UDINT 溢出。 *)\n                    segmentValue :=\n                        segmentValue * UDINT#10\n                        + INT_TO_UDINT(digitIndex - 1);\n                    hasDigit := TRUE;\n\n                    IF segmentValue > UDINT#255 THEN\n                        valid := FALSE;\n                    END_IF;\n                END_IF;\n            END_IF;\n        END_IF;\n    END_FOR;\n\n    IF valid AND hasDigit AND (segmentCount = 4) THEN\n        (* 此前仅组装三个字节，最后一步最大结果为 16#FFFFFFFF。 *)\n        ipValue := assembledValue * UDINT#256 + segmentValue;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "fail",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 3,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P14_1_42\\tools\\candidate_1\\fast\\source.st:3-19..3-20: error: ';' missing at end of input variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P14_1_42\\tools\\candidate_1\\fast\\source.st:3-19..3-20: error: ';' missing at end of input variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 3,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P14_1_42\\tools\\candidate_1\\fast\\source.st:3-20..3-24: error: invalid input variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P14_1_42\\tools\\candidate_1\\fast\\source.st:3-20..3-24: error: invalid input variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 12,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P14_1_42\\tools\\candidate_1\\fast\\source.st:12-22..12-23: error: ';' missing at end of variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P14_1_42\\tools\\candidate_1\\fast\\source.st:12-22..12-23: error: ';' missing at end of variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 12,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P14_1_42\\tools\\candidate_1\\fast\\source.st:12-23..12-25: error: invalid variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P14_1_42\\tools\\candidate_1\\fast\\source.st:12-23..12-25: error: invalid variable(s) declaration."
+        }
+      ],
+      "elapsed_s": 0.281,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 41,
+          "message": "不能将类型 '未知的类型: 'LEN(ipText)'' 转换为类型'INT'",
+          "raw": "不能将类型 '未知的类型: 'LEN(ipText)'' 转换为类型'INT'"
+        },
+        {
+          "code": "E_UNDECLARED",
+          "severity": "error",
+          "line": 41,
+          "message": "没有定义标识符'LEN' ",
+          "raw": "没有定义标识符'LEN' "
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 41,
+          "message": "需要程序名、函数或功能块实例替代 'LEN'",
+          "raw": "需要程序名、函数或功能块实例替代 'LEN'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 50,
+          "message": "不能将类型 '未知的类型: 'MID(ipText, 1, position)'' 转换为类型'STRING(1)'",
+          "raw": "不能将类型 '未知的类型: 'MID(ipText, 1, position)'' 转换为类型'STRING(1)'"
+        },
+        {
+          "code": "E_UNDECLARED",
+          "severity": "error",
+          "line": 50,
+          "message": "没有定义标识符'MID' ",
+          "raw": "没有定义标识符'MID' "
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 50,
+          "message": "需要程序名、函数或功能块实例替代 'MID'",
+          "raw": "需要程序名、函数或功能块实例替代 'MID'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 63,
+          "message": "不能将类型 '未知的类型: 'FIND('0123456789', character)'' 转换为类型'INT'",
+          "raw": "不能将类型 '未知的类型: 'FIND('0123456789', character)'' 转换为类型'INT'"
+        },
+        {
+          "code": "E_UNDECLARED",
+          "severity": "error",
+          "line": 63,
+          "message": "没有定义标识符'FIND' ",
+          "raw": "没有定义标识符'FIND' "
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 63,
+          "message": "需要程序名、函数或功能块实例替代 'FIND'",
+          "raw": "需要程序名、函数或功能块实例替代 'FIND'"
+        }
+      ],
+      "elapsed_s": 33.078,
+      "evidence_kind": "live"
+    },
+    "errors": [
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 41,
+        "message": "不能将类型 '未知的类型: 'LEN(ipText)'' 转换为类型'INT'",
+        "raw": "不能将类型 '未知的类型: 'LEN(ipText)'' 转换为类型'INT'"
+      },
+      {
+        "code": "E_UNDECLARED",
+        "severity": "error",
+        "line": 41,
+        "message": "没有定义标识符'LEN' ",
+        "raw": "没有定义标识符'LEN' "
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 41,
+        "message": "需要程序名、函数或功能块实例替代 'LEN'",
+        "raw": "需要程序名、函数或功能块实例替代 'LEN'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 50,
+        "message": "不能将类型 '未知的类型: 'MID(ipText, 1, position)'' 转换为类型'STRING(1)'",
+        "raw": "不能将类型 '未知的类型: 'MID(ipText, 1, position)'' 转换为类型'STRING(1)'"
+      },
+      {
+        "code": "E_UNDECLARED",
+        "severity": "error",
+        "line": 50,
+        "message": "没有定义标识符'MID' ",
+        "raw": "没有定义标识符'MID' "
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 50,
+        "message": "需要程序名、函数或功能块实例替代 'MID'",
+        "raw": "需要程序名、函数或功能块实例替代 'MID'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 63,
+        "message": "不能将类型 '未知的类型: 'FIND('0123456789', character)'' 转换为类型'INT'",
+        "raw": "不能将类型 '未知的类型: 'FIND('0123456789', character)'' 转换为类型'INT'"
+      },
+      {
+        "code": "E_UNDECLARED",
+        "severity": "error",
+        "line": 63,
+        "message": "没有定义标识符'FIND' ",
+        "raw": "没有定义标识符'FIND' "
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 63,
+        "message": "需要程序名、函数或功能块实例替代 'FIND'",
+        "raw": "需要程序名、函数或功能块实例替代 'FIND'"
+      }
+    ],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "skipped",
+    "total": 0,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": []
+  },
+  "repair_rounds": 0,
+  "token_count": 2273,
+  "tag": "candidate_1"
+}

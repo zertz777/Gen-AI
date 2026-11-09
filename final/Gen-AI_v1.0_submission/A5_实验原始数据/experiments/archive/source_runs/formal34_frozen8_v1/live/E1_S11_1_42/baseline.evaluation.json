@@ -1,0 +1,63 @@
+{
+  "source": "(*\n  语义冲突报告（保留并报告，不自行消解）：\n  1. 条件1：SensorCurrent 在 4—20 mA 内时 SensorValid = TRUE，ControlValue = (SensorCurrent - 4) / 16 × 100。\n  2. 条件3：断线恢复后重新进入 3.8—20.5 mA 时 SensorValid = TRUE。\n  冲突：有效范围定义不一致，导致 3.8—4 和 20—20.5 区间 SensorValid 的含义冲突。\n  本实现按滞回处理：明确断线判据 <3.6 或 >21 置 SensorValid=FALSE；恢复判据 3.8—20.5 置 SensorValid=TRUE；\n  中间区（3.6—3.8 和 20.5—21）保持前一状态。因此 ControlValue 在 3.8—4 区间会得到负值，\n  在 20—20.5 区间会大于 100，此为本保留冲突，未新增接口。\n  编译通过仅证明语法正确；功能正确必须由逐周期测试判定。\n*)\n\nFUNCTION_BLOCK FB_S11\nVAR_INPUT\n    SensorCurrent : REAL;\n    FallbackValue : REAL;\nEND_VAR\nVAR_OUTPUT\n    SensorValid : BOOL;\n    DegradedMode : BOOL;\n    ControlValue : REAL;\n    AlarmLamp : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    State : INT;\n    FaultTimer : INT;\n    RecoverTimer : INT;\n    BlinkTimer : INT;\n    LastValidControlValue : REAL;\n    FaultNow : BOOL;\n    RecoverOK : BOOL;\n    FirstScan : BOOL;\nEND_VAR\n\nFaultNow := (SensorCurrent < 3.6) OR (SensorCurrent > 21.0);\nRecoverOK := (SensorCurrent >= 3.8) AND (SensorCurrent <= 20.5);\n\nIF NOT FirstScan THEN\n    FirstScan := TRUE;\n    State := 0;\n    FaultTimer := 0;\n    RecoverTimer := 0;\n    BlinkTimer := 0;\n    LastValidControlValue := 0.0;\nEND_IF;\n\nCASE State OF\n    0:\n        IF FaultNow THEN\n            State := 1;\n            FaultTimer := 1;\n            SensorValid := FALSE;\n            BlinkTimer := 0;\n        ELSE\n            SensorValid := TRUE;\n        END_IF;\n    1:\n        IF RecoverOK THEN\n            State := 0;\n            FaultTimer := 0;\n            SensorValid := TRUE;\n        ELSIF FaultNow THEN\n            FaultTimer := FaultTimer + 1;\n            SensorValid := FALSE;\n            IF FaultTimer >= 100 THEN\n                State := 2;\n                FaultTimer := 0;\n                RecoverTimer := 0;\n            END_IF;\n        ELSE\n            SensorValid := FALSE;\n        END_IF;\n    2:\n        IF RecoverOK THEN\n            State := 3;\n            RecoverTimer := 1;\n            SensorValid := TRUE;\n        ELSIF FaultNow THEN\n            RecoverTimer := 0;\n            SensorValid := FALSE;\n        ELSE\n            SensorValid := FALSE;\n        END_IF;\n    3:\n        IF FaultNow THEN\n            State := 2;\n            RecoverTimer := 0;\n            SensorValid := FALSE;\n        ELSIF RecoverOK THEN\n            RecoverTimer := RecoverTimer + 1;\n            SensorValid := TRUE;\n            IF RecoverTimer > 150 THEN\n                State := 0;\n                RecoverTimer := 0;\n            END_IF;\n        ELSE\n            SensorValid := TRUE;\n        END_IF;\nEND_CASE;\n\nCASE State OF\n    0:\n        DegradedMode := FALSE;\n        Status := 16#0000;\n        AlarmLamp := FALSE;\n        ControlValue := (SensorCurrent - 4.0) / 16.0 * 100.0;\n        LastValidControlValue := ControlValue;\n    1:\n        DegradedMode := FALSE;\n        Status := 16#8A01;\n        ControlValue := LastValidControlValue;\n        BlinkTimer := BlinkTimer + 1;\n        IF BlinkTimer >= 50 THEN\n            BlinkTimer := 0;\n        END_IF;\n        IF BlinkTimer < 25 THEN\n            AlarmLamp := TRUE;\n        ELSE\n            AlarmLamp := FALSE;\n        END_IF;\n    2:\n        DegradedMode := TRUE;\n        Status := 16#8A02;\n        ControlValue := FallbackValue;\n        AlarmLamp := TRUE;\n    3:\n        DegradedMode := TRUE;\n        Status := 16#8A03;\n        ControlValue := FallbackValue;\n        AlarmLamp := TRUE;\nEND_CASE;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.453,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 42.532,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 5,
+    "passed": 1,
+    "passed_ids": [
+      "S11-01"
+    ],
+    "failures": [
+      {
+        "case_id": "S11-02",
+        "cycle": 2,
+        "signal": "ControlValue",
+        "expected": 0.0,
+        "actual": 50.0
+      },
+      {
+        "case_id": "S11-03",
+        "cycle": 2,
+        "signal": "ControlValue",
+        "expected": 0.0,
+        "actual": 50.0
+      },
+      {
+        "case_id": "S11-04",
+        "cycle": 25,
+        "signal": "AlarmLamp",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S11-05",
+        "cycle": 2,
+        "signal": "Status",
+        "expected": 0,
+        "actual": 35329
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

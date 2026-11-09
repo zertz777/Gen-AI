@@ -1,0 +1,6 @@
+{"task_id": "P12", "case_id": "P12-01", "status": "fail", "mismatch": {"cycle": 1, "variable": "Slab_Fault_History", "expected": [100, 0, 0, 0, 0], "actual": ["100", "0", "0", "0", "0"]}, "latency_s": 0.002}
+{"task_id": "P12", "case_id": "P12-02", "status": "fail", "mismatch": {"cycle": 1, "variable": "Slab_Fault_History", "expected": [100, 0, 0, 0, 0], "actual": ["100", "0", "0", "0", "0"]}, "latency_s": 0.001}
+{"task_id": "P12", "case_id": "P12-03", "status": "fail", "mismatch": {"cycle": 1, "variable": "Slab_Fault_History", "expected": [0, 0, 0, 0, 0], "actual": ["0", "0", "0", "0", "0"]}, "latency_s": 0.001}
+{"task_id": "P12", "case_id": "P12-04", "status": "fail", "mismatch": {"cycle": 1, "variable": "Slab_Fault_History", "expected": [0, 0, 0, 0, 0], "actual": ["0", "0", "0", "0", "0"]}, "latency_s": 0.001}
+{"task_id": "P12", "case_id": "P12-05", "status": "fail", "mismatch": {"cycle": 1, "variable": "Slab_Fault_History", "expected": [100, 0, 0, 0, 0], "actual": ["100", "0", "0", "0", "0"]}, "latency_s": 0.001}
+{"task_id": "P12", "case_id": "P12-06", "status": "fail", "mismatch": {"cycle": 1, "variable": "Slab_Fault_History", "expected": [100, 0, 0, 0, 0], "actual": ["100", "0", "0", "0", "0"]}, "latency_s": 0.001}

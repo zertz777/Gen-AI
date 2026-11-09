@@ -1,0 +1,3 @@
+case_id,cycle,ClampLeft,ClampRight,Busy,Status
+S01-05,1,FALSE,FALSE,FALSE,16#8101
+S01-05,2,FALSE,FALSE,FALSE,16#0000

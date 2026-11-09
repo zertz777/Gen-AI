@@ -1,0 +1,149 @@
+{
+  "task_id": "P09",
+  "title": "Calculate Moving Average",
+  "difficulty": "medium",
+  "category": "B",
+  "requirement": "Write a function block FB that calculates and updates a moving arithmetic mean. The moving arithmetic mean is a method of averaging over consecutive data points, where each new data point replaces the oldest data point, and then the average is recalculated.\n\n1. When cyclicExecution is TRUE, a new data value is automatically read and the moving average average is updated every scan cycle.\n2. Provide an external trigger signal trigger, which reads a new data value and updates the moving average upon each rising edge.\n3. Provide a reset function reset, which resets the moving average calculation when the reset signal is TRUE. If the window size is less than 1 or greater than 100, output an error status and status code.\n\nThe status parameter indicates the execution status of the program:\n- 16#0000: Execution successful\n- 16#8200: Window length setting error, please set a value between 1 and 100.\n\n中文摘要：滑动平均：按周期或触发沿读入新值并更新窗口平均，窗口长度非法时报 16#8200，reset 清空窗口。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）",
+  "io_table": [
+    {
+      "direction": "IN",
+      "name": "cyclicExecution",
+      "data_type": "BOOL",
+      "description": "When TRUE, periodic reading is performed, and trigger has no effect"
+    },
+    {
+      "direction": "IN",
+      "name": "trigger",
+      "data_type": "BOOL",
+      "description": "External trigger signal, reads value upon each rising edge"
+    },
+    {
+      "direction": "IN",
+      "name": "value",
+      "data_type": "LREAL",
+      "description": "Newly read data value"
+    },
+    {
+      "direction": "IN",
+      "name": "windowSize",
+      "data_type": "INT",
+      "description": "The window size for the moving average, which must be between 1 and 100"
+    },
+    {
+      "direction": "IN",
+      "name": "reset",
+      "data_type": "BOOL",
+      "description": "Reset signal, resets the moving average calculation when TRUE"
+    },
+    {
+      "direction": "OUT",
+      "name": "average",
+      "data_type": "LREAL",
+      "description": "The moving average"
+    },
+    {
+      "direction": "OUT",
+      "name": "windowSizeReached",
+      "data_type": "BOOL",
+      "description": "FALSE: Maximum window width not yet reached TRUE: Maximum window width has been reached"
+    },
+    {
+      "direction": "OUT",
+      "name": "error",
+      "data_type": "BOOL",
+      "description": "FALSE: No error occurred TRUE: An error occurred during the execution of FB"
+    },
+    {
+      "direction": "OUT",
+      "name": "status",
+      "data_type": "WORD",
+      "description": "Status code"
+    }
+  ],
+  "initial_state": "窗口为空：average = 0.0；windowSizeReached = FALSE；error = FALSE；status = 16#0000；写入指针 = 0。",
+  "constraints": [
+    "K1 cyclicExecution = TRUE 时每个扫描周期读入一个新数据并更新 average。",
+    "K2 trigger 的每个上升沿读入一个新数据并更新 average（与周期模式二选一，不重复计数）。",
+    "K3 windowSize 不在 1..100 时置 error = TRUE、status = 16#8200，且不更新 average。",
+    "K4 reset = TRUE 时清空窗口、把 windowSizeReached 置 FALSE，其优先级高于 cyclicExecution 与 trigger。"
+  ],
+  "provenance": "课程公共题库 P09（Calculate Moving Average）；原文导入、变量名与需求未做任何改动；来源与审核记录见 data/provenance.csv 第 10 行",
+  "spec_ref": "data/specs/P09.ltl",
+  "error_examples": [
+    "错误实现：窗口未填满就按 windowSize 做除数。症状——上电前几个周期的 average 明显偏小。",
+    "错误实现：windowSize 越界时仍继续累加。症状——报告里 status 是 16#8200，但 average 仍在变化，测试无法判定。"
+  ],
+  "notes": "",
+  "spec_text": "# task: P09\n# meta: medium / B 模拟量与数据处理\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(reset -> !windowSizeReached)    -- 复位当周期必须清除窗口满标志（复位优先于周期与触发）（K4）\nC3: G(windowSize < 1 -> F[0,1](error))    -- 窗口长度小于 1 时必须报错（不得静默）（K3）\nC3b: G(windowSize > 100 -> F[0,1](error))    -- 窗口长度大于 100 时必须报错（K3）\nC2: G(windowSizeReached -> !error)    -- 窗口满标志与错误标志不得同时为真（K3）\nC10: G[0,1](!windowSizeReached && !error && average == 0.0)    -- 上电首周期无窗口、无错误、平均值为 0（初态）\n",
+  "spec_sha256": "4f341918516b89567fca8b1297c84dcf4c27904f457de2c873c4008e5e2e71e3",
+  "task_version": "5d002eb5",
+  "task_sha256": "5d002eb509f2a5971a8d1aabb07768a0cf870ffa9751bdd009f3f32169ec9597",
+  "source_path": "data/tasks/P09.yaml",
+  "degraded": false,
+  "missing_fields": [],
+  "warnings": [],
+  "semantic_warnings": [],
+  "interface_io_table": [
+    {
+      "direction": "IN",
+      "name": "cyclicExecution",
+      "data_type": "BOOL",
+      "description": "When TRUE, periodic reading is performed, and trigger has no effect"
+    },
+    {
+      "direction": "IN",
+      "name": "trigger",
+      "data_type": "BOOL",
+      "description": "External trigger signal, reads value upon each rising edge"
+    },
+    {
+      "direction": "IN",
+      "name": "value",
+      "data_type": "LREAL",
+      "description": "Newly read data value"
+    },
+    {
+      "direction": "IN",
+      "name": "windowSize",
+      "data_type": "INT",
+      "description": "The window size for the moving average, which must be between 1 and 100"
+    },
+    {
+      "direction": "IN",
+      "name": "reset",
+      "data_type": "BOOL",
+      "description": "Reset signal, resets the moving average calculation when TRUE"
+    },
+    {
+      "direction": "OUT",
+      "name": "average",
+      "data_type": "LREAL",
+      "description": "The moving average"
+    },
+    {
+      "direction": "OUT",
+      "name": "windowSizeReached",
+      "data_type": "BOOL",
+      "description": "FALSE: Maximum window width not yet reached TRUE: Maximum window width has been reached"
+    },
+    {
+      "direction": "OUT",
+      "name": "error",
+      "data_type": "BOOL",
+      "description": "FALSE: No error occurred TRUE: An error occurred during the execution of FB"
+    },
+    {
+      "direction": "OUT",
+      "name": "status",
+      "data_type": "WORD",
+      "description": "Status code"
+    }
+  ],
+  "type_declarations": "",
+  "type_origins": {},
+  "pou_name": "FB_P09",
+  "pou_kind": "FUNCTION_BLOCK",
+  "dialect_requirements": [],
+  "skeleton_compiled": false,
+  "scan_cycle_ms": 20
+}

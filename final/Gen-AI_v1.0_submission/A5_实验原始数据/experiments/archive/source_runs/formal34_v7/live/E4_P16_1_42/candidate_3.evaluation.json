@@ -1,0 +1,80 @@
+{
+  "source": "FUNCTION_BLOCK FB_P16\nVAR_INPUT\n    processLength : USINT;\n    sensor1 : BOOL;\n    sensor2 : BOOL;\n    sensor3 : BOOL;\n    sensor4 : BOOL;\n    sensor5 : BOOL;\n    station1Start : BOOL;\n    station2Complete : BOOL;\n    station3Complete : BOOL;\n    station4Complete : BOOL;\n    processSequence : ARRAY[1..8] OF USINT;\nEND_VAR\nVAR_OUTPUT\n    conveyorLeft : BOOL := FALSE;\n    conveyorRight : BOOL := FALSE;\nEND_VAR\nVAR\n    (* State: 0 = idle, 1 = delivery, 2 = processing. *)\n    state : USINT := 0;\n    stepIndex : INT := 0;\n    currentStation : USINT := 1;\n    targetStation : USINT := 0;\n\n    jobSequence : ARRAY[1..8] OF USINT;\n    jobLength : INT := 0;\n    inputLength : INT;\n    i : INT;\n    sequenceValid : BOOL;\n    errorState : BOOL := FALSE;\n\n    startupScans : USINT := 0;\n    previousStart : BOOL := FALSE;\n    startEdge : BOOL;\n    targetPresent : BOOL;\n    targetComplete : BOOL;\n\n    (* Number of subsequent scans still prohibiting rightward motion. *)\n    rightInhibitScans : USINT := 0;\nEND_VAR\n\n(* One invocation represents one 20 ms scan.\n   No reset input exists: errorState remains latched until FB reinitialization.\n   Each accepted job snapshots its active sequence.\n   C9 is implemented literally: EVERY leftward scan prohibits rightward\n   motion during that scan and the following ten scans.\n   Compilation and cycle-by-cycle functional verification are not claimed. *)\n\nconveyorLeft := FALSE;\nconveyorRight := FALSE;\n\nstartEdge := station1Start AND NOT previousStart;\npreviousStart := station1Start;\n\ninputLength := USINT_TO_INT(processLength);\nsequenceValid := (inputLength >= 1) AND (inputLength <= 8);\n\nIF sequenceValid THEN\n    FOR i := 1 TO inputLength DO\n        IF (processSequence[i] < 1) OR (processSequence[i] > 5) THEN\n            sequenceValid := FALSE;\n        END_IF;\n\n        (* Enforce the supplied sequence contract as well as K4. *)\n        IF i = inputLength THEN\n            IF processSequence[i] <> 5 THEN\n                sequenceValid := FALSE;\n            END_IF;\n        ELSE\n            IF (processSequence[i] < 2) OR\n               (processSequence[i] > 4) THEN\n                sequenceValid := FALSE;\n            END_IF;\n        END_IF;\n    END_FOR;\nEND_IF;\n\nIF NOT sequenceValid THEN\n    errorState := TRUE;\nEND_IF;\n\n(* G[0,1]: the first two invocations cannot energize either output. *)\nIF startupScans < 2 THEN\n    startupScans := startupScans + 1;\n\nELSIF NOT errorState THEN\n    CASE state OF\n        0:\n            IF startEdge AND sensor1 THEN\n                jobLength := inputLength;\n                FOR i := 1 TO jobLength DO\n                    jobSequence[i] := processSequence[i];\n                END_FOR;\n\n                stepIndex := 1;\n                currentStation := 1;\n                targetStation := jobSequence[stepIndex];\n                state := 1;\n            END_IF;\n\n        1:\n            (* Delivery is evaluated below, including newly requested legs. *)\n\n        2:\n            targetPresent := FALSE;\n            targetComplete := FALSE;\n\n            CASE targetStation OF\n                2:\n                    targetPresent := sensor2;\n                    targetComplete := station2Complete;\n                3:\n                    targetPresent := sensor3;\n                    targetComplete := station3Complete;\n                4:\n                    targetPresent := sensor4;\n                    targetComplete := station4Complete;\n            ELSE\n                errorState := TRUE;\n            END_CASE;\n\n            (* Completion is a level-qualified signal; both inputs must\n               be TRUE in this scan. Only one process step advances. *)\n            IF NOT errorState AND targetPresent AND targetComplete THEN\n                IF stepIndex < jobLength THEN\n                    stepIndex := stepIndex + 1;\n                    targetStation := jobSequence[stepIndex];\n                    state := 1;\n                ELSE\n                    errorState := TRUE;\n                END_IF;\n            END_IF;\n\n    ELSE\n        errorState := TRUE;\n    END_CASE;\n\n    IF (state = 1) AND NOT errorState THEN\n        targetPresent := FALSE;\n\n        CASE targetStation OF\n            2: targetPresent := sensor2;\n            3: targetPresent := sensor3;\n            4: targetPresent := sensor4;\n            5: targetPresent := sensor5;\n        ELSE\n            errorState := TRUE;\n        END_CASE;\n\n        IF NOT errorState THEN\n            IF targetPresent THEN\n                currentStation := targetStation;\n\n                IF targetStation = 5 THEN\n                    (* Delivery complete; another job needs a new start edge. *)\n                    state := 0;\n                    stepIndex := 0;\n                    jobLength := 0;\n                    targetStation := 0;\n                ELSE\n                    state := 2;\n                END_IF;\n\n            ELSIF targetStation < currentStation THEN\n                conveyorLeft := TRUE;\n\n            ELSIF targetStation > currentStation THEN\n                IF rightInhibitScans = 0 THEN\n                    conveyorRight := TRUE;\n                END_IF;\n\n            ELSE\n                (* Consecutive equal stations require no transport.\n                   Wait for that station's presence signal, then process\n                   the distinct next step without skipping it. *)\n                conveyorLeft := FALSE;\n                conveyorRight := FALSE;\n            END_IF;\n        END_IF;\n    END_IF;\nEND_IF;\n\n(* Fault shutdown has priority over every operating state. *)\nIF errorState THEN\n    conveyorLeft := FALSE;\n    conveyorRight := FALSE;\nEND_IF;\n\n(* Update after output decisions: ten full scans after the last leftward\n   output remain right-inhibited; rightward motion is allowed on scan 11. *)\nIF conveyorLeft THEN\n    rightInhibitScans := 10;\nELSIF rightInhibitScans > 0 THEN\n    rightInhibitScans := rightInhibitScans - 1;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 105,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P16_1_42\\tools\\candidate_3\\fast\\source.st:105-9..105-9: error: invalid statement in case element of ST 'CASE' statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_v7\\live\\E4_P16_1_42\\tools\\candidate_3\\fast\\source.st:105-9..105-9: error: invalid statement in case element of ST 'CASE' statement."
+        }
+      ],
+      "elapsed_s": 0.172,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 22.734,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 8,
+    "passed": 3,
+    "passed_ids": [
+      "P16-03",
+      "P16-05",
+      "P16-06"
+    ],
+    "failures": [
+      {
+        "case_id": "P16-01",
+        "cycle": 1,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P16-02",
+        "cycle": 1,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P16-04",
+        "cycle": 1,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P16-07",
+        "cycle": 2,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P16-08",
+        "cycle": 1,
+        "signal": "conveyorRight",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3833,
+  "tag": "candidate_3"
+}

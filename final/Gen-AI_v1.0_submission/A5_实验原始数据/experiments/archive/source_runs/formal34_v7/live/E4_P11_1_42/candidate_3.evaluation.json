@@ -1,0 +1,77 @@
+{
+  "source": "FUNCTION_BLOCK FB_P11\nVAR_INPUT\n    Mode : BOOL;\n    ForwardButton : BOOL;\n    ReverseButton : BOOL;\n    SensorA : BOOL;\n    SensorB : BOOL;\n    SensorC : BOOL;\n    ButtonA : BOOL;\n    ButtonB : BOOL;\n    ButtonC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MotorForward : BOOL := FALSE;\n    MotorReverse : BOOL := FALSE;\n    CompletionLight : BOOL := FALSE;\nEND_VAR\nVAR\n    (* 0: IDLE / A; 1: A->B; 2: B; 3: B->C; 4: C; 5: 完成 *)\n    StationState : USINT := 0;\n    StartupScans : USINT := 0;\n\n    PreviousButtonA : BOOL := FALSE;\n    PreviousButtonB : BOOL := FALSE;\n    PreviousButtonC : BOOL := FALSE;\n    RisingButtonA : BOOL;\n    RisingButtonB : BOOL;\n    RisingButtonC : BOOL;\nEND_VAR\n\n(*\n    每次调用为一个 20 ms 扫描周期。\n    C10 的 [0,1] 按包含两个扫描周期实现；这比文字中的\n    “上电首周期”更严格，启动期间不接受完成按钮事件。\n\n    规约说明中的急停异常验证没有对应急停输入，属于待审信息；\n    本接口不能实现或判定外部急停行为。\n    本源码不代表已经通过编译或逐周期功能验证。\n*)\n\nRisingButtonA := ButtonA AND NOT PreviousButtonA;\nRisingButtonB := ButtonB AND NOT PreviousButtonB;\nRisingButtonC := ButtonC AND NOT PreviousButtonC;\n\nPreviousButtonA := ButtonA;\nPreviousButtonB := ButtonB;\nPreviousButtonC := ButtonC;\n\n(* 每周期先撤销电机命令，再按状态给出许可。 *)\nMotorForward := FALSE;\nMotorReverse := FALSE;\n\n(* 完成灯的清除不受模式影响。 *)\nIF NOT SensorC THEN\n    CompletionLight := FALSE;\nEND_IF;\n\nIF StartupScans < 2 THEN\n    StartupScans := StartupScans + 1;\n    StationState := 0;\n    CompletionLight := FALSE;\n\nELSIF NOT Mode THEN\n    (* 手动退出自动序列；重新进入自动时从 A 开始。\n       已点亮的完成灯仍保持到 SensorC 断开。 *)\n    StationState := 0;\n    MotorForward := ForwardButton AND NOT ReverseButton;\n    MotorReverse := ReverseButton AND NOT ForwardButton;\n\nELSE\n    IF CompletionLight THEN\n        StationState := 5;\n    END_IF;\n\n    CASE StationState OF\n        0:\n            (* 当前站 A：到位且新完成事件才允许推进。 *)\n            IF SensorA AND RisingButtonA THEN\n                IF SensorB THEN\n                    (* B 已到位，本扫描保持停止。 *)\n                    StationState := 2;\n                ELSE\n                    StationState := 1;\n                    MotorForward := TRUE;\n                END_IF;\n            END_IF;\n\n        1:\n            (* 转移途中无需持续按住 A 按钮或保持 SensorA。 *)\n            IF SensorB THEN\n                StationState := 2;\n                (* 同扫描到位和完成事件有效，但到位扫描先停止。 *)\n                IF RisingButtonB THEN\n                    StationState := 3;\n                END_IF;\n            ELSE\n                MotorForward := TRUE;\n            END_IF;\n\n        2:\n            IF SensorB AND RisingButtonB THEN\n                IF SensorC THEN\n                    StationState := 4;\n                ELSE\n                    StationState := 3;\n                    MotorForward := TRUE;\n                END_IF;\n            END_IF;\n\n        3:\n            IF SensorC THEN\n                StationState := 4;\n                IF RisingButtonC THEN\n                    CompletionLight := TRUE;\n                    StationState := 5;\n                END_IF;\n            ELSE\n                MotorForward := TRUE;\n            END_IF;\n\n        4:\n            IF SensorC AND RisingButtonC THEN\n                CompletionLight := TRUE;\n                StationState := 5;\n            END_IF;\n\n        5:\n            (* 完成后保持停止，离开 C 后准备下一件产品。 *)\n            IF NOT SensorC THEN\n                StationState := 0;\n            END_IF;\n\n        ELSE\n            (* 内部状态异常时停止并回到 A 等待。 *)\n            StationState := 0;\n    END_CASE;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.265,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 25.11,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 7,
+    "passed": 1,
+    "passed_ids": [
+      "P11-05"
+    ],
+    "failures": [
+      {
+        "case_id": "P11-01",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P11-02",
+        "cycle": 2,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P11-03",
+        "cycle": 2,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P11-04",
+        "cycle": 1,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P11-06",
+        "cycle": 2,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P11-07",
+        "cycle": 2,
+        "signal": "MotorForward",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3485,
+  "tag": "candidate_3"
+}

@@ -1,0 +1,30 @@
+{
+  "task_id": "P13",
+  "io": [
+    {
+      "name": "OCCUPANCY_DETECTED",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "ENERGY_SAVING_MODE",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "HVAC_MODE_SELECTOR",
+      "direction": "IN",
+      "type": "INT"
+    },
+    {
+      "name": "SUPPLY_FAN_RUN",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "TEMP_SETPOINT_ADJUST",
+      "direction": "OUT",
+      "type": "INT"
+    }
+  ]
+}

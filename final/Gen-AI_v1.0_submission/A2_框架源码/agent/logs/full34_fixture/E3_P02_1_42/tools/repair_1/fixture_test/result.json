@@ -1,0 +1,12 @@
+{
+  "status": "pass",
+  "total": 3,
+  "passed": 3,
+  "passed_ids": [
+    "fixture_case_1",
+    "fixture_case_2",
+    "fixture_case_3"
+  ],
+  "failures": [],
+  "evidence_kind": "fixture"
+}

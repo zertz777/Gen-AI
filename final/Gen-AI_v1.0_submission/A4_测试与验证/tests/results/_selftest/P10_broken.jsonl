@@ -1,0 +1,4 @@
+{"task_id": "P10", "case_id": "P10-01", "status": "fail", "mismatch": {"cycle": 1, "variable": "HeaterStatus", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "P10", "case_id": "P10-02", "status": "fail", "mismatch": {"cycle": 1, "variable": "HeaterStatus", "expected": true, "actual": false}, "latency_s": 0.0}
+{"task_id": "P10", "case_id": "P10-03", "status": "fail", "mismatch": {"cycle": 1, "variable": "HeaterStatus", "expected": true, "actual": false}, "latency_s": 0.0}
+{"task_id": "P10", "case_id": "P10-04", "status": "fail", "mismatch": {"cycle": 1, "variable": "HeaterStatus", "expected": true, "actual": false}, "latency_s": 0.0}

@@ -1,0 +1,35 @@
+{
+  "task_id": "S10",
+  "io": [
+    {
+      "name": "VFDFaultCode",
+      "direction": "IN",
+      "type": "WORD"
+    },
+    {
+      "name": "VFDRun",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "ResetBtn",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "AlarmLamp",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "TripOutput",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "Status",
+      "direction": "OUT",
+      "type": "WORD"
+    }
+  ]
+}

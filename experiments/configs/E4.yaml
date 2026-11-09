@@ -1,0 +1,12 @@
+{
+  "setting_id": "E4",
+  "framework": "self",
+  "agent": "self-developed",
+  "model": "gpt-6.1-sol",
+  "task_set": "all34",
+  "seed": 42,
+  "scan_cycle_ms": 20,
+  "task_timeout_s": 900,
+  "compile_timeout_s": 90,
+  "repeat": 1
+}

@@ -1,0 +1,138 @@
+{
+  "source": "TYPE ST_AnalogChannel :\nSTRUCT\n    enable : BOOL;\n    hiLIM : REAL;\n    loLIM : REAL;\n    bipolar : BOOL;\n    measuringMode : INT;\n    retVal : WORD;\n    outputValue : REAL;\nEND_STRUCT\nEND_TYPE\n\nFUNCTION_BLOCK FB_P08\nVAR_INPUT\n    count : DINT;\nEND_VAR\nVAR_IN_OUT\n    analogValues : ARRAY[*] OF INT;\n    channels : ARRAY[*] OF ST_AnalogChannel;\nEND_VAR\nVAR\n    firstScan : BOOL := TRUE;\n    i : DINT;\n    n : DINT;\n    nA : DINT;\n    nC : DINT;\n    maxCount : DINT;\n    lowerA : DINT;\n    lowerC : DINT;\n    idxA : DINT;\n    idxC : DINT;\n    raw : INT;\n    tempOut : REAL;\n    mode : INT;\n    hi : REAL;\n    lo : REAL;\n    bip : BOOL;\n    en : BOOL;\nEND_VAR\n\n(* Conflict note: C10 requires first-scan outputValue = 0.0, while the initial-state text\n   says retVal/outputValue are recomputed from current inputs on every call.  This\n   implementation satisfies C10 by forcing outputValue to 0.0 on the first call only;\n   retVal is still computed according to the current inputs. *)\n\nlowerA := LOWER_BOUND(analogValues, 1);\nlowerC := LOWER_BOUND(channels, 1);\nnA := UPPER_BOUND(analogValues, 1) - lowerA + 1;\nnC := UPPER_BOUND(channels, 1) - lowerC + 1;\n\nmaxCount := nA;\nIF nC < maxCount THEN\n    maxCount := nC;\nEND_IF;\n\nIF count < 0 THEN\n    n := 0;\nELSIF count > maxCount THEN\n    n := maxCount;\nELSE\n    n := count;\nEND_IF;\n\nFOR i := 0 TO n - 1 DO\n    idxA := lowerA + i;\n    idxC := lowerC + i;\n\n    en := channels[idxC].enable;\n    IF NOT en THEN\n        channels[idxC].retVal := 0;\n        tempOut := 0.0;\n    ELSE\n        mode := channels[idxC].measuringMode;\n        IF (mode <> 0) AND (mode <> 1) AND (mode <> 2) THEN\n            channels[idxC].retVal := 16#8001;\n            tempOut := 0.0;\n        ELSE\n            hi := channels[idxC].hiLIM;\n            lo := channels[idxC].loLIM;\n            IF hi <= lo THEN\n                channels[idxC].retVal := 16#8002;\n                tempOut := 0.0;\n            ELSE\n                channels[idxC].retVal := 0;\n                raw := analogValues[idxA];\n                CASE mode OF\n                    0:\n                        bip := channels[idxC].bipolar;\n                        IF bip THEN\n                            tempOut := lo + (INT_TO_REAL(raw) + 27648.0) * (hi - lo) / 55296.0;\n                        ELSE\n                            tempOut := lo + INT_TO_REAL(raw) * (hi - lo) / 27648.0;\n                        END_IF;\n                    1:\n                        tempOut := INT_TO_REAL(raw) / 10.0;\n                    2:\n                        tempOut := INT_TO_REAL(raw) / 100.0;\n                END_CASE;\n            END_IF;\n        END_IF;\n    END_IF;\n\n    IF firstScan THEN\n        tempOut := 0.0;\n    END_IF;\n\n    channels[idxC].outputValue := tempOut;\nEND_FOR;\n\nfirstScan := FALSE;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 10,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:10-10..11-1: error: ';' missing at end of data type declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:10-10..11-1: error: ';' missing at end of data type declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 18,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:18-26..18-26: error: invalid subrange list defined in array specification.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:18-26..18-26: error: invalid subrange list defined in array specification."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 19,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:19-22..19-22: error: invalid subrange list defined in array specification.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:19-22..19-22: error: invalid subrange list defined in array specification."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 38,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:38-5..38-13: error: invalid variable(s) declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:38-5..38-13: error: invalid variable(s) declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 46,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:46-22..46-23: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:46-22..46-23: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 46,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:46-23..46-39: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:46-23..46-39: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 47,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:47-21..47-22: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:47-21..47-22: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 47,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:47-22..47-34: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:47-22..47-34: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 48,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:48-17..48-18: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:48-17..48-18: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 48,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:48-18..48-47: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:48-18..48-47: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 49,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:49-17..49-18: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:49-17..49-18: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 49,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:49-18..49-43: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:49-18..49-43: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 68,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:68-5..68-6: error: invalid variable before ':=' in ST assignment statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:68-5..68-6: error: invalid variable before ':=' in ST assignment statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 69,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:69-12..69-13: error: invalid expression after 'NOT' in ST expression.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P08_1_42\\tools\\candidate_1\\fast\\source.st:69-12..69-13: error: invalid expression after 'NOT' in ST expression."
+        }
+      ],
+      "elapsed_s": 0.265,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 36.125,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P08-01",
+      "P08-02",
+      "P08-03",
+      "P08-04",
+      "P08-05",
+      "P08-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 16313,
+  "tag": "candidate_1"
+}

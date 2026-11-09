@@ -1,0 +1,5 @@
+{"task_id": "S11", "case_id": "S11-01", "status": "fail", "mismatch": {"cycle": 1, "variable": "SensorValid", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "S11", "case_id": "S11-02", "status": "fail", "mismatch": {"cycle": 1, "variable": "SensorValid", "expected": true, "actual": false}, "latency_s": 0.002}
+{"task_id": "S11", "case_id": "S11-03", "status": "fail", "mismatch": {"cycle": 1, "variable": "SensorValid", "expected": true, "actual": false}, "latency_s": 0.007}
+{"task_id": "S11", "case_id": "S11-04", "status": "fail", "mismatch": {"cycle": 1, "variable": "AlarmLamp", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "S11", "case_id": "S11-05", "status": "fail", "mismatch": {"cycle": 1, "variable": "SensorValid", "expected": true, "actual": false}, "latency_s": 0.001}

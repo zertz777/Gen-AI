@@ -1,0 +1,38 @@
+{
+  "source": "(*\n需求原文：\n烘箱按三段升温曲线工作，超温时必须先降载而不是直接断电。\n\n控制要求：\n1. Segment 取值 0/1/2，分别对应目标温度 SetTemp 的\n   50%/80%/100%；段号非法时按 0 段处理并置 Status = 16#8601。\n2. 当前温度 TempPV 低于目标值 -5 ℃ 时 HeatOn = TRUE，\n   高于目标值 +5 ℃ 时 HeatOn = FALSE，两者之间保持（死区）。\n3. TempPV 超过目标值 +10 ℃ 时置 OverTempAlarm = TRUE\n   并置 LoadReduce = TRUE；TempPV 回落到目标值 -3 ℃ 以下\n   才撤销 LoadReduce。\n4. HeatOn = TRUE 期间 FanOn 必须为 TRUE\n   （先开风机后加热，禁止干烧）。\n5. Status：16#0000 正常、16#8601 段号非法、16#8602 超温降载。\n\n扫描周期：20 ms。\n\n完整形式化规约：\nC1: G(LoadReduce -> !HeatOn)\nC2: G(HeatOn -> FanOn)\nC4: G(!(HeatOn && LoadReduce))\nC7: G(OverTempAlarm ->\n       (OverTempAlarm W TempPV <= SetTemp - 3.0))\nC8: G(Segment < 0 || Segment > 2 -> X(Status == 16#8601))\nC10: G[0,1](!HeatOn && !FanOn && !OverTempAlarm && !LoadReduce)\n\n修改说明：\n- 最新逐周期测试为 2/5 通过。\n- S06-03 周期 2 的 Status 实际为 34305，即 16#8601，\n  测试要求恢复为 16#0000。删除上一扫描非法段号记忆，\n  Status 仅根据当前扫描的段号及保护状态计算。\n- S06-04、S06-05 周期 1 要求 FanOn = FALSE。\n  删除降载及报警独立启动风机的逻辑，\n  风机仅在有温控加热请求且未降载时开启。\n- 保留外部接口、声明初态、分段目标及温控和保护迟滞。\n\n语义冲突报告：\n- 测试要求非法段号恢复合法后立即清除错误码，\n  与 C8 要求非法段号的下一周期仍报 16#8601 冲突。\n  本实现采用当前扫描状态，不满足该转换场景下的 C8。\n- 先前测试要求周期 1 立即开启加热或保护输出，\n  与 C10 在 [0,1] 内全部 BOOL 输出为 FALSE 的要求冲突。\n  本实现仅在首次调用前保持声明初态，扫描中立即响应，\n  不满足扫描输出意义上的 C10。\n- “先降载而不是直接断电”与 C1/C4 强制降载时关闭 HeatOn\n  存在冲突；本实现按 C1/C4 禁止降载期间加热，\n  不声称实现了保持加热的分级降功率。\n- 同一扫描内先赋值 FanOn 再计算 HeatOn，满足输出联锁，\n  但不能证明物理风机已先启动。接口没有风机运行反馈。\n- 温控开启要求受降载保护覆盖；内部温控请求保持死区状态。\n- 非法段号错误优先于超温降载状态。\n- C7 使用 SetTemp，而温控/降载要求使用分段目标。\n  报警仅在同时低于分段目标 -3 ℃ 且不高于 SetTemp -3 ℃\n  时清除，避免提前违反任一保持边界。\n- LoadReduceReq 的组合规则未给出：\n  采用与超温降载锁存的逻辑或；请求持续时不撤销降载。\n  请求降载不单独触发超温报警或超温状态码。\n- 阈值“低于/高于/超过/以下”采用严格比较；\n  等于阈值时保持迟滞状态。C7 的解除边界采用 <=。\n- 用户提供的检查通过结果针对修改前版本；其功能测试仍失败。\n  当前没有可调用的命令执行工具，未重新运行本版本编译和测试。\n  本次修改针对已报告的失败，不能证明所有逐周期测试均通过，\n  也不能声称满足存在冲突的全部规约。\n*)\nFUNCTION_BLOCK FB_S06\nVAR_INPUT\n    TempPV : REAL;\n    SetTemp : REAL;\n    Segment : INT;\n    LoadReduceReq : BOOL;\nEND_VAR\nVAR_OUTPUT\n    HeatOn : BOOL := FALSE;\n    FanOn : BOOL := FALSE;\n    OverTempAlarm : BOOL := FALSE;\n    LoadReduce : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    TargetTemp : REAL := 0.0;\n    InvalidSegment : BOOL := FALSE;\n    HeatDemand : BOOL := FALSE;\n    ThermalReduce : BOOL := FALSE;\nEND_VAR\n\nInvalidSegment := (Segment < 0) OR (Segment > 2);\n\nCASE Segment OF\n    0:\n        TargetTemp := SetTemp * 0.5;\n    1:\n        TargetTemp := SetTemp * 0.8;\n    2:\n        TargetTemp := SetTemp;\nELSE\n    TargetTemp := SetTemp * 0.5;\nEND_CASE;\n\n(* 温控请求在两个严格阈值之间保持。 *)\nIF TempPV < (TargetTemp - 5.0) THEN\n    HeatDemand := TRUE;\nELSIF TempPV > (TargetTemp + 5.0) THEN\n    HeatDemand := FALSE;\nEND_IF;\n\n(* 超温降载锁存与上位机降载请求独立处理。 *)\nIF TempPV > (TargetTemp + 10.0) THEN\n    ThermalReduce := TRUE;\n    OverTempAlarm := TRUE;\nELSE\n    IF TempPV < (TargetTemp - 3.0) THEN\n        ThermalReduce := FALSE;\n    END_IF;\n\n    IF (TempPV < (TargetTemp - 3.0))\n        AND (TempPV <= (SetTemp - 3.0)) THEN\n        OverTempAlarm := FALSE;\n    END_IF;\nEND_IF;\n\nLoadReduce := ThermalReduce OR LoadReduceReq;\n\n(* 风机仅服务于获准的加热请求，不由降载或报警单独启动。 *)\nFanOn := HeatDemand AND NOT LoadReduce;\n\n(* 先赋值风机输出，再计算具有降载保护及风机联锁的加热输出。 *)\nHeatOn := HeatDemand AND NOT LoadReduce AND FanOn;\n\nIF InvalidSegment THEN\n    Status := WORD#16#8601;\nELSIF ThermalReduce OR OverTempAlarm THEN\n    Status := WORD#16#8602;\nELSE\n    Status := WORD#16#0000;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.234,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 22.719,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 5,
+    "passed": 5,
+    "passed_ids": [
+      "S06-01",
+      "S06-02",
+      "S06-03",
+      "S06-04",
+      "S06-05"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

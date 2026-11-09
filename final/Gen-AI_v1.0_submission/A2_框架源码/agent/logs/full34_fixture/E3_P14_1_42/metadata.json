@@ -1,0 +1,24 @@
+{
+  "execution_mode": "fixture",
+  "eligible_for_experiments": false,
+  "status": "completed",
+  "failure_reason": null,
+  "first_compile_status": "fail",
+  "selected_candidate": "repair_1",
+  "semantic_warnings": [
+    {
+      "code": "DATA_P14_STATUS_NOT_IN_INTERFACE",
+      "message": "K4提到靠返回状态区分非法输入与0.0.0.0，但I/O仅有ipText/ipValue；不能擅自新增状态参数。",
+      "evidence": [
+        "constraints K4",
+        "io_table"
+      ]
+    }
+  ],
+  "degraded": true,
+  "environment_blockers": [],
+  "fingerprint": "2fda9c324a8adb19aa78526b5fb1707fcf92288bfcee8d0d0c8af072a1ec8602",
+  "seed_sent_to_api": false,
+  "tokens_estimate_upper_bound": 22308,
+  "tool_verify_status": "skipped"
+}

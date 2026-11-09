@@ -1,0 +1,4 @@
+{"task_id": "S09", "case_id": "S09-01", "status": "fail", "mismatch": {"cycle": 1, "variable": "WaterValve", "expected": true, "actual": false}, "latency_s": 0.002}
+{"task_id": "S09", "case_id": "S09-02", "status": "fail", "mismatch": {"cycle": 1, "variable": "WaterValve", "expected": true, "actual": false}, "latency_s": 0.0}
+{"task_id": "S09", "case_id": "S09-03", "status": "fail", "mismatch": {"cycle": 1, "variable": "WaterValve", "expected": true, "actual": false}, "latency_s": 0.0}
+{"task_id": "S09", "case_id": "S09-04", "status": "fail", "mismatch": {"cycle": 1, "variable": "WaterValve", "expected": true, "actual": false}, "latency_s": 0.0}

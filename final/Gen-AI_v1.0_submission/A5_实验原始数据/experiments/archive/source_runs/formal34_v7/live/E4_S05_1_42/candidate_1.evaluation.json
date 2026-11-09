@@ -1,0 +1,46 @@
+{
+  "source": "FUNCTION_BLOCK FB_S05\nVAR_INPUT\n    FlowPulse : BOOL;\n    ShiftReset : BOOL;\n    CycleTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    TotalVolume : LREAL := LREAL#0.0;\n    ShiftVolume : LREAL := LREAL#0.0;\n    PulseCount : UDINT := UDINT#0;\n    OverflowFlag : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    FlowPulseLast : BOOL := FALSE;\n    ShiftResetLast : BOOL := FALSE;\n    FlowRise : BOOL := FALSE;\n    ResetRise : BOOL := FALSE;\nEND_VAR\n\n(*\n需求原文：\n泵站出口装有脉冲流量计，每个脉冲代表 0.5 L。需要同时维护累计总量与当班流量。\n\n控制要求：\n1. FlowPulse 的每个上升沿使 PulseCount 加 1，TotalVolume 与 ShiftVolume 各加 0.5 L。\n2. ShiftReset 的上升沿把 ShiftVolume 清 0、PulseCount 清 0，但 TotalVolume 必须保持不变。\n3. TotalVolume 达到 1000000.0 L 时不再增加，置 OverflowFlag = TRUE；\n   清零只能由维护流程完成（本题不提供入口，仅置位）。\n4. FlowPulse 为高频脉冲，同一扫描周期内最多计一个脉冲\n   （20 ms 周期内不允许丢脉冲的假设不成立时，以 Status 报 16#8501）。\n5. 上电时 PulseCount = 0、TotalVolume = 0.0、ShiftVolume = 0.0、\n   OverflowFlag = FALSE。\n6. Status：16#0000 正常、16#8501 脉冲过快、16#8502 总量溢出。\n\n扫描周期：20 ms。\n\n待审：现有接口不能完整满足以下要求，未新增接口或制造判据。\nA. 每次调用只得到一个 BOOL 采样，无法观测采样之间的多次上升沿。\n   CycleTime 仅提供周期长度，不能提供遗漏的边沿数。\n   因而无法实现 K4 的多脉冲检测，也不能可靠产生 16#8501。\n   本实现只计可观测的采样上升沿，不用连续高电平或周期长度伪造过快诊断。\nB. 总量封顶后，要求1仍要求当班量随脉冲增加，这与 C6\n   ShiftVolume <= TotalVolume 冲突。本实现保留当班独立累计，\n   不为满足 C6 擅自封顶当班量；因此 C6 无法普遍成立。\nC. C10 要求上电前两个观察周期累计量为零，与这些周期中出现\n   FlowPulse 上升沿必须计数的要求冲突。本实现采用声明初态，\n   从首次调用开始处理上升沿，不屏蔽启动期间的脉冲。\nD. 同周期复位与流量上升沿对当班结果存在冲突：\n   本实现按复位优先处理当班量和当班脉冲数，\n   但流量上升沿仍计入累计总量。\nE. UDINT 无法无限加1。本实现达到 UDINT 上限后饱和以避免回绕；\n   上限后的精确计数需求及对应状态码未定义，需审定。\n   LREAL 的有限精度也不能保证无限运行后每次仍精确增加0.5。\n\n以下实现不表示全部规约已满足，也未声明通过编译或逐周期测试。\n*)\n\nFlowRise := FlowPulse AND NOT FlowPulseLast;\nResetRise := ShiftReset AND NOT ShiftResetLast;\n\nFlowPulseLast := FlowPulse;\nShiftResetLast := ShiftReset;\n\n(* 总量不受班次复位影响；达到上限的本周期立即置位。 *)\nIF FlowRise THEN\n    IF TotalVolume < LREAL#1000000.0 THEN\n        IF TotalVolume >= LREAL#999999.5 THEN\n            TotalVolume := LREAL#1000000.0;\n        ELSE\n            TotalVolume := TotalVolume + LREAL#0.5;\n        END_IF;\n    END_IF;\nEND_IF;\n\nIF TotalVolume >= LREAL#1000000.0 THEN\n    TotalVolume := LREAL#1000000.0;\n    OverflowFlag := TRUE;\nEND_IF;\n\n(* 当班复位优先；复位不清除累计总量或锁存的溢出标志。 *)\nIF ResetRise THEN\n    ShiftVolume := LREAL#0.0;\n    PulseCount := UDINT#0;\nELSIF FlowRise THEN\n    ShiftVolume := ShiftVolume + LREAL#0.5;\n\n    IF PulseCount < UDINT#4294967295 THEN\n        PulseCount := PulseCount + UDINT#1;\n    END_IF;\nEND_IF;\n\n(* 16#0000 仅表示未产生可实现的溢出诊断，不证明没有漏脉冲。\n   溢出状态随 OverflowFlag 永久保持；过快诊断受上述接口限制。 *)\nIF OverflowFlag THEN\n    Status := WORD#16#8502;\nELSE\n    Status := WORD#16#0000;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.235,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 26.172,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 5,
+    "passed_ids": [
+      "S05-01",
+      "S05-02",
+      "S05-03",
+      "S05-04",
+      "S05-05"
+    ],
+    "failures": [
+      {
+        "case_id": "S05-06",
+        "cycle": 2,
+        "signal": "TotalVolume",
+        "expected": 1.0,
+        "actual": 0.5
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3134,
+  "tag": "candidate_1"
+}

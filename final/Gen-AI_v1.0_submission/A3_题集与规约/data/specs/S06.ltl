@@ -1,0 +1,11 @@
+# task: S06
+# meta: medium / B 模拟量与数据处理
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(LoadReduce -> !HeatOn)    -- 降载动作时加热必须关断（保护优先于温控）（K3）
+C2: G(HeatOn -> FanOn)    -- 加热的前提是风机运行（禁止干烧）（K4）
+C4: G(!(HeatOn && LoadReduce))    -- 加热与降载互斥（K3）
+C7: G(OverTempAlarm -> (OverTempAlarm W TempPV <= SetTemp - 3.0))    -- 超温报警保持到温度回落到设定值以下 3 ℃（迟滞）（K3）
+C8: G(Segment < 0 || Segment > 2 -> X(Status == 16#8601))    -- 段号非法时下一周期必须报错误码（K1）
+C10: G[0,1](!HeatOn && !FanOn && !OverTempAlarm && !LoadReduce)    -- 上电首周期全部输出关断（初态）

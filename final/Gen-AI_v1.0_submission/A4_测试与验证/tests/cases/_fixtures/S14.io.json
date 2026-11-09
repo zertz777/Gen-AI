@@ -1,0 +1,45 @@
+{
+  "task_id": "S14",
+  "io": [
+    {
+      "name": "Pressure",
+      "direction": "IN",
+      "type": "REAL"
+    },
+    {
+      "name": "PumpEnable",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "ResetBtn",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "LowPump",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "HighPump",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "ReliefValve",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "AlarmLamp",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "Status",
+      "direction": "OUT",
+      "type": "WORD"
+    }
+  ]
+}

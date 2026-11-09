@@ -1,0 +1,46 @@
+{
+  "source": "FUNCTION_BLOCK FB_S10\nVAR_INPUT\n    VFDFaultCode : WORD;\n    VFDRun : BOOL;\n    ResetBtn : BOOL;\nEND_VAR\nVAR_OUTPUT\n    AlarmLamp : BOOL := FALSE;\n    TripOutput : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    ResetBtnLast : BOOL := FALSE;\n    ResetRise : BOOL := FALSE;\n    HeavyFault : BOOL := FALSE;\n    TripDemand : BOOL := FALSE;\n    LatchedFaultCode : WORD := WORD#16#0000;\nEND_VAR\n\n(*\n    每次调用为一个20 ms扫描周期。\n\n    需求冲突报告（待审，不能同时满足全部原文和形式化规约）：\n    1. 要求1规定轻故障不跳闸；要求4/K4规定运行中任何非零\n       故障均跳闸。C1又排除了轻故障。本实现按安全优先级执行\n       要求4/K4，因此运行中轻故障也触发跳闸。\n    2. C2要求 TripOutput -> NOT VFDRun，但VFDRun是只读反馈。\n       在运行反馈为TRUE的故障扫描中，立即跳闸必然与C2冲突；\n       本块不能修改运行反馈，也不能保证其下一周期值（C7）。\n    3. C10要求第0至1周期输出均无故障，与上电即存在故障时\n       的立即报警/跳闸要求冲突。本实现初始化输出为无故障，\n       首次调用即处理输入，不设置屏蔽故障的启动延时。\n    4. C6要求所有跳闸保持到复位。本实现保持全部跳闸，\n       并仅在复位上升沿且当前故障码为零时解除。\n    本源码未声称已经编译验证或通过逐周期功能测试。\n*)\n\nResetRise := ResetBtn AND NOT ResetBtnLast;\nResetBtnLast := ResetBtn;\n\nHeavyFault :=\n    (VFDFaultCode = WORD#16#0002) OR\n    (VFDFaultCode = WORD#16#0003);\n\nTripDemand :=\n    HeavyFault OR\n    (VFDRun AND (VFDFaultCode <> WORD#16#0000));\n\n(* 故障置位优先；有当前故障时不允许复位。 *)\nIF TripDemand THEN\n    TripOutput := TRUE;\n\n    IF HeavyFault THEN\n        (* 首个重故障锁存；可替换此前锁存的非重故障码。 *)\n        IF (LatchedFaultCode <> WORD#16#0002) AND\n           (LatchedFaultCode <> WORD#16#0003) THEN\n            LatchedFaultCode := VFDFaultCode;\n        END_IF;\n    ELSIF LatchedFaultCode = WORD#16#0000 THEN\n        LatchedFaultCode := VFDFaultCode;\n    END_IF;\n\nELSIF ResetRise AND (VFDFaultCode = WORD#16#0000) THEN\n    TripOutput := FALSE;\n    LatchedFaultCode := WORD#16#0000;\nEND_IF;\n\n(* 锁存故障优先显示；未锁存时显示当前故障码。 *)\nIF LatchedFaultCode <> WORD#16#0000 THEN\n    Status := LatchedFaultCode;\nELSE\n    Status := VFDFaultCode;\nEND_IF;\n\nAlarmLamp :=\n    TripOutput OR\n    (VFDFaultCode <> WORD#16#0000);\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 22.281,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 5,
+    "passed_ids": [
+      "S10-02",
+      "S10-03",
+      "S10-04",
+      "S10-05",
+      "S10-06"
+    ],
+    "failures": [
+      {
+        "case_id": "S10-01",
+        "cycle": 1,
+        "signal": "TripOutput",
+        "expected": false,
+        "actual": true
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 2537,
+  "tag": "candidate_1"
+}

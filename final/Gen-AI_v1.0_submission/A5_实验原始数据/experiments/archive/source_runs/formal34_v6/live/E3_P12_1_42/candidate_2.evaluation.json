@@ -1,0 +1,78 @@
+{
+  "source": "FUNCTION_BLOCK FB_P12\nVAR_INPUT\n    THICKNESS_FAULT : BOOL;\n    THICKNESS_SIGNAL_VALID : BOOL;\n    CUTTING_RUN : BOOL;\n    FaultTimestamp : DINT;\n    CycleTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    THICKNESS_ALARM : BOOL;\n    Slab_Fault_Counter : UINT;\n    Slab_Runtime_Accumulator : LTIME;\n    Slab_Fault_History : ARRAY[0..4] OF DINT;\nEND_VAR\nVAR\n    InitDone : BOOL := FALSE;\n    PrevValidFault : BOOL := FALSE;\n    HoldTimer : TIME := T#0s;\n    HoldActive : BOOL := FALSE;\nEND_VAR\n\nIF NOT InitDone THEN\n    THICKNESS_ALARM := FALSE;\n    Slab_Fault_Counter := UINT#0;\n    Slab_Runtime_Accumulator := LTIME#0s;\n    Slab_Fault_History[0] := 0;\n    Slab_Fault_History[1] := 0;\n    Slab_Fault_History[2] := 0;\n    Slab_Fault_History[3] := 0;\n    Slab_Fault_History[4] := 0;\n    HoldTimer := T#0s;\n    HoldActive := FALSE;\n    PrevValidFault := THICKNESS_SIGNAL_VALID AND THICKNESS_FAULT;\n    InitDone := TRUE;\nELSE\n    IF NOT THICKNESS_SIGNAL_VALID THEN\n        THICKNESS_ALARM := FALSE;\n        HoldTimer := T#0s;\n        HoldActive := FALSE;\n        PrevValidFault := FALSE;\n    ELSE\n        (* Fault rising edge: count and shift the five-entry history. *)\n        IF THICKNESS_FAULT AND NOT PrevValidFault THEN\n            IF Slab_Fault_Counter < UINT#65535 THEN\n                Slab_Fault_Counter := Slab_Fault_Counter + UINT#1;\n            END_IF;\n            Slab_Fault_History[4] := Slab_Fault_History[3];\n            Slab_Fault_History[3] := Slab_Fault_History[2];\n            Slab_Fault_History[2] := Slab_Fault_History[1];\n            Slab_Fault_History[1] := Slab_Fault_History[0];\n            Slab_Fault_History[0] := FaultTimestamp;\n            THICKNESS_ALARM := TRUE;\n            HoldTimer := T#0s;\n            HoldActive := TRUE;\n        END_IF;\n        PrevValidFault := THICKNESS_FAULT;\n\n        (* Keep alarm active while the valid fault persists. *)\n        IF THICKNESS_FAULT THEN\n            THICKNESS_ALARM := TRUE;\n            IF NOT HoldActive THEN\n                HoldTimer := T#0s;\n                HoldActive := TRUE;\n            END_IF;\n        END_IF;\n\n        (* Minimum 500 ms alarm hold. *)\n        IF HoldActive THEN\n            IF CycleTime > T#0s THEN\n                HoldTimer := HoldTimer + CycleTime;\n            END_IF;\n            IF HoldTimer >= T#500ms THEN\n                HoldTimer := T#500ms;\n                IF NOT THICKNESS_FAULT THEN\n                    HoldActive := FALSE;\n                    THICKNESS_ALARM := FALSE;\n                END_IF;\n            END_IF;\n        ELSE\n            IF NOT THICKNESS_FAULT THEN\n                THICKNESS_ALARM := FALSE;\n            END_IF;\n        END_IF;\n\n        (* Normal-cutting runtime accumulation. *)\n        IF CUTTING_RUN AND NOT THICKNESS_FAULT THEN\n            IF CycleTime > T#0s THEN\n                Slab_Runtime_Accumulator := Slab_Runtime_Accumulator + TIME_TO_LTIME(CycleTime);\n            END_IF;\n        END_IF;\n    END_IF;\nEND_IF;\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": null,
+          "message": "Fast compiler exited nonzero; inspect stdout.txt/stderr.txt",
+          "raw": "Fast compiler exited nonzero; inspect stdout.txt/stderr.txt"
+        }
+      ],
+      "elapsed_s": 1.625,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.219,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 1,
+    "passed_ids": [
+      "P12-03"
+    ],
+    "failures": [
+      {
+        "case_id": "P12-01",
+        "cycle": 1,
+        "signal": "THICKNESS_ALARM",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P12-02",
+        "cycle": 1,
+        "signal": "Slab_Fault_Counter",
+        "expected": 1,
+        "actual": 0
+      },
+      {
+        "case_id": "P12-04",
+        "cycle": 1,
+        "signal": "Slab_Runtime_Accumulator",
+        "expected": 1000.0,
+        "actual": 0.0
+      },
+      {
+        "case_id": "P12-05",
+        "cycle": 1,
+        "signal": "THICKNESS_ALARM",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P12-06",
+        "cycle": 1,
+        "signal": "THICKNESS_ALARM",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 15930,
+  "tag": "candidate_2"
+}

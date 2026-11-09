@@ -1,0 +1,70 @@
+{
+  "ok": true,
+  "checks": [
+    {
+      "ok": true,
+      "label": "32/34题题面齐全",
+      "detail": "34 份题面"
+    },
+    {
+      "ok": true,
+      "label": "规约与题面一一对应",
+      "detail": "34 份规约"
+    },
+    {
+      "ok": true,
+      "label": "来源表完整",
+      "detail": "34 行"
+    },
+    {
+      "ok": true,
+      "label": "框架单题入口存在",
+      "detail": "agent/run.py"
+    },
+    {
+      "ok": true,
+      "label": "结果日志为22字段",
+      "detail": "22 fields"
+    },
+    {
+      "ok": true,
+      "label": "四组配置齐全",
+      "detail": "4 份"
+    },
+    {
+      "ok": true,
+      "label": "136份最终运行记录齐全",
+      "detail": "136 result.json"
+    },
+    {
+      "ok": true,
+      "label": "summary可由stats.py重算",
+      "detail": "tools/stats.py"
+    },
+    {
+      "ok": true,
+      "label": "用例≥150且每题有安全用例",
+      "detail": "214 cases, 34/34 security tasks"
+    },
+    {
+      "ok": true,
+      "label": "失败可定位到周期号",
+      "detail": "316 defect rows with cycle field; 72 independent replays"
+    },
+    {
+      "ok": true,
+      "label": "README三条命令",
+      "detail": "3 core command lines"
+    },
+    {
+      "ok": true,
+      "label": "提交包无key、绝对路径或临时文件",
+      "detail": "secrets=0, absolute_paths=0, temp=0"
+    }
+  ],
+  "scan": {
+    "secret_files": [],
+    "absolute_path_files": [],
+    "temporary_files": []
+  }
+}

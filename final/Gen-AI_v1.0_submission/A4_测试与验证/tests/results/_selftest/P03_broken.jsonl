@@ -1,0 +1,6 @@
+{"task_id": "P03", "case_id": "P03-01", "status": "fail", "mismatch": {"cycle": 1, "variable": "hiAlarm", "expected": true, "actual": false}, "latency_s": 0.0}
+{"task_id": "P03", "case_id": "P03-02", "status": "fail", "mismatch": {"cycle": 1, "variable": "hiAlarm", "expected": false, "actual": true}, "latency_s": 0.0}
+{"task_id": "P03", "case_id": "P03-03", "status": "fail", "mismatch": {"cycle": 1, "variable": "hiAlarm", "expected": false, "actual": true}, "latency_s": 0.0}
+{"task_id": "P03", "case_id": "P03-04", "status": "fail", "mismatch": {"cycle": 1, "variable": "error", "expected": true, "actual": false}, "latency_s": 0.0}
+{"task_id": "P03", "case_id": "P03-05", "status": "fail", "mismatch": {"cycle": 1, "variable": "error", "expected": true, "actual": false}, "latency_s": 0.0}
+{"task_id": "P03", "case_id": "P03-06", "status": "fail", "mismatch": {"cycle": 1, "variable": "hiAlarm", "expected": true, "actual": false}, "latency_s": 0.0}

@@ -1,0 +1,70 @@
+{
+  "source": "(*\n 任务: S02 输送线正反转与检修锁\n 扫描周期: 20 ms\n 本文件为 ST 实现，保持给定接口不变。\n\n 语义冲突报告（保留，不声称已验证正确）：\n 1) K4 要求 EStop_NC = FALSE 时立即清空死区计时；而 C9 要求某方向输出为 TRUE 后\n    的 10 个扫描周期内不得出现反向输出。若急停发生时正转正在运行，按 K4 清空\n    死区后，急停解除即可反向，可能在 C9 的 10 周期窗口内出现 MotorRev = TRUE。\n    本实现按 K4 优先（急停清空死区并复位最后方向），C9 在该边界条件下可能被\n    违反。该冲突来自规约本身，未自行新增接口或修改规约。\n 2) 需求 1 要求按钮有效时输出置位；C10 要求上电首周期两方向都不输出。两者在\n    首周期相互冲突；本实现以需求 1 / 判定用例为准，首周期即响应按钮。\n 3) RunLamp 在非检修态的具体行为未在规约中明确约束（仅要求检修态 1 Hz 闪烁）。\n    依据判定用例的观测，本实现取：正常运行态 RunLamp := NOT (MotorFwd OR MotorRev)；\n    检修态按 1 Hz 闪烁（前 25 周期亮、后 25 周期灭）；急停时熄灭。\n 4) K2 原文仅要求“换向”经过 200 ms 死区；判定用例要求“任何停机后再次启动\n    （含同方向重启）”也必须等满 200 ms 死区。本实现按判定用例取更严格行为。\n*)\nFUNCTION_BLOCK FB_S02\nVAR_INPUT\n    FwdBtn : BOOL;\n    RevBtn : BOOL;\n    MaintKey : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MotorFwd : BOOL;\n    MotorRev : BOOL;\n    RunLamp : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    DeadCnt : INT := 0;\n    LastDir : INT := 0;  (* 0 = 无, 1 = 正转, 2 = 反转 *)\n    PrevFwd : BOOL := FALSE;\n    PrevRev : BOOL := FALSE;\n    BlinkCnt : INT := 0;\nEND_VAR\n\n(* 记录上一周期输出，用于下降沿检测 *)\nPrevFwd := MotorFwd;\nPrevRev := MotorRev;\n\n(* 200 ms 死区计时递减（10 个 20 ms 扫描周期） *)\nIF DeadCnt > 0 THEN\n    DeadCnt := DeadCnt - 1;\nEND_IF;\n\n(* 输出默认清零，保证正反转互斥（C4） *)\nMotorFwd := FALSE;\nMotorRev := FALSE;\nRunLamp := FALSE;\n\n(* 优先级：急停 > 检修 > 正常运行 *)\nIF NOT EStop_NC THEN\n    (* C1 / K4：急停当周期两方向断开，清空死区计时 *)\n    MotorFwd := FALSE;\n    MotorRev := FALSE;\n    DeadCnt := 0;\n    LastDir := 0;\n    RunLamp := FALSE;\n    Status := 16#8202;\nELSIF MaintKey THEN\n    (* C2 / C2b / K3：检修锁定两方向输出，运行灯 1 Hz 闪烁 *)\n    MotorFwd := FALSE;\n    MotorRev := FALSE;\n    Status := 16#8201;\n    (* BlinkCnt 为扫描开始时计数（前一周期值），前 25 周期亮、后 25 周期灭 *)\n    IF BlinkCnt < 25 THEN\n        RunLamp := TRUE;\n    ELSE\n        RunLamp := FALSE;\n    END_IF;\nELSE\n    (* 正常运行 *)\n    IF FwdBtn AND NOT RevBtn THEN\n        (* 目标方向：正转 *)\n        IF DeadCnt > 0 THEN\n            (* 处于死区中（含同方向重启），禁止启动（K2 / 判定用例） *)\n            Status := 16#8203;\n        ELSE\n            MotorFwd := TRUE;\n            Status := 16#0000;\n        END_IF;\n    ELSIF RevBtn AND NOT FwdBtn THEN\n        (* 目标方向：反转 *)\n        IF DeadCnt > 0 THEN\n            (* 处于死区中（含同方向重启），禁止启动（K2 / 判定用例） *)\n            Status := 16#8203;\n        ELSE\n            MotorRev := TRUE;\n            Status := 16#0000;\n        END_IF;\n    ELSE\n        (* 无有效方向请求（含两按钮同时按下时的互斥处理） *)\n        Status := 16#0000;\n    END_IF;\n\n    (* 运行灯（非检修态）：电机停止时为 TRUE，电机运行时为 FALSE *)\n    RunLamp := NOT (MotorFwd OR MotorRev);\nEND_IF;\n\n(* 1 Hz 闪烁计数推进：50 周期 = 1 s，半周期 25 周期 = 500 ms *)\nIF BlinkCnt < 49 THEN\n    BlinkCnt := BlinkCnt + 1;\nELSE\n    BlinkCnt := 0;\nEND_IF;\n\n(* 下降沿处理：输出由运行变为停止时，记录最后方向并启动死区（C9 / K2） *)\nIF EStop_NC THEN\n    IF PrevFwd AND NOT MotorFwd THEN\n        LastDir := 1;\n        DeadCnt := 10;\n    END_IF;\n    IF PrevRev AND NOT MotorRev THEN\n        LastDir := 2;\n        DeadCnt := 10;\n    END_IF;\nELSE\n    (* 急停期间死区必须保持为 0（K4） *)\n    DeadCnt := 0;\n    LastDir := 0;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.219,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 16.156,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 1,
+    "passed_ids": [
+      "S02-03"
+    ],
+    "failures": [
+      {
+        "case_id": "S02-01",
+        "cycle": 3,
+        "signal": "RunLamp",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S02-02",
+        "cycle": 2,
+        "signal": "MotorRev",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S02-04",
+        "cycle": 3,
+        "signal": "MotorFwd",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S02-05",
+        "cycle": 1,
+        "signal": "RunLamp",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S02-06",
+        "cycle": 1,
+        "signal": "RunLamp",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

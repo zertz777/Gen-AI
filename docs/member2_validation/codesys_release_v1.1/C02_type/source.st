@@ -1,0 +1,6 @@
+FUNCTION_BLOCK FB_AgentProbeType
+VAR_OUTPUT
+ y : BOOL;
+END_VAR
+y := 'not-a-bool';
+END_FUNCTION_BLOCK

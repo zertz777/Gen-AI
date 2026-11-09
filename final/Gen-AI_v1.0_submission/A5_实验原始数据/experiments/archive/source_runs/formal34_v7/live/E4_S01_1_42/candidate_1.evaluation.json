@@ -1,0 +1,64 @@
+{
+  "source": "FUNCTION_BLOCK FB_S01\nVAR_INPUT\n    StartBtn : BOOL;\n    LeftPartPresent : BOOL;\n    RightPartPresent : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    ClampLeft : BOOL := FALSE;\n    ClampRight : BOOL := FALSE;\n    Busy : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    StartBtnLast : BOOL := FALSE;\n    StartRise : BOOL := FALSE;\n    StartupScans : USINT := 0;\n    PendingLeft : BOOL := FALSE;\n    PendingRight : BOOL := FALSE;\nEND_VAR\n\n(*\n需求原文：\n双工位气动夹具用于同时定位两个零件，但气源只有一路，\n因此两个夹具不能同时动作。\n\n控制要求：\n1. StartBtn 为上升沿触发：若左工位有零件\n   （LeftPartPresent = TRUE）而右夹具未在夹紧，\n   则左夹具 ClampLeft 夹紧；右侧对称。\n2. 夹紧动作只做一次保持，不随 StartBtn 电平反复动作；\n   要松开必须由同一按钮在另一工位动作时自动让位\n   （即后启动的工位会等待）。\n3. 任一工位没有零件（对应 PartPresent = FALSE）时，\n   该侧不允许夹紧。\n4. EStop_NC = FALSE（急停）时两侧夹具立即松开，\n   ClampLeft 与 ClampRight 同时为 FALSE，并清空忙标志。\n5. 任一时刻 ClampLeft 与 ClampRight 不得同时为 TRUE。\n6. Busy 表示当前已有工位在夹紧过程中；\n   Status 输出 16#0000 正常、16#8101 两侧同时请求、\n   16#8102 急停中。\n\n扫描周期：20 ms。\n\n语义冲突及待审事项：\n- 初态之外，C10 的 G[0,1] 还要求前两个扫描输出全为 FALSE，\n  与需求1未限定启动时段的立即夹紧存在冲突。\n  本实现优先满足 C10；此期间仅更新按钮历史，不缓存启动。\n- 需求2的“要松开必须”与零件离位及急停强制松开冲突；\n  本实现优先满足 C1、C2、C2b。\n- 需求1禁止对侧夹紧时直接启动，需求2要求等待和自动让位。\n  本实现将请求与夹紧分开：单侧请求使旧侧松开并保留请求，\n  后一扫描在安全条件仍成立时夹紧新侧。\n  原文未指定等待时长、夹紧完成反馈或气动释放时间；\n  此扫描分离不代表气动机构已经完成释放，该时序需要审定。\n- 两侧同时请求的仲裁、状态保持时长和 Busy 完成判据未定义。\n  本实现不仲裁同时请求，保持已有合法夹紧；\n  16#8101 表示当扫描的冲突上升沿，Busy 表示夹紧或等待请求。\n上述解释仍需逐周期测试及需求审定；未声称编译或功能已验证。\n*)\n\n(* 每个扫描都更新边沿历史，包括急停和启动禁止期间。 *)\nStartRise := StartBtn AND NOT StartBtnLast;\nStartBtnLast := StartBtn;\n\nStatus := WORD#16#0000;\n\n(* 零件离位立即解除该侧夹紧及其等待请求。 *)\nIF NOT LeftPartPresent THEN\n    ClampLeft := FALSE;\n    PendingLeft := FALSE;\nEND_IF;\n\nIF NOT RightPartPresent THEN\n    ClampRight := FALSE;\n    PendingRight := FALSE;\nEND_IF;\n\nIF NOT EStop_NC THEN\n    ClampLeft := FALSE;\n    ClampRight := FALSE;\n    PendingLeft := FALSE;\n    PendingRight := FALSE;\n    Busy := FALSE;\n    Status := WORD#16#8102;\n\nELSIF StartupScans < 2 THEN\n    ClampLeft := FALSE;\n    ClampRight := FALSE;\n    PendingLeft := FALSE;\n    PendingRight := FALSE;\n    Busy := FALSE;\n\n    IF StartRise AND LeftPartPresent AND RightPartPresent THEN\n        Status := WORD#16#8101;\n    END_IF;\n\nELSE\n    (* 异常互斥状态采取两侧释放，不暗中选择某一侧。 *)\n    IF ClampLeft AND ClampRight THEN\n        ClampLeft := FALSE;\n        ClampRight := FALSE;\n        PendingLeft := FALSE;\n        PendingRight := FALSE;\n        Status := WORD#16#8101;\n    END_IF;\n\n    IF PendingLeft AND PendingRight THEN\n        PendingLeft := FALSE;\n        PendingRight := FALSE;\n        Status := WORD#16#8101;\n    END_IF;\n\n    (* 执行前一扫描留下的让位请求；输出与请求均受到位约束。 *)\n    IF PendingLeft THEN\n        IF LeftPartPresent AND NOT ClampRight THEN\n            ClampLeft := TRUE;\n            PendingLeft := FALSE;\n        END_IF;\n    ELSIF PendingRight THEN\n        IF RightPartPresent AND NOT ClampLeft THEN\n            ClampRight := TRUE;\n            PendingRight := FALSE;\n        END_IF;\n    END_IF;\n\n    IF StartRise THEN\n        IF LeftPartPresent AND RightPartPresent THEN\n            (* 无规定的优先工位：拒绝新增动作，保留合法保持。 *)\n            Status := WORD#16#8101;\n\n        ELSIF LeftPartPresent THEN\n            PendingRight := FALSE;\n            IF ClampRight THEN\n                ClampRight := FALSE;\n                PendingLeft := TRUE;\n            ELSE\n                ClampLeft := TRUE;\n                PendingLeft := FALSE;\n            END_IF;\n\n        ELSIF RightPartPresent THEN\n            PendingLeft := FALSE;\n            IF ClampLeft THEN\n                ClampLeft := FALSE;\n                PendingRight := TRUE;\n            ELSE\n                ClampRight := TRUE;\n                PendingRight := FALSE;\n            END_IF;\n        END_IF;\n    END_IF;\n\n    Busy := ClampLeft OR ClampRight OR PendingLeft OR PendingRight;\nEND_IF;\n\n(* C10 以扫描索引 0、1 解释；急停不重新启动上电计数。 *)\nIF StartupScans < 2 THEN\n    StartupScans := StartupScans + 1;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.266,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 25.797,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 2,
+    "passed_ids": [
+      "S01-03",
+      "S01-06"
+    ],
+    "failures": [
+      {
+        "case_id": "S01-01",
+        "cycle": 1,
+        "signal": "ClampLeft",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S01-02",
+        "cycle": 1,
+        "signal": "ClampRight",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S01-04",
+        "cycle": 1,
+        "signal": "ClampLeft",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S01-05",
+        "cycle": 2,
+        "signal": "Status",
+        "expected": 33025,
+        "actual": 0
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3495,
+  "tag": "candidate_1"
+}

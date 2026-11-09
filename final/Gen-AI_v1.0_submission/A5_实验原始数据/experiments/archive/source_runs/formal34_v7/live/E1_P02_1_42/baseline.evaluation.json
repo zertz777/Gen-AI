@@ -1,0 +1,39 @@
+{
+  "source": "FUNCTION_BLOCK FB_P02\nVAR_INPUT\n    value : DWORD;\nEND_VAR\nVAR_OUTPUT\n    hasChanged : BOOL;\n    hasRisingEdges : BOOL;\n    risingBits : DWORD;\n    noOfRisingBits : USINT;\n    hasFallingEdges : BOOL;\n    fallingBits : DWORD;\n    noOfFallingBits : USINT;\nEND_VAR\nVAR\n    (* 内部状态：上一周期保存的输入值，初态 16#00000000 *)\n    lastValue : DWORD := 16#00000000;\n    (* 上电首周期标志：首周期没有“上一周期”可比，禁止上报任何变化 *)\n    firstScan : BOOL := TRUE;\n    (* 位计数用局部量 *)\n    i : INT;\n    tempBits : DWORD;\n    cnt : USINT;\nEND_VAR\n\n(* K4 / C10: 上电后的第一个扫描周期，统一复位/清零并只记录本周期值 *)\nIF firstScan THEN\n    hasChanged := FALSE;\n    hasRisingEdges := FALSE;\n    hasFallingEdges := FALSE;\n    risingBits := 16#00000000;\n    fallingBits := 16#00000000;\n    noOfRisingBits := 0;\n    noOfFallingBits := 0;\n    lastValue := value;\n    firstScan := FALSE;\nELSE\n    (* K1: 每个扫描周期只做一次比较：本周期 value 与上一周期保存的 lastValue *)\n    hasChanged := (value <> lastValue);\n\n    (* K2: 上升沿位流只在本周期为 1 且上周期为 0 的位上置 1 *)\n    risingBits := value AND (NOT lastValue);\n    (* K2: 下降沿位流只在本周期为 0 且上周期为 1 的位上置 1 *)\n    fallingBits := (NOT value) AND lastValue;\n\n    (* C2 / C2b: 边沿标志与 hasChanged 必须同源一致 *)\n    IF risingBits <> 16#00000000 THEN\n        hasRisingEdges := TRUE;\n    ELSE\n        hasRisingEdges := FALSE;\n    END_IF;\n\n    IF fallingBits <> 16#00000000 THEN\n        hasFallingEdges := TRUE;\n    ELSE\n        hasFallingEdges := FALSE;\n    END_IF;\n\n    (* K3 / C8: 计数必须等于对应位流中 1 的个数；无变化时自然为 0 *)\n    cnt := 0;\n    tempBits := risingBits;\n    FOR i := 0 TO 31 DO\n        IF (tempBits AND 16#00000001) <> 16#00000000 THEN\n            cnt := cnt + 1;\n        END_IF;\n        tempBits := SHR(tempBits, 1);\n    END_FOR;\n    noOfRisingBits := cnt;\n\n    cnt := 0;\n    tempBits := fallingBits;\n    FOR i := 0 TO 31 DO\n        IF (tempBits AND 16#00000001) <> 16#00000000 THEN\n            cnt := cnt + 1;\n        END_IF;\n        tempBits := SHR(tempBits, 1);\n    END_FOR;\n    noOfFallingBits := cnt;\n\n    (* 保存本周期值，供下一周期比较（每周期仅一次状态更新） *)\n    lastValue := value;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.234,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 15.266,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P02-01",
+      "P02-02",
+      "P02-03",
+      "P02-04",
+      "P02-05",
+      "P02-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

@@ -1,0 +1,81 @@
+task_id: P16
+title: Flexible Processing Control
+difficulty: hard
+category: C
+requirement: |-
+  An automated production line consists of 5 workstations: numbered 1# to 5# from left to right. The 1# station is used for raw material loading, stations 2# to 4# are used for product processing, and the 5# station is used for finished product output and storage.
+  There is a motor in the production line, responsible for moving the product from one workstation to the next. Each workstation has a sensor (used to detect if the product has arrived).
+  Each product has a different sequence and number of processing steps, specified by the process sequence 'processSequence'. The processSequence is an array type, storing the sequence numbers of the workstations, and the system automatically sends the raw materials to the corresponding workstation for processing based on the station number.
+  Control requirements:
+  At the start of production, when the sensor at the 1# station (sensor1) detects the raw material, the start button at the 1# station (station1Start) is pressed. The system queries the first element of the process sequence 'processSequence', starts the conveyor to move the raw material to the corresponding workstation, and stops after delivery. Upon receiving the processing completion signal from the corresponding workstation (station2Complete to station4Complete), it continues to query the next element of the process sequence 'processSequence', determines the direction of the conveyor, and starts the conveyor (conveyorLeft, conveyorRight). This continues until the product is delivered to the 5# workstation.
+
+  processLength specifies the active sequence length, from 1 through 8, starting at processSequence[1]. The final active entry is output station 5; other active entries are processing stations 2 through 4. The caller supplies a sequence satisfying this contract.
+
+  中文摘要：柔性加工线：按工艺序列 processSequence 把工件依次送到指定工位加工，5 个工位、输送机左右互斥。
+
+  扫描周期：20 ms（全组统一，见 docs/tasks_note.md）
+io_table:
+  - direction: IN
+    name: processLength
+    data_type: USINT
+    description: Active process-sequence length, 1..8; the final active entry must be station 5.
+  - direction: IN
+    name: sensor1
+    data_type: BOOL
+    description: "Sensor at 1# station"
+  - direction: IN
+    name: sensor2
+    data_type: BOOL
+    description: "Sensor at 2# station"
+  - direction: IN
+    name: sensor3
+    data_type: BOOL
+    description: "Sensor at 3# station"
+  - direction: IN
+    name: sensor4
+    data_type: BOOL
+    description: "Sensor at 4# station"
+  - direction: IN
+    name: sensor5
+    data_type: BOOL
+    description: "Sensor at 5# station"
+  - direction: IN
+    name: station1Start
+    data_type: BOOL
+    description: "Start button at 1# station"
+  - direction: IN
+    name: station2Complete
+    data_type: BOOL
+    description: "Processing completion signal at 2# station"
+  - direction: IN
+    name: station3Complete
+    data_type: BOOL
+    description: "Processing completion signal at 3# station"
+  - direction: IN
+    name: station4Complete
+    data_type: BOOL
+    description: "Processing completion signal at 4# station"
+  - direction: IN
+    name: processSequence
+    data_type: ARRAY[1..8] OF USINT
+    description: Processing sequence
+  - direction: OUT
+    name: conveyorLeft
+    data_type: BOOL
+    description: Conveyor turns left
+  - direction: OUT
+    name: conveyorRight
+    data_type: BOOL
+    description: Conveyor turns right
+initial_state: conveyorLeft = FALSE；conveyorRight = FALSE；工步索引 = 0；各工位空闲。
+constraints:
+  - K1 每件工件的前 processLength 个工位号来自 processSequence，按数组顺序依次加工，不得跳过或乱序。
+  - K2 conveyorLeft 与 conveyorRight 互斥，任何时刻不得同时为 TRUE。
+  - K3 只有目标工位的到位传感器为 TRUE 且该工位加工完成信号有效时，才允许启动下一段输送。
+  - K4 processLength 超出数组范围或工位号不在 1—5 时置错误状态并停止输送。
+provenance: 课程公共题库 P16（Flexible Processing Control）；原文导入、变量名与需求未做任何改动；来源与审核记录见 data/provenance.csv 第 17 行
+spec_ref: data/specs/P16.ltl
+error_examples:
+  - 错误实现：忽略 processLength，把 8 个元素全部执行。症状——数组尾部残留的 0 被当作工位号，输送机空转到不存在的工位。
+  - 错误实现：左右输送不互斥。症状——切换瞬间两个方向同时输出，机械卡死。
+notes: ""

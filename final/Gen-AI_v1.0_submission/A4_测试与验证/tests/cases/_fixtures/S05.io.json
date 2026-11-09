@@ -1,0 +1,45 @@
+{
+  "task_id": "S05",
+  "io": [
+    {
+      "name": "FlowPulse",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "ShiftReset",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "CycleTime",
+      "direction": "IN",
+      "type": "TIME"
+    },
+    {
+      "name": "TotalVolume",
+      "direction": "OUT",
+      "type": "LREAL"
+    },
+    {
+      "name": "ShiftVolume",
+      "direction": "OUT",
+      "type": "LREAL"
+    },
+    {
+      "name": "PulseCount",
+      "direction": "OUT",
+      "type": "UDINT"
+    },
+    {
+      "name": "OverflowFlag",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "Status",
+      "direction": "OUT",
+      "type": "WORD"
+    }
+  ]
+}

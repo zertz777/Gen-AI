@@ -1,0 +1,9 @@
+{"task_id": "P19", "case_id": "P19-01", "status": "fail", "mismatch": {"cycle": 1, "variable": "MoveDown", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "P19", "case_id": "P19-02", "status": "fail", "mismatch": {"cycle": 1, "variable": "MoveDown", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "P19", "case_id": "P19-03", "status": "fail", "mismatch": {"cycle": 1, "variable": "MoveDown", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "P19", "case_id": "P19-04", "status": "fail", "mismatch": {"cycle": 1, "variable": "MoveDown", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "P19", "case_id": "P19-05", "status": "fail", "mismatch": {"cycle": 1, "variable": "MoveDown", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "P19", "case_id": "P19-06", "status": "pass", "mismatch": null, "latency_s": 0.001}
+{"task_id": "P19", "case_id": "P19-07", "status": "pass", "mismatch": null, "latency_s": 0.001}
+{"task_id": "P19", "case_id": "P19-08", "status": "pass", "mismatch": null, "latency_s": 0.001}
+{"task_id": "P19", "case_id": "P19-09", "status": "fail", "mismatch": {"cycle": 1, "variable": "MoveDown", "expected": true, "actual": false}, "latency_s": 0.001}

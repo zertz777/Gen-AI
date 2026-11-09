@@ -1,0 +1,4 @@
+case_id,cycle,hasChanged,hasRisingEdges,risingBits,noOfRisingBits,hasFallingEdges,fallingBits,noOfFallingBits
+P02-05,1,FALSE,FALSE,16#00000000,0,FALSE,16#00000000,0
+P02-05,2,FALSE,FALSE,16#00000000,0,FALSE,16#00000000,0
+P02-05,3,TRUE,FALSE,16#00000000,0,TRUE,16#00000001,1

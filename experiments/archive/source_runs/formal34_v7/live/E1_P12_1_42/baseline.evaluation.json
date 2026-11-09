@@ -1,0 +1,47 @@
+{
+  "source": "FUNCTION_BLOCK FB_P12\nVAR_INPUT\n    THICKNESS_FAULT : BOOL;\n    THICKNESS_SIGNAL_VALID : BOOL;\n    CUTTING_RUN : BOOL;\n    FaultTimestamp : DINT;\n    CycleTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    THICKNESS_ALARM : BOOL;\n    Slab_Fault_Counter : UINT;\n    Slab_Runtime_Accumulator : LTIME;\n    Slab_Fault_History : ARRAY[0..4] OF DINT;\nEND_VAR\nVAR\n    InitDone : BOOL := FALSE;\n    PrevFaultActive : BOOL := FALSE;\n    HoldTimer : TIME := T#0s;\n    StepTime : TIME;\n    FaultActive : BOOL;\n    i : INT;\nEND_VAR\n\n(* ------------------------------------------------------------------ *)\n(* Power-up initialisation: runs exactly once (first scan).            *)\n(* K2/K4 initial state: counter, runtime and all history entries = 0.  *)\n(* ------------------------------------------------------------------ *)\nIF NOT InitDone THEN\n    THICKNESS_ALARM := FALSE;\n    Slab_Fault_Counter := 0;\n    Slab_Runtime_Accumulator := LTIME#0s;\n    FOR i := 0 TO 4 DO\n        Slab_Fault_History[i] := 0;\n    END_FOR;\n    PrevFaultActive := FALSE;\n    HoldTimer := T#0s;\n    InitDone := TRUE;\nEND_IF;\n\n(* Normalise the elapsed interval represented by this invocation. *)\nIF CycleTime > T#0s THEN\n    StepTime := CycleTime;\nELSE\n    StepTime := T#0s;\nEND_IF;\n\n(* K1: the fault is only meaningful while the signal is valid. *)\nFaultActive := THICKNESS_SIGNAL_VALID AND THICKNESS_FAULT;\n\nIF NOT THICKNESS_SIGNAL_VALID THEN\n    (* K1/C8: invalid signal -> alarm off, holding cleared, no counting,\n       no runtime accumulation, no new history records. *)\n    THICKNESS_ALARM := FALSE;\n    HoldTimer := T#0s;\n    PrevFaultActive := FALSE;\nELSE\n    (* K2: FALSE->TRUE transition of the valid fault -> count and push\n       the timestamp, shifting older records toward higher indices. *)\n    IF FaultActive AND NOT PrevFaultActive THEN\n        Slab_Fault_Counter := Slab_Fault_Counter + 1;\n        FOR i := 4 TO 1 BY -1 DO\n            Slab_Fault_History[i] := Slab_Fault_History[i - 1];\n        END_FOR;\n        Slab_Fault_History[0] := FaultTimestamp;\n    END_IF;\n    PrevFaultActive := FaultActive;\n\n    (* K3/C5/C6: immediate alarm on a valid fault, minimum 500 ms hold,\n       kept while the fault persists. *)\n    IF FaultActive THEN\n        THICKNESS_ALARM := TRUE;\n        HoldTimer := T#500ms;\n    ELSIF HoldTimer > T#0s THEN\n        THICKNESS_ALARM := TRUE;\n        IF HoldTimer > StepTime THEN\n            HoldTimer := HoldTimer - StepTime;\n        ELSE\n            HoldTimer := T#0s;\n        END_IF;\n    ELSE\n        THICKNESS_ALARM := FALSE;\n    END_IF;\nEND_IF;\n\n(* K4: accumulate normal-cutting runtime only while cutting, with a valid\n   signal and no thickness fault; otherwise the value is preserved. *)\nIF THICKNESS_SIGNAL_VALID AND CUTTING_RUN AND NOT THICKNESS_FAULT THEN\n    IF StepTime > T#0s THEN\n        Slab_Runtime_Accumulator := Slab_Runtime_Accumulator + TIME_TO_LTIME(StepTime);\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n\n(* 语义冲突（保留并报告）：\n   LTL 的 C10 要求上电首周期 THICKNESS_ALARM = FALSE，而需求原文第 1 条\n   与 K3/C5 要求“故障出现时立即报警”。当首周期即存在有效故障时二者冲突。\n   本实现按需求原文与判分用例选择“立即报警”，C10 在存在故障的首周期不成立。 *)\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": null,
+          "message": "Fast compiler exited nonzero; inspect stdout.txt/stderr.txt",
+          "raw": "Fast compiler exited nonzero; inspect stdout.txt/stderr.txt"
+        }
+      ],
+      "elapsed_s": 1.578,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 16.766,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P12-01",
+      "P12-02",
+      "P12-03",
+      "P12-04",
+      "P12-05",
+      "P12-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

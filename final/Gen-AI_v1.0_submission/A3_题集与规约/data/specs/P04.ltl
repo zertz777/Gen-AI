@@ -1,0 +1,10 @@
+# task: P04
+# meta: easy / D 故障与安全
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(!PASTE_E_STOP_NC -> !VFD_RUN)    -- 急停动作当周期泵必须停（急停优先于一切）（K1）
+C2: G(VFD_RUN -> (PASTE_E_STOP_NC && VISCOSITY_OK))    -- 泵运行的许可条件：无急停且粘度合格（K3）
+C7: G(!VISCOSITY_OK -> X(!VFD_RUN))    -- 粘度条件失效后下一周期必须停泵（去抖计时作废）（K2/K3）
+C8: G(PUMP_MAINT_DUE -> X(PUMP_MAINT_DUE))    -- 维护提示置位后不得自行消失（只作信息输出）（K5）
+C10: G[0,1](!VFD_RUN && !PUMP_MAINT_DUE)    -- 上电首周期泵不运行、维护提示不亮（初态）

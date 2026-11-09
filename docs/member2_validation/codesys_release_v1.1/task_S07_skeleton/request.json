@@ -1,0 +1,9 @@
+{
+  "case_id": "task_S07_skeleton",
+  "source": ".\\validation\\codesys_release_v1.1\\task_S07_skeleton\\source.st",
+  "project": ".\\validation\\codesys_release_v1.1\\task_S07_skeleton\\compile.project",
+  "result": ".\\validation\\codesys_release_v1.1\\task_S07_skeleton\\result.json",
+  "source_sha256": "11a085f8da516845c35b99e5d45fba49a61c0d9ea0c6d4ca05b10ad1d73cc4cc",
+  "application": "Application",
+  "task_card": ".\\validation\\codesys_release_v1.1\\task_S07_skeleton\\task_card.json"
+}

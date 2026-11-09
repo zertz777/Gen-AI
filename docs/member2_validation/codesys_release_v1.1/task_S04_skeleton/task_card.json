@@ -1,0 +1,125 @@
+{
+  "task_id": "S04",
+  "title": "称重零点漂移补偿",
+  "difficulty": "medium",
+  "category": "B",
+  "requirement": "称重传感器长时间运行会出现零点漂移，需要在空秤时重新标定零点。\n\n控制要求：\n1. ZeroBtn 的上升沿把当前 RawWeight 采样为零点 ZeroOffset，同时清 DriftAlarm。\n2. CompensatedWeight = (RawWeight - ZeroOffset) * 0.01（单位 kg，0.01 为标定系数），每个扫描周期更新。\n3. 当 (RawWeight - ZeroOffset) 的绝对值超过 200（即 2 kg）时置 DriftAlarm = TRUE；回到 ±150 以内才复位（滞回）。\n4. 上电时 ZeroOffset = 0，DriftAlarm = FALSE。\n5. Status：16#0000 正常、16#8401 零点漂移、16#8402 采样值超量程（RawWeight 超出 -32768..32767 的可用段）。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）",
+  "io_table": [
+    {
+      "direction": "IN",
+      "name": "RawWeight",
+      "data_type": "INT",
+      "description": "称重传感器原始值"
+    },
+    {
+      "direction": "IN",
+      "name": "ZeroBtn",
+      "data_type": "BOOL",
+      "description": "零点标定按钮（上升沿有效）"
+    },
+    {
+      "direction": "IN",
+      "name": "CalibWeight",
+      "data_type": "REAL",
+      "description": "标准砝码重量（kg），仅作显示"
+    },
+    {
+      "direction": "OUT",
+      "name": "CompensatedWeight",
+      "data_type": "REAL",
+      "description": "补偿后的重量（kg）"
+    },
+    {
+      "direction": "OUT",
+      "name": "ZeroOffset",
+      "data_type": "INT",
+      "description": "当前零点原始值"
+    },
+    {
+      "direction": "OUT",
+      "name": "DriftAlarm",
+      "data_type": "BOOL",
+      "description": "零点漂移报警"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "状态码"
+    }
+  ],
+  "initial_state": "ZeroOffset = 0；CompensatedWeight = 0.0；DriftAlarm = FALSE；Status = 16#0000；ZeroBtnLast = FALSE。",
+  "constraints": [
+    "K1 ZeroOffset 只在 ZeroBtn 上升沿更新，按住或松开时保持不变。",
+    "K2 CompensatedWeight 每周期按 (RawWeight - ZeroOffset) * 0.01 计算，不使用上一周期的结果。",
+    "K3 漂移判据带 50 单位滞回：超过 ±200 置位，回到 ±150 内复位。",
+    "K4 上电后未标定前 ZeroOffset 必须为 0，不得沿用断电前的值。"
+  ],
+  "provenance": "改编自公开题（P08 Analog Batch Processing（课程题库））；改编点：借用其「原始值 → 工程量」的线性换算，加入零点标定与漂移报警，去掉多通道批量处理；为什么这样改：单通道的标定问题更接近现场调试场景，且能把「边沿触发 + 滞回」两种时序约束同时考出来；来源与审核记录见 data/provenance.csv 第 25 行",
+  "spec_ref": "data/specs/S04.ltl",
+  "error_examples": [
+    "错误实现：ZeroOffset 在 ZeroBtn 为 TRUE 的每个周期都采样。症状——操作员按住按钮时，秤上已放砝码，零点被标成砝码重量。",
+    "错误实现：没有滞回。症状——RawWeight 在 200 边界抖动时 DriftAlarm 每周期翻转。"
+  ],
+  "notes": "",
+  "spec_text": "# task: S04\n# meta: medium / B 模拟量与数据处理\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n#\n# 命题映射（I/O 名 -> 派生命题）：\n# alias: zeroDelta := RawWeight - ZeroOffset\n# alias: driftOut := RawWeight - ZeroOffset >= 200 || ZeroOffset - RawWeight >= 200\n# alias: driftBack := RawWeight - ZeroOffset <= 150 && ZeroOffset - RawWeight <= 150\n#\n# note: 称重补偿属模拟量处理，题目未设急停；信号断线/失效的降级由 tests/cases/S04.csv 覆盖，规约层只约束换算与滞回。\n\nC4: G(CompensatedWeight == (RawWeight - ZeroOffset) * 0.01)    -- 输出必须等于换算式（不得沿用上一周期的结果）（K2）\nC2: G(DriftAlarm -> driftOut)    -- 报警的前提是偏差确实超限（不得空报）（K3）\nC6: G(DriftAlarm -> (DriftAlarm W driftBack))    -- 偏差回落到 ±150 以内才允许撤警（滞回保持）（K3）\nC7: G(DriftAlarm && driftBack -> X(!DriftAlarm))    -- 偏差回到 ±150 死区内就必须下一周期撤报（不得滞留）（K3）\nC10: G[0,1](ZeroOffset == 0 && !DriftAlarm && CompensatedWeight == 0.0)    -- 上电首周期零点为 0、无报警（K4）\n",
+  "spec_sha256": "ce6e2c2f95e5d7e4f2b1bc071cac34527246bad63f17be136943f37341a0325b",
+  "task_version": "eb09d756",
+  "task_sha256": "eb09d756777097852b58b6747d731c7845fa4e7228d36b02fec7461b87ff36a2",
+  "source_path": "data/tasks/S04.yaml",
+  "degraded": false,
+  "missing_fields": [],
+  "warnings": [],
+  "semantic_warnings": [],
+  "interface_io_table": [
+    {
+      "direction": "IN",
+      "name": "RawWeight",
+      "data_type": "INT",
+      "description": "称重传感器原始值"
+    },
+    {
+      "direction": "IN",
+      "name": "ZeroBtn",
+      "data_type": "BOOL",
+      "description": "零点标定按钮（上升沿有效）"
+    },
+    {
+      "direction": "IN",
+      "name": "CalibWeight",
+      "data_type": "REAL",
+      "description": "标准砝码重量（kg），仅作显示"
+    },
+    {
+      "direction": "OUT",
+      "name": "CompensatedWeight",
+      "data_type": "REAL",
+      "description": "补偿后的重量（kg）"
+    },
+    {
+      "direction": "OUT",
+      "name": "ZeroOffset",
+      "data_type": "INT",
+      "description": "当前零点原始值"
+    },
+    {
+      "direction": "OUT",
+      "name": "DriftAlarm",
+      "data_type": "BOOL",
+      "description": "零点漂移报警"
+    },
+    {
+      "direction": "OUT",
+      "name": "Status",
+      "data_type": "WORD",
+      "description": "状态码"
+    }
+  ],
+  "type_declarations": "",
+  "type_origins": {},
+  "pou_name": "FB_S04",
+  "pou_kind": "FUNCTION_BLOCK",
+  "dialect_requirements": [],
+  "skeleton_compiled": false,
+  "scan_cycle_ms": 20
+}

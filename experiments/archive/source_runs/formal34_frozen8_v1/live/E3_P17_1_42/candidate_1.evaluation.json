@@ -1,0 +1,107 @@
+{
+  "source": "TYPE ST_Recipe :\nSTRUCT\n    recipeID : INT;\n    ingredientType : INT;\n    ingredientRatio : REAL;\n    productionTemperature : REAL;\nEND_STRUCT\nEND_TYPE\n\nFUNCTION_BLOCK FB_P17\nVAR_INPUT\n    addRecipe : BOOL;\n    deleteRecipe : BOOL;\n    modifyRecipe : BOOL;\n    queryRecipe : BOOL;\n    recipeIn : ST_Recipe;\n    (* io_table additionally lists these as IN; kept and used as fallback when recipeIn.recipeID = 0 *)\n    recipeID : INT;\n    ingredientType : INT;\n    ingredientRatio : REAL;\n    productionTemperature : REAL;\nEND_VAR\nVAR_OUTPUT\n    recipeAdded : BOOL;\n    recipeDeleted : BOOL;\n    recipeModified : BOOL;\n    recipeQueryResult : ST_Recipe;\n    error : BOOL;\n    status : WORD;\nEND_VAR\nVAR_IN_OUT\n    recipe : ARRAY[1..10] OF ST_Recipe;\nEND_VAR\nVAR\n    prevAdd : BOOL;\n    prevDelete : BOOL;\n    prevModify : BOOL;\n    prevQuery : BOOL;\n    initialized : BOOL;\n    riseAdd : BOOL;\n    riseDelete : BOOL;\n    riseModify : BOOL;\n    riseQuery : BOOL;\n    inputRecipe : ST_Recipe;\n    i : INT;\n    idx : INT;\n    emptyIndex : INT;\n    duplicate : BOOL;\n    found : BOOL;\nEND_VAR\n\nIF NOT initialized THEN\n    (* C10: power-up scan must have no error and no success flags *)\n    recipeAdded := FALSE;\n    recipeDeleted := FALSE;\n    recipeModified := FALSE;\n    error := FALSE;\n    status := 16#0000;\n    recipeQueryResult.recipeID := 0;\n    recipeQueryResult.ingredientType := 0;\n    recipeQueryResult.ingredientRatio := 0.0;\n    recipeQueryResult.productionTemperature := 0.0;\n    prevAdd := FALSE;\n    prevDelete := FALSE;\n    prevModify := FALSE;\n    prevQuery := FALSE;\n    initialized := TRUE;\nELSE\n    (* success flags are pulse outputs: one scan cycle per successful request *)\n    recipeAdded := FALSE;\n    recipeDeleted := FALSE;\n    recipeModified := FALSE;\n\n    (* rising-edge request detection *)\n    riseAdd := addRecipe AND NOT prevAdd;\n    riseDelete := deleteRecipe AND NOT prevDelete;\n    riseModify := modifyRecipe AND NOT prevModify;\n    riseQuery := queryRecipe AND NOT prevQuery;\n\n    prevAdd := addRecipe;\n    prevDelete := deleteRecipe;\n    prevModify := modifyRecipe;\n    prevQuery := queryRecipe;\n\n    (* preserve ST_Recipe mapping; use separate INs only as compatibility fallback *)\n    inputRecipe := recipeIn;\n    IF inputRecipe.recipeID = 0 AND recipeID <> 0 THEN\n        inputRecipe.recipeID := recipeID;\n        inputRecipe.ingredientType := ingredientType;\n        inputRecipe.ingredientRatio := ingredientRatio;\n        inputRecipe.productionTemperature := productionTemperature;\n    END_IF;\n\n    IF riseAdd OR riseDelete OR riseModify OR riseQuery THEN\n        error := FALSE;\n        status := 16#0000;\n\n        IF riseAdd THEN\n            duplicate := FALSE;\n            emptyIndex := 0;\n\n            IF inputRecipe.recipeID = 0 THEN\n                (* 0 denotes an empty slot, so it is not a valid recipe number for add *)\n                duplicate := TRUE;\n            END_IF;\n\n            FOR i := 1 TO 10 DO\n                IF recipe[i].recipeID <> 0 AND recipe[i].recipeID = inputRecipe.recipeID THEN\n                    duplicate := TRUE;\n                    EXIT;\n                END_IF;\n                IF recipe[i].recipeID = 0 AND emptyIndex = 0 THEN\n                    emptyIndex := i;\n                END_IF;\n            END_FOR;\n\n            IF duplicate THEN\n                error := TRUE;\n                status := 16#8002;\n            ELSIF emptyIndex = 0 THEN\n                error := TRUE;\n                status := 16#8003;\n            ELSE\n                recipe[emptyIndex] := inputRecipe;\n                recipeAdded := TRUE;\n                error := FALSE;\n                status := 16#0000;\n            END_IF;\n\n        ELSIF riseDelete THEN\n            found := FALSE;\n            idx := 0;\n\n            FOR i := 1 TO 10 DO\n                IF recipe[i].recipeID <> 0 AND recipe[i].recipeID = inputRecipe.recipeID THEN\n                    found := TRUE;\n                    idx := i;\n                    EXIT;\n                END_IF;\n            END_FOR;\n\n            IF found THEN\n                recipe[idx].recipeID := 0;\n                recipe[idx].ingredientType := 0;\n                recipe[idx].ingredientRatio := 0.0;\n                recipe[idx].productionTemperature := 0.0;\n                recipeDeleted := TRUE;\n                error := FALSE;\n                status := 16#0000;\n            ELSE\n                error := TRUE;\n                status := 16#8004;\n            END_IF;\n\n        ELSIF riseModify THEN\n            found := FALSE;\n            idx := 0;\n\n            FOR i := 1 TO 10 DO\n                IF recipe[i].recipeID <> 0 AND recipe[i].recipeID = inputRecipe.recipeID THEN\n                    found := TRUE;\n                    idx := i;\n                    EXIT;\n                END_IF;\n            END_FOR;\n\n            IF found THEN\n                recipe[idx] := inputRecipe;\n                recipeModified := TRUE;\n                error := FALSE;\n                status := 16#0000;\n            ELSE\n                error := TRUE;\n                status := 16#8005;\n            END_IF;\n\n        ELSIF riseQuery THEN\n            found := FALSE;\n\n            FOR i := 1 TO 10 DO\n                IF recipe[i].recipeID <> 0 AND recipe[i].recipeID = inputRecipe.recipeID THEN\n                    recipeQueryResult := recipe[i];\n                    found := TRUE;\n                    EXIT;\n                END_IF;\n            END_FOR;\n\n            IF found THEN\n                error := FALSE;\n                status := 16#0000;\n            ELSE\n                error := TRUE;\n                status := 16#8001;\n            END_IF;\n        END_IF;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 7,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P17_1_42\\tools\\candidate_1\\fast\\source.st:7-10..8-1: error: ';' missing at end of data type declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E3_P17_1_42\\tools\\candidate_1\\fast\\source.st:7-10..8-1: error: ';' missing at end of data type declaration."
+        }
+      ],
+      "elapsed_s": 0.234,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 28.797,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 8,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "P17-01",
+        "cycle": 1,
+        "signal": "recipeQueryResult",
+        "expected": {
+          "recipeID": 1,
+          "ingredientType": 10,
+          "ingredientRatio": 0.5,
+          "productionTemperature": 100.0
+        },
+        "actual": {
+          "ingredientRatio": 0.0,
+          "ingredientType": 0,
+          "productionTemperature": 0.0,
+          "recipeID": 0
+        }
+      },
+      {
+        "case_id": "P17-02",
+        "cycle": 1,
+        "signal": "error",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P17-03",
+        "cycle": 1,
+        "signal": "recipeAdded",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P17-04",
+        "cycle": 1,
+        "signal": "error",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P17-05",
+        "cycle": 1,
+        "signal": "error",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P17-06",
+        "cycle": 1,
+        "signal": "error",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P17-07",
+        "cycle": 1,
+        "signal": "recipeAdded",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P17-08",
+        "cycle": 1,
+        "signal": "recipeAdded",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 24744,
+  "tag": "candidate_1"
+}

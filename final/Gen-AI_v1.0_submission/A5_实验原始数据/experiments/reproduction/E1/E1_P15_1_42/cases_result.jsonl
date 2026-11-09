@@ -1,0 +1,7 @@
+{"task_id": "P15", "case_id": "P15-01", "status": "pass", "mismatch": null, "latency_s": 0.001}
+{"task_id": "P15", "case_id": "P15-02", "status": "pass", "mismatch": null, "latency_s": 0.001}
+{"task_id": "P15", "case_id": "P15-03", "status": "pass", "mismatch": null, "latency_s": 0.001}
+{"task_id": "P15", "case_id": "P15-04", "status": "pass", "mismatch": null, "latency_s": 0.001}
+{"task_id": "P15", "case_id": "P15-05", "status": "fail", "mismatch": {"cycle": 4, "variable": "valveARun", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "P15", "case_id": "P15-06", "status": "pass", "mismatch": null, "latency_s": 0.001}
+{"task_id": "P15", "case_id": "P15-07", "status": "fail", "mismatch": {"cycle": 1, "variable": "valveARun", "expected": true, "actual": false}, "latency_s": 0.001}

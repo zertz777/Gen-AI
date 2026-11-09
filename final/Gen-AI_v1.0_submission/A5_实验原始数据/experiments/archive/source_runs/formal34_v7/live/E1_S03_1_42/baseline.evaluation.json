@@ -1,0 +1,61 @@
+{
+  "source": "FUNCTION_BLOCK FB_S03\nVAR_INPUT\n    DoorSwitch : BOOL;\n    ZoneAOccupied : BOOL;\n    ZoneBOccupied : BOOL;\n    ResetBtn : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    DriveA_Run : BOOL;\n    DriveB_Run : BOOL;\n    AlarmLamp : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    NeedReset     : BOOL := FALSE;\n    BStopping     : BOOL := FALSE;\n    BStopped      : BOOL := FALSE;\n    StopTimer     : INT  := 0;\n    ResetBtn_Prev : BOOL := FALSE;\n    ResetEdge     : BOOL := FALSE;\nEND_VAR\n\n(* --- 复位按钮上升沿检测（每扫描周期计算一次） --- *)\nResetEdge := ResetBtn AND NOT ResetBtn_Prev;\nResetBtn_Prev := ResetBtn;\n\nIF NOT EStop_NC THEN\n    (* C1 / K4：急停优先，两区同周期立即停，忽略 500 ms 分级延时 *)\n    DriveA_Run := FALSE;\n    DriveB_Run := FALSE;\n    BStopping := FALSE;\n    BStopped := FALSE;\n    StopTimer := 0;\n    NeedReset := TRUE;\n    AlarmLamp := TRUE;\n    Status := 16#8303;\n\nELSIF DoorSwitch THEN\n    (* C1b / K1：A 区（高等级侧）当周期立即停 *)\n    (* C5  / K2：B 区（低等级侧）允许走完当前动作，最多 25 个扫描周期 = 500 ms *)\n    DriveA_Run := FALSE;\n    NeedReset := TRUE;\n    AlarmLamp := TRUE;\n    Status := 16#8302;\n    IF NOT BStopping THEN\n        BStopping := TRUE;\n        BStopped := FALSE;\n        StopTimer := 0;\n    END_IF;\n    IF BStopped THEN\n        (* 本次门开期间 B 区已停，锁存不再恢复 *)\n        DriveB_Run := FALSE;\n    ELSIF StopTimer >= 25 THEN\n        (* 500 ms 上限到：B 区停 *)\n        DriveB_Run := FALSE;\n        BStopped := TRUE;\n    ELSIF ZoneBOccupied THEN\n        (* B 区动作进行中：走完当前动作 *)\n        DriveB_Run := TRUE;\n        StopTimer := StopTimer + 1;\n    ELSE\n        (* B 区无进行中的动作：立即停 *)\n        DriveB_Run := FALSE;\n        BStopped := TRUE;\n    END_IF;\n\nELSE\n    (* 门关且急停正常 *)\n    BStopping := FALSE;\n    BStopped := FALSE;\n    StopTimer := 0;\n    IF NeedReset THEN\n        (* 待复位：未复位的启动请求一律无效，Status 保持 16#8301 *)\n        DriveA_Run := FALSE;\n        DriveB_Run := FALSE;\n        AlarmLamp := TRUE;      (* C6：报警锁存，门关后须待复位才撤销 *)\n        Status := 16#8301;\n        IF ResetEdge THEN\n            NeedReset := FALSE;\n            AlarmLamp := FALSE;\n            Status := 16#0000;\n        END_IF;\n    ELSE\n        (* C2：门关闭、无急停、已复位 —— 正常运行 *)\n        DriveA_Run := TRUE;\n        DriveB_Run := TRUE;\n        AlarmLamp := FALSE;\n        Status := 16#0000;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.219,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 15.469,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 4,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "S03-01",
+        "cycle": 2,
+        "signal": "DriveB_Run",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S03-02",
+        "cycle": 2,
+        "signal": "DriveB_Run",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S03-03",
+        "cycle": 2,
+        "signal": "DriveB_Run",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S03-04",
+        "cycle": 2,
+        "signal": "DriveB_Run",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

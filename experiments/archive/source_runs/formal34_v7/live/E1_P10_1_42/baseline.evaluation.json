@@ -1,0 +1,38 @@
+{
+  "source": "FUNCTION_BLOCK FB_P10\nVAR_INPUT\n    TemperatureSensorInput : REAL;\n    SetTemperature : REAL;\nEND_VAR\nVAR_OUTPUT\n    CurrentTemperature : REAL;\n    SetTempDisplay : REAL;\n    HeaterStatus : BOOL;\n    OverheatProtection : BOOL;\n    HeaterOutput : BOOL;\nEND_VAR\nVAR\n    (* 连续加热扫描周期计数，5 s = 250 个扫描周期 *)\n    HeatTimer : UINT := 0;\n    (* 过热保护保持扫描周期计数，3 s = 150 个扫描周期 *)\n    ProtectTimer : UINT := 0;\n    (* 传感器故障标志（越界：< 0 或 > 100） *)\n    SensorFault : BOOL := FALSE;\nEND_VAR\n\n(* ------------------------------------------------------------ *)\n(* 状态显示：当前温度 / 设定温度                                  *)\n(* ------------------------------------------------------------ *)\nCurrentTemperature := TemperatureSensorInput;\nSetTempDisplay := SetTemperature;\n\n(* ------------------------------------------------------------ *)\n(* 传感器故障判断（K4）：< 0 ℃ 或 > 100 ℃                          *)\n(* ------------------------------------------------------------ *)\nSensorFault := (TemperatureSensorInput < 0.0)\n               OR (TemperatureSensorInput > 100.0);\n\nIF OverheatProtection THEN\n    (* -------------------------------------------------------- *)\n    (* 过热保护保持阶段（K3，C9）                                 *)\n    (* 强制关断加热器（C1），并至少保持 3 s                       *)\n    (* -------------------------------------------------------- *)\n    HeaterOutput := FALSE;\n    HeatTimer := 0;\n    ProtectTimer := ProtectTimer + 1;\n    (* 触发周期 + 后续 150 个周期 => 计数到 151 才解除            *)\n    IF ProtectTimer >= 151 THEN\n        OverheatProtection := FALSE;\n        ProtectTimer := 0;\n    END_IF;\n\nELSIF SensorFault THEN\n    (* -------------------------------------------------------- *)\n    (* 传感器故障（K4）：禁止加热                                 *)\n    (* -------------------------------------------------------- *)\n    HeaterOutput := FALSE;\n    HeatTimer := 0;\n\nELSE\n    (* -------------------------------------------------------- *)\n    (* 正常温控逻辑（K1）                                        *)\n    (* -------------------------------------------------------- *)\n    IF TemperatureSensorInput < SetTemperature THEN\n        IF HeatTimer >= 250 THEN\n            (* 连续加热达到 5 s（K2）：触发过热保护                *)\n            OverheatProtection := TRUE;\n            ProtectTimer := 0;\n            HeaterOutput := FALSE;\n            HeatTimer := 0;\n        ELSE\n            HeaterOutput := TRUE;\n            HeatTimer := HeatTimer + 1;\n        END_IF;\n    ELSE\n        (* 高于或等于设定值：停止加热                             *)\n        HeaterOutput := FALSE;\n        HeatTimer := 0;\n    END_IF;\nEND_IF;\n\n(* 加热器状态显示 *)\nHeaterStatus := HeaterOutput;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.219,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 15.656,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 5,
+    "passed": 5,
+    "passed_ids": [
+      "P10-01",
+      "P10-02",
+      "P10-03",
+      "P10-04",
+      "P10-05"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

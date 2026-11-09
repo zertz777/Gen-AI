@@ -1,0 +1,58 @@
+{
+  "source": "FUNCTION_BLOCK FB_S14\nVAR_INPUT\n    Pressure : REAL;\n    PumpEnable : BOOL;\n    ResetBtn : BOOL;\nEND_VAR\nVAR_OUTPUT\n    LowPump : BOOL := FALSE;\n    HighPump : BOOL := FALSE;\n    ReliefValve : BOOL := FALSE;\n    AlarmLamp : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    ResetBtnLast : BOOL := FALSE;\n    HighPumpLatched : BOOL := FALSE;\n    FaultLatched : BOOL := FALSE;\n    ResetEdge : BOOL := FALSE;\n    SensorFault : BOOL := FALSE;\nEND_VAR\n\n(*\n    扫描周期：20 ms。\n\n    需求原文：\n    液压站按系统压力自动投切泵组与卸荷阀，要求不频繁启停、\n    越界立即保护。\n    1. PumpEnable = TRUE 且 AlarmLamp = FALSE 时：\n       Pressure < 120.0 bar，LowPump = TRUE。\n    2. Pressure >= 140.0 bar，高压泵投入。\n    3. 高压泵投入后，只有 Pressure < 100.0 bar 才断开；\n       100.0 <= Pressure < 140.0 区间保持原状态。\n    4. Pressure > 160.0 bar，卸荷阀打开，两泵停止；\n       Pressure < 150.0 bar 后卸荷阀关闭。\n    5. 卸荷阀与两泵互斥。\n    6. Pressure < 0.5 bar 或 Pressure > 250.0 bar：\n       两泵停止、报警、Status = 16#8D01。\n       故障消失后需 ResetBtn 上升沿复位，复位前为 16#8D02。\n    7. Status：16#0000 正常，16#8D01 故障，16#8D02 待复位。\n\n    规约冲突记录（待审，不声称全部规约可同时满足）：\n    - C10 要求上电首周期输出全部关闭且无报警，而 K1 要求\n      过压同周期卸荷；首周期过压时两者不能同时满足。\n      此实现将给定初态用于变量初始化，不屏蔽首周期安全保护。\n    - C1/C2/C7 使用 X，文字要求包含同周期动作；\n      若 X 表示下一次调用输出，则输入在相邻调用间变化时，\n      不能无条件同时满足这些公式和即时安全保护。\n    - K2 未排除故障。例如 Pressure < 0.5 且允许加载时，\n      其加载要求与传感器故障停泵要求冲突。\n    - C7 未排除撤销 PumpEnable、故障及卸荷；\n      无条件保持可能与安全停泵冲突。\n    - 第3条“只有低于100才断开”必须与第4、6条强制停泵\n      区分；此实现安全停泵优先，并清除高压泵保持状态。\n\n    实现优先级：传感器故障禁止泵运行；卸荷禁止泵运行；\n    其次为允许加载与压力滞回。卸荷独立于泵允许和报警，\n    因而 Pressure > 250.0 时仍打开卸荷阀。\n    未经真实编译器及逐周期测试验证。\n*)\n\n(* 每次调用均更新边沿历史；故障期间的边沿不留待以后使用。 *)\nResetEdge := ResetBtn AND NOT ResetBtnLast;\nResetBtnLast := ResetBtn;\n\nSensorFault := (Pressure < REAL#0.5) OR\n               (Pressure > REAL#250.0);\n\n(* 故障优先于复位；有效压力恢复后才接受新的复位上升沿。 *)\nIF SensorFault THEN\n    FaultLatched := TRUE;\nELSIF ResetEdge THEN\n    FaultLatched := FALSE;\nEND_IF;\n\nAlarmLamp := FaultLatched;\n\nIF SensorFault THEN\n    Status := WORD#16#8D01;\nELSIF FaultLatched THEN\n    Status := WORD#16#8D02;\nELSE\n    Status := WORD#16#0000;\nEND_IF;\n\n(* 卸荷滞回：160恰好不触发，150恰好不解除。 *)\nIF Pressure > REAL#160.0 THEN\n    ReliefValve := TRUE;\nELSIF Pressure < REAL#150.0 THEN\n    ReliefValve := FALSE;\nEND_IF;\n\n(* 所有停泵条件优先于压力加载，保证阀泵互斥。 *)\nIF AlarmLamp OR ReliefValve OR NOT PumpEnable THEN\n    LowPump := FALSE;\n    HighPump := FALSE;\n    HighPumpLatched := FALSE;\nELSE\n    LowPump := Pressure < REAL#120.0;\n\n    IF Pressure >= REAL#140.0 THEN\n        HighPumpLatched := TRUE;\n    ELSIF Pressure < REAL#100.0 THEN\n        HighPumpLatched := FALSE;\n    END_IF;\n\n    HighPump := HighPumpLatched;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.219,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 16.187,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 3,
+    "passed_ids": [
+      "S14-01",
+      "S14-02",
+      "S14-04"
+    ],
+    "failures": [
+      {
+        "case_id": "S14-03",
+        "cycle": 2,
+        "signal": "LowPump",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S14-05",
+        "cycle": 1,
+        "signal": "ReliefValve",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S14-06",
+        "cycle": 1,
+        "signal": "LowPump",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3098,
+  "tag": "candidate_1"
+}

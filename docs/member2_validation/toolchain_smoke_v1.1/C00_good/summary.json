@@ -1,0 +1,18 @@
+{
+  "status": "pass",
+  "fast": {
+    "status": "pass",
+    "errors": [],
+    "elapsed_s": 0.187,
+    "evidence_kind": "live"
+  },
+  "authoritative": {
+    "status": "pass",
+    "errors": [],
+    "elapsed_s": 33.828,
+    "evidence_kind": "live"
+  },
+  "errors": [],
+  "authoritative_available": true,
+  "evidence_kind": "live"
+}

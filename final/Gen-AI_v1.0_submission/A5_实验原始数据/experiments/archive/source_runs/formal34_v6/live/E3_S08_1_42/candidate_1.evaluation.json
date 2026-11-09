@@ -1,0 +1,68 @@
+{
+  "source": "FUNCTION_BLOCK FB_S08\nVAR_INPUT\n    RecipeSelect : INT;\n    ChangeoverReq : BOOL;\n    PartHeight : REAL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    ActiveRecipe : INT := 1;\n    SortLeft : BOOL := FALSE;\n    SortRight : BOOL := FALSE;\n    Busy : BOOL := FALSE;\n    Status : WORD := 16#0000;\nEND_VAR\nVAR\n    InitDone : BOOL := FALSE;\n    ChangeoverReqLast : BOOL := FALSE;\n    reqEdge : BOOL;\n    LeftThr : REAL := 30.0;\n    RightThr : REAL := 60.0;\n    BusyCount : INT := 0;\n    IllegalReq : BOOL;\nEND_VAR\n\n(* 上电首周期初态：默认配方 1，不分拣，不忙 *)\nIF NOT InitDone THEN\n    ActiveRecipe := 1;\n    SortLeft := FALSE;\n    SortRight := FALSE;\n    Busy := FALSE;\n    Status := 16#0000;\n    ChangeoverReqLast := ChangeoverReq;\n    BusyCount := 0;\n    InitDone := TRUE;\nELSE\n    reqEdge := ChangeoverReq AND NOT ChangeoverReqLast;\n    ChangeoverReqLast := ChangeoverReq;\n\n    (* 安全优先级：急停常闭断开时禁止分拣和切换保持 *)\n    IF NOT EStop_NC THEN\n        SortLeft := FALSE;\n        SortRight := FALSE;\n        Busy := FALSE;\n        BusyCount := 0;\n        Status := 16#0000;\n        (* ActiveRecipe 保持不变 *)\n    ELSE\n        SortLeft := FALSE;\n        SortRight := FALSE;\n\n        (* 按当前生效配方加载阈值 *)\n        CASE ActiveRecipe OF\n            1:\n                LeftThr := 30.0;\n                RightThr := 60.0;\n            2:\n                LeftThr := 50.0;\n                RightThr := 90.0;\n            3:\n                LeftThr := 70.0;\n                RightThr := 120.0;\n        ELSE\n            LeftThr := 0.0;\n            RightThr := 0.0;\n        END_CASE;\n\n        Status := 16#0000;\n        IllegalReq := FALSE;\n\n        (* RecipeSelect 非法：拒绝切换，仅置错误码 *)\n        IF (RecipeSelect < 1) OR (RecipeSelect > 3) THEN\n            Status := 16#8801;\n            IllegalReq := TRUE;\n        END_IF;\n\n        (* 切换请求上升沿；仅无料且非忙时允许切换 *)\n        IF reqEdge THEN\n            IF (RecipeSelect < 1) OR (RecipeSelect > 3) THEN\n                Status := 16#8801;\n                IllegalReq := TRUE;\n            ELSIF (NOT Busy) AND (PartHeight = 0.0) THEN\n                ActiveRecipe := RecipeSelect;\n                Busy := TRUE;\n                BusyCount := 0;\n                Status := 16#0000;\n            END_IF;\n        END_IF;\n\n        (* 正常分拣；Busy 期间强制禁止分拣 *)\n        IF NOT Busy THEN\n            IF PartHeight > 0.0 THEN\n                IF PartHeight < LeftThr THEN\n                    SortLeft := TRUE;\n                ELSIF PartHeight < RightThr THEN\n                    SortRight := TRUE;\n                ELSE\n                    IF NOT IllegalReq THEN\n                        Status := 16#8802;\n                    END_IF;\n                END_IF;\n            END_IF;\n        END_IF;\n\n        (* Busy 保持 2 s = 100 个扫描周期 *)\n        IF Busy THEN\n            BusyCount := BusyCount + 1;\n            IF BusyCount > 100 THEN\n                Busy := FALSE;\n                BusyCount := 0;\n            END_IF;\n        END_IF;\n    END_IF;\nEND_IF;\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 25.359,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 5,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "S08-01",
+        "cycle": 1,
+        "signal": "SortLeft",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S08-02",
+        "cycle": 1,
+        "signal": "Busy",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S08-03",
+        "cycle": 1,
+        "signal": "Status",
+        "expected": 34817,
+        "actual": 0
+      },
+      {
+        "case_id": "S08-04",
+        "cycle": 1,
+        "signal": "SortLeft",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S08-05",
+        "cycle": 1,
+        "signal": "Status",
+        "expected": 34817,
+        "actual": 0
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 28947,
+  "tag": "candidate_1"
+}

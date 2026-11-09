@@ -1,0 +1,58 @@
+{
+  "source": "(*\n修改说明：\n1. 删除上电两次调用的动作屏蔽及暂存启动逻辑，\n   StartBtn 上升沿当周期开启 Conveyor，修复已报告的周期 1 失败。\n2. 将内部 Step 变量改名为 CurrentStep，避免与 IEC 61131-3\n   的 SFC 保留字 STEP 冲突；外部接口不变。\n   原先内部声明解析失败可能导致后续赋值和 CASE 的级联报错。\n3. 保留固定 20 ms 扫描计时、急停复位、超时锁定、\n   输出互斥和完成瓶数计数。\n\n验证说明：\n用户提供的旧版结果为 authoritative 编译通过、fast 编译失败，\n逐周期测试 6 项中仅 1 项通过；其余均首先失败于周期 1 的 Conveyor。\n本次修改未在当前对话中运行编译器或测试命令，\n不声称新版已编译通过或功能验证通过。\n需要使用相同 judge 命令重新运行，检查后续周期及计时边界。\n\n需求原文：\n灌装线由进瓶、灌装、封盖、包装四个工位组成，按固定节拍顺序推进。\n\n控制要求：\n1. StartBtn 上升沿启动整线，Conveyor = TRUE 进入进瓶工位；EStop_NC = FALSE 时立即停止全部输出并回到 Step 0。\n2. 工步顺序：0 进瓶（等 BottleIn）→ 1 灌装（FillValve 开，等 FillDone）→ 2 封盖（CapMotor 开，等 CapDone）→ 3 包装（PackCyl 开，等 PackDone）→ 回到 0。\n3. 每一步自进入起计时，超过 5 s 未收到完成信号则置 Status = 16#8701、保持当前步不动、关闭该步输出（等待人工处理）。\n4. 每完成一瓶（PackDone 且回到 Step 0）CycleCount 加 1。\n5. 同一时刻四个执行器输出中最多一个为 TRUE。\n6. Status：16#0000 正常、16#8701 工步超时、16#8702 急停。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）\n\n接口、初态、约束与数据告警：\ntask_id: S07\ntitle: 灌装四工位节拍控制\n接口声明见下方 VAR_INPUT 和 VAR_OUTPUT，名称、方向、类型保持不变。\ninitial_state:\n四个执行器输出全 FALSE；CycleCount = 0；Step = 0；\nStatus = 16#0000；步计时器 = 0；StartBtnLast = FALSE。\n内部 CurrentStep 对应需求中的 Step。\nK1 工步只能按 0→1→2→3→0 推进，不得跳步或回退（除急停复位）。\nK2 每一步必须在收到对应完成信号后才推进到下一步。\nK3 单步超过 5 s 未完成时置 16#8701、关闭该步输出、保持步号不变。\nK4 Conveyor/FillValve/CapMotor/PackCyl 同一时刻最多一个为 TRUE。\nK5 EStop_NC = FALSE 时全部输出 FALSE、Step 归 0、立即返回。\nsemantic_warnings: []\nwarnings: []\nmissing_fields: []\ndialect_requirements: []\ntype_origins: {}\n\n完整形式化规约；有界时序以扫描周期计：\n# task: S07\n# meta: hard / C 状态机与节拍\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(!EStop_NC -> (!Conveyor && !FillValve && !CapMotor && !PackCyl))\n    -- 急停当周期四路执行器全停（K5）\nC2: G(FillValve -> BottleIn)\n    -- 开灌装阀的前提是瓶子到位（K2）\nC4: G(!(Conveyor && FillValve) && !(Conveyor && CapMotor) &&\n    !(Conveyor && PackCyl) && !(FillValve && CapMotor) &&\n    !(FillValve && PackCyl) && !(CapMotor && PackCyl))\n    -- 四路执行器两两互斥（单工步动作）（K4）\nC6: G(FillValve -> (FillValve W FillDone))\n    -- 灌装阀保持到灌装完成信号出现（K2）\nC9: G(FillValve -> G[0,5](FillValve))\n    -- 灌装动作至少保持 100 ms（防抖，避免单周期抖动误判完成）（K3）\nC10: G[0,1](!Conveyor && !FillValve && !CapMotor && !PackCyl)\n    -- 上电首周期无动作（初态）\n\n语义冲突报告：\n1. C9 对每个 FillValve 为 TRUE 的周期重复施加未来保持条件。\n   按给定闭区间公式，一旦开阀便不能在有限周期内关阀，\n   不等价于仅在进入灌装时保持 100 ms。\n   该公式与完成后推进、超时关阀以及急停关阀存在冲突。\n2. 未出现 FillDone 时，C6 要求持续开阀；\n   与急停或超时强制关阀存在冲突。\n3. 灌装期间 BottleIn 若变 FALSE，C2 要求立即关阀，\n   而未出现 FillDone 时 C6 要求保持开阀，两者冲突。\n4. C10 的闭区间 [0,1] 要求最初两次调用均无执行器动作；\n   与这两次调用中启动沿立即开启 Conveyor 的要求存在冲突。\n   已报告测试要求周期 1 的 Conveyor 为 TRUE。\n   本次选择启动沿立即动作，保留 C10 原文并报告此冲突，\n   不宣称满足 C10。\n\n本实现的明确取舍：\n急停优先于一切；超时优先于保持输出；BottleIn 实时联锁灌装阀。\n初态执行器全 FALSE；正常输入下启动沿当周期进入进瓶并开启 Conveyor。\n启动周期不同时处理 BottleIn，保证先进入进瓶工步。\n完成信号按当前工步电平采样，每次调用最多推进一个工步。\n不宣称满足冲突的 C6、C9 全局公式。\n当前工步的进入周期计时为 0，此后每次调用累加 20 ms；\n250 次为 5 s，251 次为超过 5 s。\n同周期收到完成信号时优先完成；无完成信号才锁定超时。\n超时锁定后不再接收完成信号或启动沿；\n使用已有急停输入复位，释放急停后必须重新出现启动沿。\n未启动期间不计步超时。急停保留 CycleCount。\nUINT 计数到 65535 后，下一瓶回绕为 0。\n*)\n\nFUNCTION_BLOCK FB_S07\nVAR_INPUT\n    BottleIn : BOOL;\n    FillDone : BOOL;\n    CapDone : BOOL;\n    PackDone : BOOL;\n    StartBtn : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    Conveyor : BOOL := FALSE;\n    FillValve : BOOL := FALSE;\n    CapMotor : BOOL := FALSE;\n    PackCyl : BOOL := FALSE;\n    CycleCount : UINT := 0;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    CurrentStep : USINT := 0;\n    StepTicks : UINT := 0;\n    StartBtnLast : BOOL := FALSE;\n    StartRise : BOOL := FALSE;\n    Running : BOOL := FALSE;\n    TimeoutLatched : BOOL := FALSE;\n    StepDone : BOOL := FALSE;\nEND_VAR\n\n(* 默认关闭全部执行器，最后按当前工步唯一赋值。 *)\nConveyor := FALSE;\nFillValve := FALSE;\nCapMotor := FALSE;\nPackCyl := FALSE;\n\n(* 包括急停期间在内，每次调用都更新按钮历史。 *)\nStartRise := StartBtn AND NOT StartBtnLast;\nStartBtnLast := StartBtn;\n\n(* 急停具有最高优先级，当周期复位并立即返回。 *)\nIF NOT EStop_NC THEN\n    Running := FALSE;\n    TimeoutLatched := FALSE;\n    CurrentStep := 0;\n    StepTicks := 0;\n    StepDone := FALSE;\n    Status := WORD#16#8702;\n    RETURN;\nEND_IF;\n\n(* 超时后保持步号及计时值，关闭输出，等待急停复位。 *)\nIF TimeoutLatched THEN\n    Status := WORD#16#8701;\n    RETURN;\nEND_IF;\n\nStatus := WORD#16#0000;\n\nIF NOT Running THEN\n    IF StartRise THEN\n        Running := TRUE;\n        CurrentStep := 0;\n        StepTicks := 0;\n        StepDone := FALSE;\n    ELSE\n        RETURN;\n    END_IF;\nELSE\n    (* 前一次调用进入工步，本次调用经过一个 20 ms 周期。 *)\n    IF StepTicks < 251 THEN\n        StepTicks := StepTicks + 1;\n    END_IF;\n\n    StepDone := FALSE;\n    CASE CurrentStep OF\n        0:\n            StepDone := BottleIn;\n        1:\n            StepDone := FillDone;\n        2:\n            StepDone := CapDone;\n        3:\n            StepDone := PackDone;\n    END_CASE;\n\n    IF StepDone THEN\n        CASE CurrentStep OF\n            0:\n                CurrentStep := 1;\n            1:\n                CurrentStep := 2;\n            2:\n                CurrentStep := 3;\n            3:\n                CurrentStep := 0;\n                IF CycleCount = UINT#65535 THEN\n                    CycleCount := 0;\n                ELSE\n                    CycleCount := CycleCount + 1;\n                END_IF;\n        END_CASE;\n        StepTicks := 0;\n    ELSIF StepTicks > 250 THEN\n        TimeoutLatched := TRUE;\n        Status := WORD#16#8701;\n        RETURN;\n    END_IF;\nEND_IF;\n\n(* 仅当前工步对应输出允许开启；灌装附加实时瓶到位联锁。 *)\nCASE CurrentStep OF\n    0:\n        Conveyor := TRUE;\n    1:\n        FillValve := BottleIn;\n    2:\n        CapMotor := TRUE;\n    3:\n        PackCyl := TRUE;\nEND_CASE;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.343,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 3,
+    "passed_ids": [
+      "S07-01",
+      "S07-03",
+      "S07-06"
+    ],
+    "failures": [
+      {
+        "case_id": "S07-02",
+        "cycle": 251,
+        "signal": "FillValve",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S07-04",
+        "cycle": 3,
+        "signal": "FillValve",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S07-05",
+        "cycle": 1,
+        "signal": "Conveyor",
+        "expected": false,
+        "actual": true
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

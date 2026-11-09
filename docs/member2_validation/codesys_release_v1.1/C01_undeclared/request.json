@@ -1,0 +1,9 @@
+{
+  "case_id": "C01_undeclared",
+  "source": ".\\validation\\codesys_release_v1.1\\C01_undeclared\\source.st",
+  "project": ".\\validation\\codesys_release_v1.1\\C01_undeclared\\compile.project",
+  "result": ".\\validation\\codesys_release_v1.1\\C01_undeclared\\result.json",
+  "source_sha256": "938fe28d7ed276f3adbc2598220984afb0437ab8204952e2697edf6955b7882d",
+  "application": "Application",
+  "task_card": ".\\validation\\codesys_release_v1.1\\C01_undeclared\\task_card.json"
+}

@@ -1,0 +1,6 @@
+{"task_id": "S07", "case_id": "S07-01", "status": "fail", "mismatch": {"cycle": 2, "variable": "Conveyor", "expected": false, "actual": true}, "latency_s": 0.001}
+{"task_id": "S07", "case_id": "S07-02", "status": "fail", "mismatch": {"cycle": 2, "variable": "Conveyor", "expected": false, "actual": true}, "latency_s": 0.002}
+{"task_id": "S07", "case_id": "S07-03", "status": "fail", "mismatch": {"cycle": 2, "variable": "Conveyor", "expected": false, "actual": true}, "latency_s": 0.001}
+{"task_id": "S07", "case_id": "S07-04", "status": "fail", "mismatch": {"cycle": 2, "variable": "Conveyor", "expected": false, "actual": true}, "latency_s": 0.001}
+{"task_id": "S07", "case_id": "S07-05", "status": "fail", "mismatch": {"cycle": 1, "variable": "Conveyor", "expected": false, "actual": true}, "latency_s": 0.001}
+{"task_id": "S07", "case_id": "S07-06", "status": "fail", "mismatch": {"cycle": 2, "variable": "Conveyor", "expected": false, "actual": true}, "latency_s": 0.002}

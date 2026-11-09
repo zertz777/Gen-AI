@@ -1,0 +1,4 @@
+case_id,cycle,THICKNESS_ALARM,Slab_Fault_Counter,Slab_Runtime_Accumulator,Slab_Fault_History
+P12-03,1,FALSE,0,T#0ms,"[""0"", ""0"", ""0"", ""0"", ""0""]"
+P12-03,2,FALSE,0,T#0ms,"[""0"", ""0"", ""0"", ""0"", ""0""]"
+P12-03,3,TRUE,1,T#0ms,"[""200"", ""0"", ""0"", ""0"", ""0""]"

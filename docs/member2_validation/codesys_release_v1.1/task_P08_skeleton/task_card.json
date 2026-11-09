@@ -1,0 +1,152 @@
+{
+  "task_id": "P08",
+  "title": "Analog Batch Processing",
+  "difficulty": "medium",
+  "category": "B",
+  "requirement": "Write a PLC function block that processes analog inputs in batches and converts them into engineering values.\n\n1. analogValues supplies the raw-value array. channels supplies per-channel settings and receives conversion results. count specifies how many channels to process from the beginning of the arrays. The caller must provide count from zero through the smaller of the two array lengths. Match channels by ordinal position starting at each array's own lower bound. Read analogValues without modifying it.\n2. Each channel is enabled by its enable field and converted according to measuringMode. Read configuration fields without modifying them; write only retVal and outputValue.\n3. For measuringMode 0, perform non-temperature linear scaling: when bipolar is FALSE, map raw values 0..27648 to loLIM..hiLIM; when TRUE, map -27648..27648 to loLIM..hiLIM.\n4. For measuringMode 1, perform standard-temperature conversion: outputValue is one tenth of the raw analog value.\n5. For measuringMode 2, perform climatic-temperature conversion: outputValue is one hundredth of the raw analog value.\n6. If measuringMode is not 0, 1 or 2, set that channel's retVal to 16#8001 and skip its conversion.\n7. If hiLIM is less than or equal to loLIM, set that channel's retVal to 16#8002 and skip its conversion.\n\n中文摘要：模拟量批量转换：按 count 逐通道把原始值换算为工程量，支持非温度线性标定、标准温度与气候温度三种模式。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）",
+  "io_table": [
+    {
+      "direction": "IN",
+      "name": "count",
+      "data_type": "DINT",
+      "description": "Number of channels to be converted"
+    },
+    {
+      "direction": "INOUT",
+      "name": "analogValues",
+      "data_type": "ARRAY[*] OF INT",
+      "description": "Variable-length analog array passed by reference to preserve its bounds. Read-only to the function block; no element may be modified."
+    },
+    {
+      "direction": "INOUT",
+      "name": "channels",
+      "data_type": "ARRAY[*] OF ST_AnalogChannel",
+      "description": "Channel records passed by reference. Configuration fields are read-only; write only retVal and outputValue."
+    },
+    {
+      "direction": "IN",
+      "name": "channels[].enable",
+      "data_type": "BOOL",
+      "description": "Channel conversion enable. Read-only to the function block."
+    },
+    {
+      "direction": "IN",
+      "name": "channels[].hiLIM",
+      "data_type": "REAL",
+      "description": "Upper engineering-unit limit. Read-only to the function block."
+    },
+    {
+      "direction": "IN",
+      "name": "channels[].loLIM",
+      "data_type": "REAL",
+      "description": "Lower engineering-unit limit. Read-only to the function block."
+    },
+    {
+      "direction": "IN",
+      "name": "channels[].bipolar",
+      "data_type": "BOOL",
+      "description": "FALSE selects unipolar and TRUE selects bipolar operation. Read-only to the function block."
+    },
+    {
+      "direction": "IN",
+      "name": "channels[].measuringMode",
+      "data_type": "INT",
+      "description": "0 non-temperature, 1 standard temperature, 2 climatic temperature. Read-only to the function block."
+    },
+    {
+      "direction": "OUT",
+      "name": "channels[].retVal",
+      "data_type": "WORD",
+      "description": "Per-channel status code written by the function block."
+    },
+    {
+      "direction": "OUT",
+      "name": "channels[].outputValue",
+      "data_type": "REAL",
+      "description": "Converted value written by the function block."
+    }
+  ],
+  "initial_state": "不保留上次结果：每次调用按当前输入重算 retVal 与 outputValue；count = 0 时不做任何通道。",
+  "constraints": [
+    "K1 只处理从两个数组各自下界开始的前 count 个通道；count 必须落在 0 到两数组长度较小者之间。",
+    "K2 只读 analogValues 与配置字段，仅写 retVal 与 outputValue，不得就地修改输入数组。",
+    "K3 measuringMode = 0 时做线性标定：bipolar = FALSE 把 0..27648 映射到 loLIM..hiLIM，bipolar = TRUE 把 -27648..27648 映射到同一区间。",
+    "K4 measuringMode = 1 时输出为原始值的 1/10，measuringMode = 2 时输出为原始值的 1/100。",
+    "K5 count 越界或模式非法时置错误码并停止处理后续通道，已处理的通道结果保持有效。"
+  ],
+  "provenance": "课程公共题库 P08（Analog Batch Processing）；原文导入、变量名与需求未做任何改动；来源与审核记录见 data/provenance.csv 第 9 行",
+  "spec_ref": "data/specs/P08.ltl",
+  "error_examples": [
+    "错误实现：直接在 analogValues 上做原地换算。症状——同一通道在第二个扫描周期被重复换算，工程量越算越小。",
+    "错误实现：单双极性判断写反。症状——单极性输入算出负的工程量，输出值整体偏移满量程。"
+  ],
+  "notes": "",
+  "spec_text": "# task: P08\n# meta: medium / B 模拟量与数据处理\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n#\n# 命题映射（I/O 名 -> 派生命题）：\n# alias: chEn := channels[].enable\n# alias: chOut := channels[].outputValue\n# alias: chRet := channels[].retVal\n#\n# note: 本题为数组批量处理，逐通道结果由 tests/cases/P08.csv 逐周期比对；规约只约束与通道状态无关的全局性质（未使能不输出、越界不处理、上电清零）。\n\nC1: G(!chEn -> chOut == 0.0)    -- 未使能的通道不得输出非零工程量（安全默认）（K1/K5）\nC2: G(count < 0 -> !chEn)    -- 通道计数为负时不得使能任何通道（越界不处理）（K1/K5）\nC2b: G(count > 32 -> !chEn)    -- 通道计数超过组内约定的 32 路上限时不处理（见 docs/tasks_note.md）（K1）\nC6: G(chRet != 16#0000 -> (chRet != 16#0000 W chEn))    -- 错误码保持到该通道重新使能，不得自行消失（K5）\nC10: G[0,1](chOut == 0.0)    -- 上电首周期不输出任何工程量（初态）\n",
+  "spec_sha256": "a42632cdd59dc92754c8e85e942f7b947b2aedaffb32b284515210a6c29997a8",
+  "task_version": "6414bf27",
+  "task_sha256": "6414bf27191ec3723b64bc957f583b806736baeccc60f962661be60a6f6b311b",
+  "source_path": "data/tasks/P08.yaml",
+  "degraded": true,
+  "missing_fields": [],
+  "warnings": [],
+  "semantic_warnings": [
+    {
+      "code": "DATA_P08_ERROR_HANDLING_CONFLICT",
+      "message": "英文需求逐通道跳过非法模式/量程；K5要求遇错停止后续通道。须由数据负责人确认，框架保留两者。",
+      "evidence": [
+        "requirement 第6/7项",
+        "constraints K5"
+      ]
+    },
+    {
+      "code": "DATA_P08_SPEC_BOUNDS_CONFLICT",
+      "message": "题面按调用方两数组长度确定count上界；LTL C2b另引入32路上限，且首周期/未使能输出要求与题面未统一。",
+      "evidence": [
+        "requirement 第1项",
+        "spec C1/C2b/C10"
+      ]
+    }
+  ],
+  "interface_io_table": [
+    {
+      "direction": "IN",
+      "name": "count",
+      "data_type": "DINT",
+      "description": "Number of channels to be converted"
+    },
+    {
+      "direction": "INOUT",
+      "name": "analogValues",
+      "data_type": "ARRAY[*] OF INT",
+      "description": "Variable-length analog array passed by reference to preserve its bounds. Read-only to the function block; no element may be modified."
+    },
+    {
+      "direction": "INOUT",
+      "name": "channels",
+      "data_type": "ARRAY[*] OF ST_AnalogChannel",
+      "description": "Channel records passed by reference. Configuration fields are read-only; write only retVal and outputValue."
+    }
+  ],
+  "type_declarations": "TYPE ST_AnalogChannel :\nSTRUCT\n    enable : BOOL;\n    hiLIM : REAL;\n    loLIM : REAL;\n    bipolar : BOOL;\n    measuringMode : INT;\n    retVal : WORD;\n    outputValue : REAL;\nEND_STRUCT\nEND_TYPE",
+  "type_origins": {
+    "ST_AnalogChannel": {
+      "evidence": "io_table显式数组成员路径",
+      "fields": [
+        "channels[].enable",
+        "channels[].hiLIM",
+        "channels[].loLIM",
+        "channels[].bipolar",
+        "channels[].measuringMode",
+        "channels[].retVal",
+        "channels[].outputValue"
+      ]
+    }
+  },
+  "pou_name": "FB_P08",
+  "pou_kind": "FUNCTION_BLOCK",
+  "dialect_requirements": [
+    "可变长ARRAY[*]仅用于VAR_IN_OUT，需要支持开放数组的编译profile"
+  ],
+  "skeleton_compiled": false,
+  "scan_cycle_ms": 20
+}

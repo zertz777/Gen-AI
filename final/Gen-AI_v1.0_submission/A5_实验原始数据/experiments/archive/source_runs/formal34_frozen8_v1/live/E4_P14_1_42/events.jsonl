@@ -1,0 +1,7 @@
+{"ts": "2026-11-01T06:36:03.302399+00:00", "event": "evaluation", "tag": "candidate_1", "compile_status": "fail", "test_status": "skipped", "test_passed": 0, "test_total": 0}
+{"ts": "2026-11-01T06:36:58.569659+00:00", "event": "evaluation", "tag": "candidate_2", "compile_status": "fail", "test_status": "skipped", "test_passed": 0, "test_total": 0}
+{"ts": "2026-11-01T06:37:48.624610+00:00", "event": "evaluation", "tag": "candidate_3", "compile_status": "fail", "test_status": "skipped", "test_passed": 0, "test_total": 0}
+{"ts": "2026-11-01T06:38:36.041331+00:00", "event": "evaluation", "tag": "repair_1", "compile_status": "fail", "test_status": "skipped", "test_passed": 0, "test_total": 0}
+{"ts": "2026-11-01T06:38:36.042832+00:00", "event": "repair_decision", "round": 1, "rollback": false, "improved": true}
+{"ts": "2026-11-01T06:38:40.695366+00:00", "event": "patch_rejected", "round": 2, "message": "Expected nonempty patches list"}
+{"ts": "2026-11-01T06:38:40.705154+00:00", "event": "patch_rejected", "round": 3, "message": "Expected nonempty patches list"}

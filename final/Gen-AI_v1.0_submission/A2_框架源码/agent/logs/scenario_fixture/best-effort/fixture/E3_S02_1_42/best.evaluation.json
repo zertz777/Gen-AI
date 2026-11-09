@@ -1,0 +1,42 @@
+{
+  "source": "FUNCTION_BLOCK FB_S02\nVAR_INPUT\n    FwdBtn : BOOL;\n    RevBtn : BOOL;\n    MaintKey : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MotorFwd : BOOL;\n    MotorRev : BOOL;\n    RunLamp : BOOL;\n    Status : WORD;\nEND_VAR\n(* Add a VAR block for internal state/timers before the implementation, if needed. *)\n(* SKELETON ONLY: replace this RETURN with scan logic and required initial state. *)\nRETURN;\nEND_FUNCTION_BLOCK\n\n(* FIXTURE_TEST_FAIL *)\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.0,
+      "evidence_kind": "fixture"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.0,
+      "evidence_kind": "fixture"
+    },
+    "errors": [],
+    "authoritative_available": false,
+    "evidence_kind": "fixture"
+  },
+  "test": {
+    "status": "fail",
+    "total": 3,
+    "passed": 1,
+    "passed_ids": [
+      "fixture_case_1"
+    ],
+    "failures": [
+      {
+        "case_id": "fixture_case_2",
+        "cycle": 2,
+        "signal": "fixture_signal",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "fixture"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "candidate_1"
+}

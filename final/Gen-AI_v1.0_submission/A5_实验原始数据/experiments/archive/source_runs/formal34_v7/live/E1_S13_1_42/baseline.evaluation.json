@@ -1,0 +1,39 @@
+{
+  "source": "(* ============================================================ *)\n(* FB_S13 : 双段输送合流同步与堵料防撞                          *)\n(* 扫描周期: 20 ms                                              *)\n(*                                                              *)\n(* [语义冲突报告]                                               *)\n(*   条款 1 要求 LineRun=FALSE 时 Status 立即写入 16#0000，      *)\n(*   条款 4/5 要求堵料报警时 Status=16#8C01 且锁存到复位才清除。 *)\n(*   两者在\"报警已锁存 且 LineRun=FALSE\"这一交叉场景下互相矛盾。 *)\n(*   本实现按条款 1 的优先级处理：LineRun=FALSE 时 Status 强制   *)\n(*   为 16#0000；JamAlarm 仍保持锁存，LineRun 恢复为 TRUE 后     *)\n(*   Status 会重新呈现 16#8C01，直到复位条件满足。               *)\n(*                                                              *)\n(* [其他实现约定]                                               *)\n(*   - ModeAuto=FALSE 只禁用\"自动启动\"（LineRun 上升沿启动），   *)\n(*     总停(C1)、防撞互锁(C4)、堵料报警(C5)仍然生效。            *)\n(*   - 堵料计时按 JamSensor 连续 TRUE 计数（不附加 LineRun 前置），*)\n(*     符合条款 4 的字面描述。                                   *)\n(*   - 计时类状态（堵料报警、升/降档）采用\"上一拍累计值判定、     *)\n(*     达到阈值后于下一扫描应用\"的时序：即 IF timer>=阈值 THEN    *)\n(*     动作 ELSE 递增 END_IF。这样连续计时满足阈值后输出晚一拍    *)\n(*     生效，避免在阈值当拍提前改变输出。                        *)\n(*   - 速度档在不满足升/降条件时保持原档位（不掉档抖动）。       *)\n(* ============================================================ *)\n\nFUNCTION_BLOCK FB_S13\nVAR_INPUT\n    LineRun : BOOL;\n    PartAtMerge : BOOL;\n    PartOnMain : BOOL;\n    JamSensor : BOOL;\n    ResetBtn : BOOL;\n    ModeAuto : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MainMotor : BOOL;\n    MergeMotor : BOOL;\n    SpeedHigh : BOOL;\n    JamAlarm : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    LineRunLast : BOOL := FALSE;\n    ResetBtnLast : BOOL := FALSE;\n    Started : BOOL := FALSE;\n    JamTimer : INT := 0;\n    PartHiTimer : INT := 0;\n    PartLoTimer : INT := 0;\n    LineRunRising : BOOL := FALSE;\n    ResetRising : BOOL := FALSE;\nEND_VAR\n\n(* ---------- 边沿检测 ---------- *)\nLineRunRising := LineRun AND NOT LineRunLast;\nResetRising := ResetBtn AND NOT ResetBtnLast;\nLineRunLast := LineRun;\nResetBtnLast := ResetBtn;\n\n(* ---------- 堵料连续计时（连续 100 周期 = 2 s） ----------\n   先判定上一拍的累计值是否已达阈值，达到则在本次扫描置位报警；\n   否则继续累计。这样\"连续 100 周期\"在第 100 个周期结束后于\n   下一扫描生效，避免提前一拍报警。                            *)\nIF JamSensor THEN\n    IF JamTimer >= 100 THEN\n        JamAlarm := TRUE;\n    ELSE\n        JamTimer := JamTimer + 1;\n    END_IF;\nELSE\n    JamTimer := 0;\nEND_IF;\n\n(* ---------- 复位：JamSensor=FALSE 且 ResetBtn 上升沿（C6 / 条款 5） ---------- *)\nIF ResetRising AND NOT JamSensor THEN\n    JamAlarm := FALSE;\nEND_IF;\n\n(* ---------- 启动锁存（C2 / 条款 2 / 条款 7） ----------\n   LineRun 上升沿 且 无报警 且 自动模式 ---------- *)\nIF LineRunRising AND NOT JamAlarm AND ModeAuto THEN\n    Started := TRUE;\nEND_IF;\n\n(* ---------- 停机条件（C1 总停 / 堵料停机） ----------\n   这里把 Started 清掉，从而保证\"复位后必须重新给 LineRun 上升沿\"才允许再启动 *)\nIF (NOT LineRun) OR JamAlarm THEN\n    Started := FALSE;\nEND_IF;\n\n(* ---------- 电机输出（C1 / C2 / C4 / 条款 3） ---------- *)\nIF LineRun AND Started AND NOT JamAlarm THEN\n    MainMotor := TRUE;\nELSE\n    MainMotor := FALSE;\nEND_IF;\n\n(* 防撞互锁：合流段有料时汇流段不得送料 *)\nIF MainMotor AND NOT PartAtMerge THEN\n    MergeMotor := TRUE;\nELSE\n    MergeMotor := FALSE;\nEND_IF;\n\n(* ---------- 速度档：有料 3 s(150) 升高速，无料 5 s(250) 降低速（C7 / K5） ----------\n   同样采用\"上一拍累计值判定、达到阈值后于下一扫描应用\"，避免提前一拍换档。 *)\nIF MainMotor AND PartOnMain THEN\n    IF PartHiTimer >= 150 THEN\n        SpeedHigh := TRUE;\n    ELSE\n        PartHiTimer := PartHiTimer + 1;\n    END_IF;\n    PartLoTimer := 0;\nELSIF MainMotor AND NOT PartOnMain THEN\n    IF PartLoTimer >= 250 THEN\n        SpeedHigh := FALSE;\n    ELSE\n        PartLoTimer := PartLoTimer + 1;\n    END_IF;\n    PartHiTimer := 0;\nELSE\n    (* 电机停止：清两个时限计时器，SpeedHigh 保持原档位 *)\n    PartHiTimer := 0;\n    PartLoTimer := 0;\nEND_IF;\n\n(* ---------- 总停 / 报警：对 SpeedHigh 与 Status 的强制覆盖 ---------- *)\nIF NOT LineRun THEN\n    SpeedHigh := FALSE;\n    Status := 16#0000;\nELSIF JamAlarm THEN\n    Status := 16#8C01;\nELSE\n    Status := 16#0000;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.203,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 15.609,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "S13-01",
+      "S13-02",
+      "S13-03",
+      "S13-04",
+      "S13-05",
+      "S13-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

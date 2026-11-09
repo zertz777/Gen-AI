@@ -1,0 +1,4 @@
+case_id,cycle,average,windowSizeReached,error,status
+P09-03,1,0.0,FALSE,TRUE,16#8200
+P09-03,2,0.0,FALSE,TRUE,16#8200
+P09-03,3,10.0,FALSE,FALSE,16#0000

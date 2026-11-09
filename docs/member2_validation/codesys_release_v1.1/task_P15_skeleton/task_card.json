@@ -1,0 +1,233 @@
+{
+  "task_id": "P15",
+  "title": "Material Proportioning Process Control",
+  "difficulty": "hard",
+  "category": "C",
+  "requirement": "Design a PLC program to control a material proportioning process that requires mixing three types of materials according to specific requirements and then delivering them to the next process through valve D. The system needs to support both manual and automatic operation modes and be able to safely stop all equipment when an emergency stop signal is triggered.\nControl requirements:\nEmergency Stop Logic: The estop(=FALSE) signal is used for emergency stopping of all equipment.\nManual Mode: opeMode=false, manually control the start/stop of valves A, B, C, D, and the mixing motor.\nAutomatic Mode: opeMode=true, equipment operates automatically according to the process flow.\nImplement the emergency stop logic to ensure that all equipment stops immediately when the emergency stop signal is triggered.\nIn manual mode, manually control the start/stop of valves and the mixing motor.\nFor example, pressing the valve A start button valveAStart (triggering a rising edge) causes valve A to run (valveARun=TRUE); pressing the valve A start button valveAStart again (triggering a rising edge) stops valve A (valveARun=FALSE).\nIn automatic mode, implement the following control logic based on the process flow:\nPress the autoStart button to start the automatic process, first opening valve A.\nWhen the liquid level sensor levelSensor reaches 50cm, close valve A and open valve B.\nWhen the liquid level sensor reaches 80cm, close valve B.\nBased on processMode:\nIf processMode=false, start the mixing motor; after receiving the mixing complete signal, stop the mixing motor, open valve D, and the automatic process ends.\nIf processMode=true, open valve C; when the liquid level sensor reaches 100cm, close valve C, start the mixing motor; after receiving the mixing complete signal, stop the mixing motor, open valve D, and the automatic process ends.\n\n中文摘要：物料配比控制：手动模式按按钮边沿切换各阀门与搅拌电机，自动模式按工艺顺序配料，急停时立即停全部设备。\n\n扫描周期：20 ms（全组统一，见 docs/tasks_note.md）",
+  "io_table": [
+    {
+      "direction": "IN",
+      "name": "estop",
+      "data_type": "BOOL",
+      "description": "Emergency Stop Signal<br>FALSE: Emergency stop triggered<br>TRUE: No emergency stop triggered"
+    },
+    {
+      "direction": "IN",
+      "name": "opeMode",
+      "data_type": "BOOL",
+      "description": "Operation Mode<br>FALSE: Manual Operation Mode<br>TRUE: Automatic Operation Mode"
+    },
+    {
+      "direction": "IN",
+      "name": "valveAStart",
+      "data_type": "BOOL",
+      "description": "Valve A Start Button"
+    },
+    {
+      "direction": "IN",
+      "name": "valveBStart",
+      "data_type": "BOOL",
+      "description": "Valve B Start Button"
+    },
+    {
+      "direction": "IN",
+      "name": "valveCStart",
+      "data_type": "BOOL",
+      "description": "Valve C Start Button"
+    },
+    {
+      "direction": "IN",
+      "name": "valveDStart",
+      "data_type": "BOOL",
+      "description": "Valve D Start Button"
+    },
+    {
+      "direction": "IN",
+      "name": "mixMotorStart",
+      "data_type": "BOOL",
+      "description": "Mixing Motor Start Button"
+    },
+    {
+      "direction": "IN",
+      "name": "autoStart",
+      "data_type": "BOOL",
+      "description": "Automatic Start Button"
+    },
+    {
+      "direction": "IN",
+      "name": "processMode",
+      "data_type": "BOOL",
+      "description": "Process Mode"
+    },
+    {
+      "direction": "IN",
+      "name": "levelSensor",
+      "data_type": "INT",
+      "description": "Liquid Level Sensor (unit cm)"
+    },
+    {
+      "direction": "IN",
+      "name": "mixMotorComplete",
+      "data_type": "BOOL",
+      "description": "Mixing Complete Signal"
+    },
+    {
+      "direction": "OUT",
+      "name": "valveARun",
+      "data_type": "BOOL",
+      "description": "Valve A Run Command"
+    },
+    {
+      "direction": "OUT",
+      "name": "valveBRun",
+      "data_type": "BOOL",
+      "description": "Valve B Run Command"
+    },
+    {
+      "direction": "OUT",
+      "name": "valveCRun",
+      "data_type": "BOOL",
+      "description": "Valve C Run Command"
+    },
+    {
+      "direction": "OUT",
+      "name": "valveDRun",
+      "data_type": "BOOL",
+      "description": "Valve D Run Command"
+    },
+    {
+      "direction": "OUT",
+      "name": "mixMotorRun",
+      "data_type": "BOOL",
+      "description": "Mixing Motor Run Command"
+    }
+  ],
+  "initial_state": "valveARun/BRun/CRun/DRun、mixMotorRun 全为 FALSE；急停信号 estop = TRUE（正常态）；模式由 opeMode 决定，上电按手动处理。",
+  "constraints": [
+    "K1 estop = FALSE 时立即停止全部设备（四个阀门与搅拌电机输出全为 FALSE），其优先级高于手动与自动模式。",
+    "K2 手动模式下各启动按钮按上升沿切换对应设备（按一次启动，再按一次停止），不得按电平持续翻转。",
+    "K3 自动模式按工艺顺序执行：先按配比开启 A/B/C 阀门，达到设定后停阀并启动搅拌，搅拌完成后开 D 阀出料。",
+    "K4 急停期间所有自动步序被冻结；急停恢复后从安全步重新开始，不得从中断处直接续跑。"
+  ],
+  "provenance": "课程公共题库 P15（Material Proportioning Process Control）；原文导入、变量名与需求未做任何改动；来源与审核记录见 data/provenance.csv 第 16 行",
+  "spec_ref": "data/specs/P15.ltl",
+  "error_examples": [
+    "错误实现：急停只停搅拌电机不停阀门。症状——急停后物料继续流入，配比罐溢出。",
+    "错误实现：按钮用电平而不是上升沿。症状——按住按钮期间阀门每周期翻转，接触器反复吸合。"
+  ],
+  "notes": "",
+  "spec_text": "# task: P15\n# meta: hard / C 状态机与节拍\n# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms\n# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。\n\nC1: G(!estop -> (!valveARun && !valveBRun && !valveCRun && !valveDRun && !mixMotorRun))    -- 急停当周期全部设备停止（优先于手动与自动）（K1）\nC2: G(mixMotorRun -> !estop)    -- 搅拌运行的许可：无急停（K1）\nC4: G(!(valveDRun && (valveARun || valveBRun || valveCRun)))    -- 出料阀与前三个配比阀互斥（配比与出料不得同时进行）（K3）\nC6: G(mixMotorRun -> (mixMotorRun W mixMotorComplete))    -- 搅拌保持到完成信号出现（K3）\nC10: G[0,1](!valveARun && !valveBRun && !valveCRun && !valveDRun && !mixMotorRun)    -- 上电首周期全部设备停止（初态）\n",
+  "spec_sha256": "48a64fa3096529d797268716355bfc25485a705fb8c7de9f75af11cca4ff7df2",
+  "task_version": "f2947252",
+  "task_sha256": "f29472529395ed4c5e59174f96c841a89fa70f9a2eb44af35ebc4f89b8ab4607",
+  "source_path": "data/tasks/P15.yaml",
+  "degraded": false,
+  "missing_fields": [],
+  "warnings": [],
+  "semantic_warnings": [],
+  "interface_io_table": [
+    {
+      "direction": "IN",
+      "name": "estop",
+      "data_type": "BOOL",
+      "description": "Emergency Stop Signal<br>FALSE: Emergency stop triggered<br>TRUE: No emergency stop triggered"
+    },
+    {
+      "direction": "IN",
+      "name": "opeMode",
+      "data_type": "BOOL",
+      "description": "Operation Mode<br>FALSE: Manual Operation Mode<br>TRUE: Automatic Operation Mode"
+    },
+    {
+      "direction": "IN",
+      "name": "valveAStart",
+      "data_type": "BOOL",
+      "description": "Valve A Start Button"
+    },
+    {
+      "direction": "IN",
+      "name": "valveBStart",
+      "data_type": "BOOL",
+      "description": "Valve B Start Button"
+    },
+    {
+      "direction": "IN",
+      "name": "valveCStart",
+      "data_type": "BOOL",
+      "description": "Valve C Start Button"
+    },
+    {
+      "direction": "IN",
+      "name": "valveDStart",
+      "data_type": "BOOL",
+      "description": "Valve D Start Button"
+    },
+    {
+      "direction": "IN",
+      "name": "mixMotorStart",
+      "data_type": "BOOL",
+      "description": "Mixing Motor Start Button"
+    },
+    {
+      "direction": "IN",
+      "name": "autoStart",
+      "data_type": "BOOL",
+      "description": "Automatic Start Button"
+    },
+    {
+      "direction": "IN",
+      "name": "processMode",
+      "data_type": "BOOL",
+      "description": "Process Mode"
+    },
+    {
+      "direction": "IN",
+      "name": "levelSensor",
+      "data_type": "INT",
+      "description": "Liquid Level Sensor (unit cm)"
+    },
+    {
+      "direction": "IN",
+      "name": "mixMotorComplete",
+      "data_type": "BOOL",
+      "description": "Mixing Complete Signal"
+    },
+    {
+      "direction": "OUT",
+      "name": "valveARun",
+      "data_type": "BOOL",
+      "description": "Valve A Run Command"
+    },
+    {
+      "direction": "OUT",
+      "name": "valveBRun",
+      "data_type": "BOOL",
+      "description": "Valve B Run Command"
+    },
+    {
+      "direction": "OUT",
+      "name": "valveCRun",
+      "data_type": "BOOL",
+      "description": "Valve C Run Command"
+    },
+    {
+      "direction": "OUT",
+      "name": "valveDRun",
+      "data_type": "BOOL",
+      "description": "Valve D Run Command"
+    },
+    {
+      "direction": "OUT",
+      "name": "mixMotorRun",
+      "data_type": "BOOL",
+      "description": "Mixing Motor Run Command"
+    }
+  ],
+  "type_declarations": "",
+  "type_origins": {},
+  "pou_name": "FB_P15",
+  "pou_kind": "FUNCTION_BLOCK",
+  "dialect_requirements": [],
+  "skeleton_compiled": false,
+  "scan_cycle_ms": 20
+}

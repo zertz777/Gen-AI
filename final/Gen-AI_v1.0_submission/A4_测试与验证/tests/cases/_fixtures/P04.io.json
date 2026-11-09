@@ -1,0 +1,40 @@
+{
+  "task_id": "P04",
+  "io": [
+    {
+      "name": "VISCOSITY_OK",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "PASTE_E_STOP_NC",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "DebounceTime",
+      "direction": "IN",
+      "type": "TIME"
+    },
+    {
+      "name": "CycleTime",
+      "direction": "IN",
+      "type": "TIME"
+    },
+    {
+      "name": "VFD_RUN",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "PUMP_MAINT_DUE",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "PUMP_RUNTIME_ACC",
+      "direction": "OUT",
+      "type": "LTIME"
+    }
+  ]
+}

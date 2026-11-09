@@ -1,0 +1,78 @@
+{
+  "source": "FUNCTION_BLOCK FB_P12\nVAR_INPUT\n    THICKNESS_FAULT : BOOL;\n    THICKNESS_SIGNAL_VALID : BOOL;\n    CUTTING_RUN : BOOL;\n    FaultTimestamp : DINT;\n    CycleTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    THICKNESS_ALARM : BOOL;\n    Slab_Fault_Counter : UINT;\n    Slab_Runtime_Accumulator : LTIME;\n    Slab_Fault_History : ARRAY[0..4] OF DINT;\nEND_VAR\nVAR\n    StartupScans : USINT := 0;\n    PreviousValidFault : BOOL := FALSE;\n    FaultRising : BOOL := FALSE;\n    HoldActive : BOOL := FALSE;\n    HoldElapsed : TIME := T#0ms;\n\n    InternalCounter : UINT := 0;\n    InternalRuntime : LTIME := LTIME#0ns;\n    InternalHistory : ARRAY[0..4] OF DINT := [0, 0, 0, 0, 0];\n\n    RuntimeIncrement : LTIME := LTIME#0ns;\n    MaximumRuntime : LTIME := LTIME#9223372036854775807ns;\n    Index : INT;\nEND_VAR\n\n(*\nRequirement text:\nMonitor slab-thickness faults on a stone-cutting line, including minimum\nalarm holding, fault counting, normal-cutting runtime accumulation and\na history of the five most recent faults.\n\n1. When THICKNESS_SIGNAL_VALID is TRUE, THICKNESS_FAULT indicates that\nthickness deviation exceeds tolerance. Activate THICKNESS_ALARM immediately\nwhen the fault becomes TRUE, and hold each triggered alarm for at least\n500 ms. Keep the alarm active while the fault persists.\n2. On each FALSE-to-TRUE transition of a valid fault signal, increment\nSlab_Fault_Counter and store the current FaultTimestamp in element 0 of\nSlab_Fault_History. Shift older entries toward higher indices, retaining\nonly the five most recent entries.\n3. Accumulate Slab_Runtime_Accumulator using CycleTime only while CUTTING_RUN\nis TRUE, the thickness signal is valid and no thickness fault is present.\nOtherwise preserve the accumulated value.\n4. At power-up or whenever THICKNESS_SIGNAL_VALID is FALSE, switch off\nthe alarm and clear its holding state. Do not add fault records or\naccumulate normal runtime while the signal is invalid.\n5. At power-up, initialize the fault count, accumulated runtime and all\nfive history entries to zero. Statistics and history are for observation\nand maintenance only; they must not alter the cutting equipment's\noperating permissive, and external callers must not modify history entries.\n\nFormal specification retained:\nC2: G(THICKNESS_ALARM -> THICKNESS_SIGNAL_VALID)\nC5: G(THICKNESS_FAULT && THICKNESS_SIGNAL_VALID ->\n      F[0,25](THICKNESS_ALARM))\nC6: G(THICKNESS_ALARM -> (THICKNESS_ALARM W !THICKNESS_FAULT))\nC8: G(!THICKNESS_SIGNAL_VALID -> X(!THICKNESS_ALARM))\nC10: G[0,1](!THICKNESS_ALARM)\n\nPENDING SEMANTIC REVIEW:\n- C10 literally requires alarm FALSE at scan indices 0 and 1. This conflicts\n  with immediate activation if a valid fault is present at startup.\n  This implementation gives the explicit startup interval priority.\n- C6 conflicts with C2 when validity is lost while the raw fault remains\n  TRUE. Invalid-signal clearing takes priority here.\n- C8 literally also requires the next scan to remain alarm-free following\n  an invalid scan, even if validity returns with a fault. This conflicts\n  with immediate activation. This implementation clears on the invalid\n  scan and handles a restored valid fault immediately.\n- C6 does not itself imply a 500 ms hold after a short fault.\n  The separate holding state below implements that textual requirement.\n- UINT cannot represent unlimited occurrences. At 65535 the counter\n  saturates; history continues recording. Exact unbounded counting is\n  impossible with the specified interface.\n- Runtime saturates at the supported signed 64-bit nanosecond LTIME limit.\n  Nonpositive CycleTime is rejected without altering accumulated runtime.\n- VAR_OUTPUT does not enforce caller access permissions in portable ST.\n  Private history is authoritative and outputs are republished each scan.\n  Strict external write prohibition requires project access configuration.\n\nCompilation profile must support LTIME, TIME_TO_LTIME, the LTIME literals\nused here, and standard array initialization. No compilation or functional\nverification is claimed. Internal state must be non-retentive at power-up.\nEach invocation represents 20 ms; CycleTime is used for runtime only.\n*)\n\nFaultRising := FALSE;\n\nIF StartupScans < 2 THEN\n    StartupScans := StartupScans + 1;\n\n    THICKNESS_ALARM := FALSE;\n    PreviousValidFault := FALSE;\n    HoldActive := FALSE;\n    HoldElapsed := T#0ms;\n\n    InternalCounter := 0;\n    InternalRuntime := LTIME#0ns;\n    FOR Index := 0 TO 4 DO\n        InternalHistory[Index] := 0;\n    END_FOR;\n\nELSIF NOT THICKNESS_SIGNAL_VALID THEN\n    THICKNESS_ALARM := FALSE;\n    PreviousValidFault := FALSE;\n    HoldActive := FALSE;\n    HoldElapsed := T#0ms;\n\nELSE\n    FaultRising := THICKNESS_FAULT AND NOT PreviousValidFault;\n\n    IF FaultRising THEN\n        IF InternalCounter < UINT#65535 THEN\n            InternalCounter := InternalCounter + UINT#1;\n        END_IF;\n\n        FOR Index := 4 TO 1 BY -1 DO\n            InternalHistory[Index] := InternalHistory[Index - 1];\n        END_FOR;\n        InternalHistory[0] := FaultTimestamp;\n\n        HoldActive := TRUE;\n        HoldElapsed := T#0ms;\n\n    ELSIF HoldActive THEN\n        IF HoldElapsed < T#500ms THEN\n            HoldElapsed := HoldElapsed + T#20ms;\n        END_IF;\n\n        IF HoldElapsed >= T#500ms THEN\n            HoldElapsed := T#500ms;\n            HoldActive := FALSE;\n        END_IF;\n    END_IF;\n\n    THICKNESS_ALARM := THICKNESS_FAULT OR HoldActive;\n    PreviousValidFault := THICKNESS_FAULT;\n\n    IF CUTTING_RUN AND NOT THICKNESS_FAULT AND (CycleTime > T#0ms) THEN\n        RuntimeIncrement := TIME_TO_LTIME(CycleTime);\n\n        IF RuntimeIncrement > LTIME#0ns THEN\n            IF RuntimeIncrement <= (MaximumRuntime - InternalRuntime) THEN\n                InternalRuntime := InternalRuntime + RuntimeIncrement;\n            ELSE\n                InternalRuntime := MaximumRuntime;\n            END_IF;\n        END_IF;\n    END_IF;\nEND_IF;\n\nSlab_Fault_Counter := InternalCounter;\nSlab_Runtime_Accumulator := InternalRuntime;\nFOR Index := 0 TO 4 DO\n    Slab_Fault_History[Index] := InternalHistory[Index];\nEND_FOR;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": null,
+          "message": "Fast compiler exited nonzero; inspect stdout.txt/stderr.txt",
+          "raw": "Fast compiler exited nonzero; inspect stdout.txt/stderr.txt"
+        }
+      ],
+      "elapsed_s": 1.781,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.203,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 1,
+    "passed_ids": [
+      "P12-03"
+    ],
+    "failures": [
+      {
+        "case_id": "P12-01",
+        "cycle": 1,
+        "signal": "THICKNESS_ALARM",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P12-02",
+        "cycle": 1,
+        "signal": "Slab_Fault_Counter",
+        "expected": 1,
+        "actual": 0
+      },
+      {
+        "case_id": "P12-04",
+        "cycle": 1,
+        "signal": "Slab_Runtime_Accumulator",
+        "expected": 1000.0,
+        "actual": 0.0
+      },
+      {
+        "case_id": "P12-05",
+        "cycle": 1,
+        "signal": "THICKNESS_ALARM",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P12-06",
+        "cycle": 1,
+        "signal": "THICKNESS_ALARM",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3824,
+  "tag": "candidate_2"
+}

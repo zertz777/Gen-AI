@@ -1,0 +1,10 @@
+# task: S12
+# meta: medium / D 故障与安全
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+
+C1: G(!EStop_NC -> !MachineRun)    -- 急停当周期设备必须停（K1）
+C2: G(MachineRun -> DoorClosed)    -- 运行的许可：安全门关闭（K2）
+C3: G(StartBtn && !DoorClosed -> X(!MachineRun))    -- 门未关时按启动不得启动（三步确认缺一不可）（K2/K3）
+C4: G(!(MachineRun && AlarmLamp))    -- 报警期间不得运行（互斥）（K1）
+C10: G[0,1](!MachineRun && ShiftCount == 0 && !AlarmLamp)    -- 上电首周期不运行、计数为 0（初态）

@@ -1,0 +1,131 @@
+{
+  "source": "TYPE ST_AnalogChannel :\nSTRUCT\n    enable : BOOL;\n    hiLIM : REAL;\n    loLIM : REAL;\n    bipolar : BOOL;\n    measuringMode : INT;\n    retVal : WORD;\n    outputValue : REAL;\nEND_STRUCT\nEND_TYPE\n\nFUNCTION_BLOCK FB_P08\nVAR_INPUT\n    count : DINT;\nEND_VAR\nVAR_IN_OUT\n    analogValues : ARRAY[*] OF INT;\n    channels : ARRAY[*] OF ST_AnalogChannel;\nEND_VAR\nVAR\n    analogLower : DINT;\n    channelLower : DINT;\n    analogLength : LINT;\n    channelLength : LINT;\n    processCount : LINT;\n    ordinal : LINT;\n    analogIndex : DINT;\n    channelIndex : DINT;\n    rawValue : REAL;\n    fraction : REAL;\nEND_VAR\n\n(*\n    Requires a compilation profile supporting ARRAY[*] in VAR_IN_OUT,\n    LOWER_BOUND, UPPER_BOUND and LINT arithmetic.\n    Compilation and scan-by-scan behavior have not been verified.\n\n    Unresolved specification conflict:\n    C10 requires zero output on the first scan, whereas the stated initial\n    behavior requires conversion from current inputs on every invocation.\n    Also, count = 0 forbids channel processing, so zeroing all channels to\n    enforce globally quantified C1/C6/C10 would violate K1.\n    This implementation follows current-input recomputation for the selected\n    prefix only. It does not add an unspecified startup suppression scan;\n    unconditional C10 and guarantees for unprocessed channels require review.\n*)\n\nanalogLower := LOWER_BOUND(analogValues, 1);\nchannelLower := LOWER_BOUND(channels, 1);\n\nanalogLength :=\n    DINT_TO_LINT(UPPER_BOUND(analogValues, 1))\n    - DINT_TO_LINT(analogLower) + LINT#1;\nchannelLength :=\n    DINT_TO_LINT(UPPER_BOUND(channels, 1))\n    - DINT_TO_LINT(channelLower) + LINT#1;\n\n(* Defensive bounds handling; valid callers already satisfy these bounds. *)\nprocessCount := DINT_TO_LINT(count);\nIF processCount < LINT#0 THEN\n    processCount := LINT#0;\nEND_IF;\nIF processCount > analogLength THEN\n    processCount := analogLength;\nEND_IF;\nIF processCount > channelLength THEN\n    processCount := channelLength;\nEND_IF;\n\nordinal := LINT#0;\nWHILE ordinal < processCount DO\n    analogIndex :=\n        LINT_TO_DINT(DINT_TO_LINT(analogLower) + ordinal);\n    channelIndex :=\n        LINT_TO_DINT(DINT_TO_LINT(channelLower) + ordinal);\n\n    channels[channelIndex].retVal := WORD#16#0000;\n    channels[channelIndex].outputValue := REAL#0.0;\n\n    IF channels[channelIndex].enable THEN\n        (* Invalid mode takes precedence if both configuration errors exist. *)\n        IF (channels[channelIndex].measuringMode < INT#0)\n            OR (channels[channelIndex].measuringMode > INT#2) THEN\n            channels[channelIndex].retVal := WORD#16#8001;\n\n        ELSIF channels[channelIndex].hiLIM\n            <= channels[channelIndex].loLIM THEN\n            channels[channelIndex].retVal := WORD#16#8002;\n\n        ELSE\n            rawValue := INT_TO_REAL(analogValues[analogIndex]);\n\n            CASE channels[channelIndex].measuringMode OF\n                0:\n                    IF channels[channelIndex].bipolar THEN\n                        fraction :=\n                            (rawValue + REAL#27648.0) / REAL#55296.0;\n                    ELSE\n                        fraction := rawValue / REAL#27648.0;\n                    END_IF;\n\n                    (* No raw-value clamping is specified. *)\n                    channels[channelIndex].outputValue :=\n                        channels[channelIndex].loLIM\n                        + fraction\n                        * (channels[channelIndex].hiLIM\n                           - channels[channelIndex].loLIM);\n\n                1:\n                    channels[channelIndex].outputValue :=\n                        rawValue / REAL#10.0;\n\n                2:\n                    channels[channelIndex].outputValue :=\n                        rawValue / REAL#100.0;\n            END_CASE;\n        END_IF;\n    END_IF;\n\n    ordinal := ordinal + LINT#1;\nEND_WHILE;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 10,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:10-10..11-1: error: ';' missing at end of data type declaration.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:10-10..11-1: error: ';' missing at end of data type declaration."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 18,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:18-26..18-26: error: invalid subrange list defined in array specification.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:18-26..18-26: error: invalid subrange list defined in array specification."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 19,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:19-22..19-22: error: invalid subrange list defined in array specification.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:19-22..19-22: error: invalid subrange list defined in array specification."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 49,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:49-27..49-28: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:49-27..49-28: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 49,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:49-28..49-44: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:49-28..49-44: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 50,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:50-27..50-28: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:50-27..50-28: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 50,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:50-28..50-40: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:50-28..50-40: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 53,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:53-28..53-29: error: ')' missing at the end of function invocation in ST expression.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:53-28..53-29: error: ')' missing at the end of function invocation in ST expression."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 53,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:53-29..53-29: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:53-29..53-29: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 53,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:53-29..54-40: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:53-29..54-40: error: invalid statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 56,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:56-28..56-29: error: ')' missing at the end of function invocation in ST expression.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:56-28..56-29: error: ')' missing at the end of function invocation in ST expression."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 56,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:56-29..56-29: error: ';' missing at the end of statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:56-29..56-29: error: ';' missing at the end of statement in ST statement."
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 56,
+          "message": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:56-29..57-41: error: invalid statement in ST statement.",
+          "raw": "E:\\wttttt\\member2_review_v1_1\\��Ա2\\��Ա2_�ύ��_v1.1\\runs\\formal34_frozen8_v1\\live\\E4_P08_1_42\\tools\\candidate_1\\fast\\source.st:56-29..57-41: error: invalid statement in ST statement."
+        }
+      ],
+      "elapsed_s": 0.265,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 38.578,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P08-01",
+      "P08-02",
+      "P08-03",
+      "P08-04",
+      "P08-05",
+      "P08-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3393,
+  "tag": "candidate_1"
+}

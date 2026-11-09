@@ -1,0 +1,46 @@
+{
+  "source": "FUNCTION_BLOCK FB_S05\nVAR_INPUT\n    FlowPulse : BOOL;\n    ShiftReset : BOOL;\n    CycleTime : TIME;\nEND_VAR\nVAR_OUTPUT\n    TotalVolume : LREAL := 0.0;\n    ShiftVolume : LREAL := 0.0;\n    PulseCount : UDINT := 0;\n    OverflowFlag : BOOL := FALSE;\n    Status : WORD := 16#0000;\nEND_VAR\nVAR\n    FlowPulseLast : BOOL := FALSE;\n    ShiftResetLast : BOOL := FALSE;\n    PulseRisingEdge : BOOL := FALSE;\n    ShiftRisingEdge : BOOL := FALSE;\nEND_VAR\n\n(* 边沿检测：按规约 K1/需求1 只在上升沿累加，每扫描周期最多计一个脉冲 (需求 1,4) *)\nPulseRisingEdge := FlowPulse AND NOT FlowPulseLast;\nShiftRisingEdge := ShiftReset AND NOT ShiftResetLast;\n\n(* 班次清零：清 ShiftVolume 与 PulseCount，TotalVolume 严格保持不变 (需求 2, K2, C6) *)\nIF ShiftRisingEdge THEN\n    ShiftVolume := 0.0;\n    PulseCount := 0;\nEND_IF;\n\n(* 脉冲上升沿累加 (需求 1, K1) *)\nIF PulseRisingEdge THEN\n    PulseCount := PulseCount + 1;\n\n    IF NOT OverflowFlag THEN\n        IF TotalVolume + 0.5 >= 1000000.0 THEN\n            (* 达到上限：封顶并置溢出标志，此后不再增长 (需求 3, K3, C1, C8) *)\n            TotalVolume := 1000000.0;\n            OverflowFlag := TRUE;\n        ELSE\n            TotalVolume := TotalVolume + 0.5;\n            ShiftVolume := ShiftVolume + 0.5;\n        END_IF;\n    END_IF;\nEND_IF;\n\n(* 溢出标志一经置位永久保持 (C8b) *)\nIF TotalVolume >= 1000000.0 THEN\n    OverflowFlag := TRUE;\nEND_IF;\n\n(* Status 输出 (需求 6)：16#8502 总量溢出；否则 16#0000 *)\nIF OverflowFlag THEN\n    Status := 16#8502;\nELSE\n    Status := 16#0000;\nEND_IF;\n\n(* 更新边沿历史 *)\nFlowPulseLast := FlowPulse;\nShiftResetLast := ShiftReset;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.203,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 17.718,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 5,
+    "passed_ids": [
+      "S05-01",
+      "S05-02",
+      "S05-03",
+      "S05-04",
+      "S05-05"
+    ],
+    "failures": [
+      {
+        "case_id": "S05-06",
+        "cycle": 2,
+        "signal": "TotalVolume",
+        "expected": 1.0,
+        "actual": 0.5
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

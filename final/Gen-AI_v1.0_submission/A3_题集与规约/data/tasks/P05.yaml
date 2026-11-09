@@ -1,0 +1,49 @@
+task_id: P05
+title: Weld Gap Alarm and Startup Inhibition
+difficulty: easy
+category: A
+requirement: |-
+  Control a weld-gap alarm with power-up monitoring inhibition, input debouncing during normal monitoring and emergency-stop priority.
+
+  1. Gap_Exceeded indicates that the scanner has detected a weld gap exceeding the permitted 1.5 mm value.
+  2. Begin with a 5-second initialization inhibition period after power-up. During this period, Operator_Alert is FALSE, Weld_Soft_Start_Active is TRUE, and gap-signal debounce time does not accumulate.
+  3. Resume gap monitoring after initialization. Allow the alarm only after Gap_Exceeded has remained TRUE for DebounceTime. When the signal becomes FALSE, switch off the alarm and clear debounce timing.
+  4. When Weld_E_Stop_NC is FALSE, the emergency stop takes priority over initialization and normal monitoring. Operator_Alert must immediately become FALSE and any incomplete debounce timing must be cleared.
+  5. Weld_Soft_Start_Active indicates only the power-up inhibition period; it does not represent a continuous speed ramp.
+
+  中文摘要：焊缝间隙报警：上电后 5 秒抑制期内不报警，抑制结束后间隙超限需去抖才报警，急停优先于一切。
+
+  扫描周期：20 ms（全组统一，见 docs/tasks_note.md）
+io_table:
+  - direction: IN
+    name: Gap_Exceeded
+    data_type: BOOL
+    description: Scanner indication that the gap exceeds 1.5 mm.
+  - direction: IN
+    name: Weld_E_Stop_NC
+    data_type: BOOL
+    description: TRUE means the emergency stop is inactive; FALSE means it is active.
+  - direction: IN
+    name: DebounceTime
+    data_type: TIME
+    description: Gap-signal debounce duration during normal monitoring; must be positive.
+  - direction: OUT
+    name: Operator_Alert
+    data_type: BOOL
+    description: Audible and visual alarm command.
+  - direction: OUT
+    name: Weld_Soft_Start_Active
+    data_type: BOOL
+    description: Monitoring-inhibition status during the 5-second power-up initialization.
+initial_state: Operator_Alert = FALSE；Weld_Soft_Start_Active = TRUE（抑制期开始）；去抖计时器清零。
+constraints:
+  - K1 上电后进入 5 s 初始化抑制期，期间 Weld_Soft_Start_Active = TRUE、Operator_Alert = FALSE，且去抖计时不累计。
+  - K2 抑制期结束后恢复监视：Gap_Exceeded 连续为 TRUE 达 DebounceTime 才置 Operator_Alert。
+  - K3 Gap_Exceeded 变 FALSE 时立即复位 Operator_Alert 并清去抖计时。
+  - K4 Weld_E_Stop_NC = FALSE 时急停优先于抑制期与正常监视：Operator_Alert 立即 FALSE，未完成的去抖计时清除。
+provenance: 课程公共题库 P05（Weld Gap Alarm and Startup Inhibition）；原文导入、变量名与需求未做任何改动；来源与审核记录见 data/provenance.csv 第 6 行
+spec_ref: data/specs/P05.ltl
+error_examples:
+  - 错误实现：抑制期内照常累计去抖时间。症状——上电 5 s 一到立即报警，抑制形同虚设。
+  - 错误实现：急停只清 Operator_Alert，未清去抖计时。症状——急停松开后间隙信号仍超限时报警瞬间重现。
+notes: ""

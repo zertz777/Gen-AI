@@ -1,0 +1,7 @@
+{"task_id": "P07", "case_id": "P07-01", "status": "fail", "mismatch": {"cycle": 2, "variable": "pumpGroup[].RunComd", "expected": [true, false, true, false, false], "actual": [false, false, false, false, false]}, "latency_s": 0.001}
+{"task_id": "P07", "case_id": "P07-02", "status": "pass", "mismatch": null, "latency_s": 0.001}
+{"task_id": "P07", "case_id": "P07-03", "status": "fail", "mismatch": {"cycle": 1, "variable": "pumpGroup[].RunComd", "expected": [true, true, true, false, false], "actual": [false, false, false, false, false]}, "latency_s": 0.001}
+{"task_id": "P07", "case_id": "P07-04", "status": "fail", "mismatch": {"cycle": 1, "variable": "pumpGroup[].RunComd", "expected": [true, false, false, false, false], "actual": [false, false, false, false, false]}, "latency_s": 0.001}
+{"task_id": "P07", "case_id": "P07-05", "status": "fail", "mismatch": {"cycle": 1, "variable": "pumpGroup[].RunComd", "expected": [true, false, false, false, false], "actual": [false, false, false, false, false]}, "latency_s": 0.001}
+{"task_id": "P07", "case_id": "P07-06", "status": "fail", "mismatch": {"cycle": 1, "variable": "pumpGroup[].RunComd", "expected": [false, true, false, true, true], "actual": [false, false, false, false, false]}, "latency_s": 0.001}
+{"task_id": "P07", "case_id": "P07-07", "status": "fail", "mismatch": {"cycle": 1, "variable": "pumpGroup[].RunComd", "expected": [false, false, true, true, true], "actual": [false, false, false, false, false]}, "latency_s": 0.001}

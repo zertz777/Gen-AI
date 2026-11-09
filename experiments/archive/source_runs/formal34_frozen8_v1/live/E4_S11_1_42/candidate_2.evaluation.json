@@ -1,0 +1,68 @@
+{
+  "source": "FUNCTION_BLOCK FB_S11\nVAR_INPUT\n    SensorCurrent : REAL;\n    FallbackValue : REAL;\nEND_VAR\nVAR_OUTPUT\n    SensorValid : BOOL := FALSE;\n    DegradedMode : BOOL := FALSE;\n    ControlValue : REAL := 0.0;\n    AlarmLamp : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    Initialized : BOOL := FALSE;\n    FaultDetected : BOOL := FALSE;\n    RecoveryBand : BOOL := FALSE;\n    FaultScans : UINT := UINT#0;\n    RecoveryScans : UINT := UINT#0;\n    BlinkPhase : UINT := UINT#0;\nEND_VAR\n\n(*\n    每次调用代表 20 ms，不依赖实际墙钟时间。\n\n    待审语义冲突：\n    若上电输入已在 4..20 mA，要求 1 的即时有效判定与\n    C10 的上电当拍 SensorValid = FALSE 不能同时成立。\n    本实现保留 C10 指定的首拍初态，从第二拍开始处理输入；\n    该首拍例外仍需需求方确认，不能据此声称全部要求已验证。\n\n    阈值间隙按 K1 的滞回处理：保持此前 SensorValid。\n    非降级且信号无效时保持此前 ControlValue。\n    有效信号采用线性换算；恢复区间超出 4..20 mA 的部分\n    同样线性外推，不自行增加限幅要求。\n\n    恢复首拍至第 150 拍均保持降级，第 151 拍才允许退出，\n    以满足 C9 的 G[0,149] 保持窗口。\n*)\n\nIF NOT Initialized THEN\n    SensorValid := FALSE;\n    DegradedMode := FALSE;\n    ControlValue := 0.0;\n    AlarmLamp := FALSE;\n    Status := WORD#16#0000;\n\n    FaultDetected := FALSE;\n    RecoveryBand := FALSE;\n    FaultScans := UINT#0;\n    RecoveryScans := UINT#0;\n    BlinkPhase := UINT#0;\n    Initialized := TRUE;\nELSE\n    FaultDetected :=\n        (SensorCurrent < 3.6) OR (SensorCurrent > 21.0);\n    RecoveryBand :=\n        (SensorCurrent >= 3.8) AND (SensorCurrent <= 20.5);\n\n    (* 断线判据优先；中间区间保持有效性状态。 *)\n    IF FaultDetected THEN\n        SensorValid := FALSE;\n    ELSIF RecoveryBand THEN\n        SensorValid := TRUE;\n    END_IF;\n\n    IF DegradedMode THEN\n        FaultScans := UINT#0;\n\n        (* 必须连续处于恢复区间，才能完成恢复确认。 *)\n        IF SensorValid AND RecoveryBand THEN\n            IF RecoveryScans < UINT#150 THEN\n                RecoveryScans := RecoveryScans + UINT#1;\n            ELSE\n                DegradedMode := FALSE;\n                RecoveryScans := UINT#0;\n            END_IF;\n        ELSE\n            RecoveryScans := UINT#0;\n        END_IF;\n    ELSE\n        RecoveryScans := UINT#0;\n\n        (* 滞回锁存的无效状态连续 100 个扫描后进入降级。 *)\n        IF NOT SensorValid THEN\n            IF FaultScans < UINT#100 THEN\n                FaultScans := FaultScans + UINT#1;\n            END_IF;\n\n            IF FaultScans >= UINT#100 THEN\n                DegradedMode := TRUE;\n                RecoveryScans := UINT#0;\n            END_IF;\n        ELSE\n            FaultScans := UINT#0;\n        END_IF;\n    END_IF;\n\n    (* 降级优先，包含整个恢复确认期。 *)\n    IF DegradedMode THEN\n        ControlValue := FallbackValue;\n    ELSIF SensorValid THEN\n        ControlValue := ((SensorCurrent - 4.0) / 16.0) * 100.0;\n    END_IF;\n\n    IF DegradedMode THEN\n        AlarmLamp := TRUE;\n        BlinkPhase := UINT#0;\n\n        IF SensorValid THEN\n            Status := WORD#16#8A03;\n        ELSE\n            Status := WORD#16#8A02;\n        END_IF;\n    ELSIF NOT SensorValid THEN\n        (* 25 拍亮、25 拍灭：周期 1 s，即 1 Hz。 *)\n        AlarmLamp := BlinkPhase < UINT#25;\n        Status := WORD#16#8A01;\n\n        IF BlinkPhase >= UINT#49 THEN\n            BlinkPhase := UINT#0;\n        ELSE\n            BlinkPhase := BlinkPhase + UINT#1;\n        END_IF;\n    ELSE\n        AlarmLamp := FALSE;\n        BlinkPhase := UINT#0;\n        Status := WORD#16#0000;\n    END_IF;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.453,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 31.407,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 5,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "S11-01",
+        "cycle": 1,
+        "signal": "SensorValid",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S11-02",
+        "cycle": 1,
+        "signal": "SensorValid",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S11-03",
+        "cycle": 1,
+        "signal": "SensorValid",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S11-04",
+        "cycle": 1,
+        "signal": "AlarmLamp",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S11-05",
+        "cycle": 1,
+        "signal": "SensorValid",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3220,
+  "tag": "candidate_2"
+}

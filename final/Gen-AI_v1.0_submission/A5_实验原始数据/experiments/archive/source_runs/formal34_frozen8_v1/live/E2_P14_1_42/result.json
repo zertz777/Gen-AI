@@ -1,0 +1,88 @@
+{
+  "run_id": "E2_P14_1_42",
+  "setting_id": "E2",
+  "framework": "baseline",
+  "model": "gpt-6.1-sol",
+  "task_id": "P14",
+  "task_version": "57db5684",
+  "repeat_idx": 1,
+  "seed": 42,
+  "start_ts": "2026-11-01T05:15:50.595031+00:00",
+  "latency_s": 136.172,
+  "candidates": 1,
+  "repair_rounds": 0,
+  "compile_status": "fail",
+  "compile_stage": "first",
+  "compile_errors": [
+    {
+      "code": "E_TYPE",
+      "severity": "error",
+      "line": 108,
+      "message": "不能将类型 '未知的类型: 'LEN(ipText)'' 转换为类型'INT'",
+      "raw": "不能将类型 '未知的类型: 'LEN(ipText)'' 转换为类型'INT'"
+    },
+    {
+      "code": "E_UNDECLARED",
+      "severity": "error",
+      "line": 108,
+      "message": "没有定义标识符'LEN' ",
+      "raw": "没有定义标识符'LEN' "
+    },
+    {
+      "code": "E_COMPILE",
+      "severity": "error",
+      "line": 108,
+      "message": "需要程序名、函数或功能块实例替代 'LEN'",
+      "raw": "需要程序名、函数或功能块实例替代 'LEN'"
+    },
+    {
+      "code": "E_TYPE",
+      "severity": "error",
+      "line": 113,
+      "message": "不能将类型 '未知的类型: 'MID(ipText, 1, position)'' 转换为类型'STRING(1)'",
+      "raw": "不能将类型 '未知的类型: 'MID(ipText, 1, position)'' 转换为类型'STRING(1)'"
+    },
+    {
+      "code": "E_UNDECLARED",
+      "severity": "error",
+      "line": 113,
+      "message": "没有定义标识符'MID' ",
+      "raw": "没有定义标识符'MID' "
+    },
+    {
+      "code": "E_COMPILE",
+      "severity": "error",
+      "line": 113,
+      "message": "需要程序名、函数或功能块实例替代 'MID'",
+      "raw": "需要程序名、函数或功能块实例替代 'MID'"
+    },
+    {
+      "code": "E_TYPE",
+      "severity": "error",
+      "line": 128,
+      "message": "不能将类型 '未知的类型: 'FIND('0123456789', character)'' 转换为类型'INT'",
+      "raw": "不能将类型 '未知的类型: 'FIND('0123456789', character)'' 转换为类型'INT'"
+    },
+    {
+      "code": "E_UNDECLARED",
+      "severity": "error",
+      "line": 128,
+      "message": "没有定义标识符'FIND' ",
+      "raw": "没有定义标识符'FIND' "
+    },
+    {
+      "code": "E_COMPILE",
+      "severity": "error",
+      "line": 128,
+      "message": "需要程序名、函数或功能块实例替代 'FIND'",
+      "raw": "需要程序名、函数或功能块实例替代 'FIND'"
+    }
+  ],
+  "test_total": 0,
+  "test_passed": 0,
+  "verify_status": "skipped",
+  "final_status": "abandoned:compile_fail",
+  "artifact_path": "live/E2_P14_1_42",
+  "tokens_in": 11464,
+  "tokens_out": 2312
+}

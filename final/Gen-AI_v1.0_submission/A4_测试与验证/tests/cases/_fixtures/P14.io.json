@@ -1,0 +1,15 @@
+{
+  "task_id": "P14",
+  "io": [
+    {
+      "name": "ipText",
+      "direction": "IN",
+      "type": "STRING(254)"
+    },
+    {
+      "name": "ipValue",
+      "direction": "OUT",
+      "type": "UDINT"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "case_id": "task_P17_skeleton",
+  "kind": "task_skeleton",
+  "expected": "observe",
+  "status": "fail",
+  "elapsed_s": 0.094,
+  "source_sha256": "e58b5773bc23b82f188574796ad9117c3fbc21624cf40ac894d74f8348f4aab3",
+  "errors": [
+    {
+      "code": "E_COMPILE",
+      "severity": "error",
+      "line": 7,
+      "message": ".\\validation\\matiec_live_r2\\task_P17_skeleton\\source.st:7-10..8-1: error: ';' missing at end of data type declaration.",
+      "raw": ".\\validation\\matiec_live_r2\\task_P17_skeleton\\source.st:7-10..8-1: error: ';' missing at end of data type declaration."
+    }
+  ],
+  "evidence_kind": "live_fast_compiler",
+  "functional_tests_run": false
+}

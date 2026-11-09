@@ -1,0 +1,68 @@
+{
+  "source": "FUNCTION_BLOCK FB_S11\nVAR_INPUT\n    SensorCurrent : REAL;\n    FallbackValue : REAL;\nEND_VAR\nVAR_OUTPUT\n    SensorValid : BOOL := FALSE;\n    DegradedMode : BOOL := FALSE;\n    ControlValue : REAL := 0.0;\n    AlarmLamp : BOOL := FALSE;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    Initialized : BOOL := FALSE;\n    FaultDetected : BOOL;\n    InRecoveryBand : BOOL;\n    InMeasurementBand : BOOL;\n    InvalidScans : UINT := UINT#0;\n    RecoveryScans : UINT := UINT#0;\n    BlinkScans : UINT := UINT#0;\n    WasInvalid : BOOL := FALSE;\n    LastMeasuredValue : REAL := 0.0;\nEND_VAR\n\n(*\n需求原文：\n温度变送器输出 4—20 mA，需要识别断线并降级运行，\n避免因单点故障停机。\n1. 4—20 mA 内信号有效，温度为 (电流 - 4) / 16 * 100。\n2. 电流 < 3.6 或 > 21 判为断线，持续 2 s 后降级并使用备用值。\n3. 重新进入 3.8—20.5 mA 后信号有效，持续 3 s 才允许退出降级。\n4. 降级时报警常亮；无效但未降级时报警以 1 Hz 闪烁。\n5. 状态：0000 正常，8A01 断线，8A02 降级，8A03 恢复确认。\n\n待审冲突及未明确项：\n- C10 要求上电当拍 SensorValid=FALSE、ControlValue=0.0，\n  与正常电流当拍立即有效并换算的要求可能冲突。\n  本实现保留 C10，上电首拍只建立初态，下一拍开始处理输入。\n- C9 要求恢复跳变当拍起连续 150 拍仍保持降级。\n  因此第 150 个恢复采样仍降级，第 151 个恢复采样退出。\n- 滞回边带的控制数值未定义。本实现只在 4—20 mA 更新测量值，\n  其他未降级情况保持最后一次区间内测量值，不外推。\n- 无效状态在滞回边带保持；断线计时按连续无效状态累计。\n  恢复计时要求电流连续处于 3.8—20.5 mA，离开即清零。\n以上边界处理待逐周期测试核对；未声称已编译或验证。\n每次调用按固定 20 ms 累计，不使用墙钟时间。\n*)\n\nIF NOT Initialized THEN\n    SensorValid := FALSE;\n    DegradedMode := FALSE;\n    ControlValue := 0.0;\n    AlarmLamp := FALSE;\n    Status := WORD#16#0000;\n\n    InvalidScans := UINT#0;\n    RecoveryScans := UINT#0;\n    BlinkScans := UINT#0;\n    WasInvalid := FALSE;\n    LastMeasuredValue := 0.0;\n    Initialized := TRUE;\nELSE\n    FaultDetected :=\n        (SensorCurrent < 3.6) OR (SensorCurrent > 21.0);\n\n    InRecoveryBand :=\n        (SensorCurrent >= 3.8) AND (SensorCurrent <= 20.5);\n\n    InMeasurementBand :=\n        (SensorCurrent >= 4.0) AND (SensorCurrent <= 20.0);\n\n    (* 滞回：断线阈值优先，中间区域保持有效性状态。 *)\n    IF FaultDetected THEN\n        SensorValid := FALSE;\n    ELSIF InRecoveryBand THEN\n        SensorValid := TRUE;\n    END_IF;\n\n    IF SensorValid THEN\n        InvalidScans := UINT#0;\n    ELSE\n        IF InvalidScans < UINT#100 THEN\n            InvalidScans := InvalidScans + UINT#1;\n        END_IF;\n\n        IF InvalidScans >= UINT#100 THEN\n            DegradedMode := TRUE;\n        END_IF;\n    END_IF;\n\n    IF DegradedMode THEN\n        IF SensorValid AND InRecoveryBand THEN\n            IF RecoveryScans < UINT#151 THEN\n                RecoveryScans := RecoveryScans + UINT#1;\n            END_IF;\n\n            (* 恢复首拍至第150拍保持降级，随后退出。 *)\n            IF RecoveryScans >= UINT#151 THEN\n                DegradedMode := FALSE;\n                RecoveryScans := UINT#0;\n            END_IF;\n        ELSE\n            RecoveryScans := UINT#0;\n        END_IF;\n    ELSE\n        RecoveryScans := UINT#0;\n    END_IF;\n\n    IF SensorValid AND InMeasurementBand THEN\n        LastMeasuredValue :=\n            ((SensorCurrent - 4.0) / 16.0) * 100.0;\n    END_IF;\n\n    (* 降级输出优先，包括恢复确认期。 *)\n    IF DegradedMode THEN\n        ControlValue := FallbackValue;\n    ELSE\n        ControlValue := LastMeasuredValue;\n    END_IF;\n\n    IF DegradedMode THEN\n        AlarmLamp := TRUE;\n        BlinkScans := UINT#0;\n    ELSIF NOT SensorValid THEN\n        (* 50拍一周期：亮25拍、灭25拍；新故障从亮相开始。 *)\n        IF NOT WasInvalid THEN\n            BlinkScans := UINT#0;\n        END_IF;\n\n        AlarmLamp := BlinkScans < UINT#25;\n\n        IF BlinkScans >= UINT#49 THEN\n            BlinkScans := UINT#0;\n        ELSE\n            BlinkScans := BlinkScans + UINT#1;\n        END_IF;\n    ELSE\n        AlarmLamp := FALSE;\n        BlinkScans := UINT#0;\n    END_IF;\n\n    IF DegradedMode THEN\n        IF SensorValid THEN\n            Status := WORD#16#8A03;\n        ELSE\n            Status := WORD#16#8A02;\n        END_IF;\n    ELSIF NOT SensorValid THEN\n        Status := WORD#16#8A01;\n    ELSE\n        Status := WORD#16#0000;\n    END_IF;\n\n    WasInvalid := NOT SensorValid;\nEND_IF;\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.422,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 35.609,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 5,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "S11-01",
+        "cycle": 1,
+        "signal": "SensorValid",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S11-02",
+        "cycle": 1,
+        "signal": "SensorValid",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S11-03",
+        "cycle": 1,
+        "signal": "SensorValid",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S11-04",
+        "cycle": 1,
+        "signal": "AlarmLamp",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S11-05",
+        "cycle": 1,
+        "signal": "SensorValid",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 3411,
+  "tag": "candidate_1"
+}

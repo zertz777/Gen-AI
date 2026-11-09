@@ -1,0 +1,68 @@
+{
+  "source": "FUNCTION_BLOCK FB_S06\nVAR_INPUT\n    TempPV : REAL;\n    SetTemp : REAL;\n    Segment : INT;\n    LoadReduceReq : BOOL;\nEND_VAR\nVAR_OUTPUT\n    HeatOn : BOOL;\n    FanOn : BOOL;\n    OverTempAlarm : BOOL;\n    LoadReduce : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    InitDone : BOOL;\n    InvalidSeg : BOOL;\n    PrevInvalidSeg : BOOL;\n    EffectiveSetTemp : REAL;\n    HeatDemand : BOOL;\nEND_VAR\n\n(* 语义冲突保留：K3/K1 要求按当前段目标值（SetTemp 经 0.5/0.8/1.0 缩放）做 +10/-3 ℃ 迟滞；\n   LTL C7 原文写 TempPV <= SetTemp - 3.0。若 Segment<>2，按原始 SetTemp 与按当前段目标值会不一致。\n   本实现按 K3/K1 使用 EffectiveSetTemp 的 -3.0 ℃ 迟滞；不新增外部接口。 *)\n\nInvalidSeg := (Segment < 0) OR (Segment > 2);\n\nIF NOT InitDone THEN\n    HeatOn := FALSE;\n    FanOn := FALSE;\n    OverTempAlarm := FALSE;\n    LoadReduce := FALSE;\n    Status := WORD#16#0000;\n    PrevInvalidSeg := InvalidSeg;\n    InitDone := TRUE;\nELSE\n    (* K1：段号 0/1/2 -> 50%/80%/100%；非法段按 0 段处理。 *)\n    IF InvalidSeg THEN\n        EffectiveSetTemp := SetTemp * 0.5;\n    ELSE\n        CASE Segment OF\n            0: EffectiveSetTemp := SetTemp * 0.5;\n            1: EffectiveSetTemp := SetTemp * 0.8;\n            2: EffectiveSetTemp := SetTemp * 1.0;\n        ELSE\n            EffectiveSetTemp := SetTemp * 0.5;\n        END_CASE;\n    END_IF;\n\n    (* K3/C7：超温报警迟滞。 *)\n    IF TempPV > (EffectiveSetTemp + 10.0) THEN\n        OverTempAlarm := TRUE;\n    END_IF;\n\n    IF OverTempAlarm AND (TempPV <= (EffectiveSetTemp - 3.0)) THEN\n        OverTempAlarm := FALSE;\n    END_IF;\n\n    (* 上位机降载请求与超温降载合并；C1/C4 由 HeatDemand 强制关断保证。 *)\n    LoadReduce := OverTempAlarm OR LoadReduceReq;\n\n    (* K2：±5 ℃ 死区，区间内保持上一周期 HeatOn。 *)\n    IF LoadReduce THEN\n        HeatDemand := FALSE;\n    ELSE\n        IF TempPV < (EffectiveSetTemp - 5.0) THEN\n            HeatDemand := TRUE;\n        ELSIF TempPV > (EffectiveSetTemp + 5.0) THEN\n            HeatDemand := FALSE;\n        ELSE\n            HeatDemand := HeatOn;\n        END_IF;\n    END_IF;\n\n    (* K4/C2：HeatOn 为 TRUE 时 FanOn 必须为 TRUE；降载/超温时保持风机散热。 *)\n    IF HeatDemand OR LoadReduce OR OverTempAlarm THEN\n        FanOn := TRUE;\n    ELSE\n        FanOn := FALSE;\n    END_IF;\n\n    HeatOn := HeatDemand;\n\n    (* Status：非法段优先，C8 对非法段状态保持到下一周期。 *)\n    IF InvalidSeg OR PrevInvalidSeg THEN\n        Status := WORD#16#8601;\n    ELSIF LoadReduce OR OverTempAlarm THEN\n        Status := WORD#16#8602;\n    ELSE\n        Status := WORD#16#0000;\n    END_IF;\n\n    PrevInvalidSeg := InvalidSeg;\nEND_IF;\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.906,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 5,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "S06-01",
+        "cycle": 1,
+        "signal": "HeatOn",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S06-02",
+        "cycle": 1,
+        "signal": "HeatOn",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S06-03",
+        "cycle": 1,
+        "signal": "HeatOn",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S06-04",
+        "cycle": 1,
+        "signal": "OverTempAlarm",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S06-05",
+        "cycle": 1,
+        "signal": "LoadReduce",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 24966,
+  "tag": "candidate_2"
+}

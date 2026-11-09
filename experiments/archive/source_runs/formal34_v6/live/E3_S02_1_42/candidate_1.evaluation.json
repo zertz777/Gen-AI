@@ -1,0 +1,75 @@
+{
+  "source": "FUNCTION_BLOCK FB_S02\nVAR_INPUT\n    FwdBtn : BOOL;\n    RevBtn : BOOL;\n    MaintKey : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MotorFwd : BOOL;\n    MotorRev : BOOL;\n    RunLamp : BOOL;\n    Status : WORD;\nEND_VAR\nVAR\n    DeadTimer : INT := 0;\n    BlinkCounter : INT := 0;\n    FirstScan : BOOL := TRUE;\nEND_VAR\n\nIF FirstScan THEN\n    FirstScan := FALSE;\n    MotorFwd := FALSE;\n    MotorRev := FALSE;\n    RunLamp := FALSE;\n    Status := 16#0000;\n    DeadTimer := 0;\n    BlinkCounter := 0;\nELSE\n    IF MaintKey THEN\n        IF BlinkCounter >= 50 THEN\n            BlinkCounter := 0;\n        END_IF;\n        IF BlinkCounter < 25 THEN\n            RunLamp := TRUE;\n        ELSE\n            RunLamp := FALSE;\n        END_IF;\n        BlinkCounter := BlinkCounter + 1;\n    ELSE\n        BlinkCounter := 0;\n        RunLamp := FALSE;\n    END_IF;\n\n    IF NOT EStop_NC THEN\n        MotorFwd := FALSE;\n        MotorRev := FALSE;\n        DeadTimer := 0;\n        Status := 16#8202;\n    ELSIF MaintKey THEN\n        MotorFwd := FALSE;\n        MotorRev := FALSE;\n        Status := 16#8201;\n    ELSE\n        IF DeadTimer > 0 THEN\n            DeadTimer := DeadTimer - 1;\n        END_IF;\n\n        IF DeadTimer > 0 THEN\n            MotorFwd := FALSE;\n            MotorRev := FALSE;\n            Status := 16#8203;\n        ELSE\n            IF MotorFwd AND RevBtn THEN\n                MotorFwd := FALSE;\n                MotorRev := FALSE;\n                DeadTimer := 10;\n                Status := 16#8203;\n            ELSIF MotorRev AND FwdBtn THEN\n                MotorFwd := FALSE;\n                MotorRev := FALSE;\n                DeadTimer := 10;\n                Status := 16#8203;\n            ELSE\n                MotorFwd := FwdBtn AND NOT MotorRev;\n                MotorRev := RevBtn AND NOT MotorFwd;\n                Status := 16#0000;\n            END_IF;\n        END_IF;\n    END_IF;\nEND_IF;\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.063,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "S02-01",
+        "cycle": 1,
+        "signal": "MotorFwd",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S02-02",
+        "cycle": 1,
+        "signal": "MotorFwd",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S02-03",
+        "cycle": 1,
+        "signal": "RunLamp",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S02-04",
+        "cycle": 1,
+        "signal": "MotorFwd",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "S02-05",
+        "cycle": 2,
+        "signal": "MotorFwd",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S02-06",
+        "cycle": 1,
+        "signal": "MotorFwd",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 18032,
+  "tag": "candidate_1"
+}

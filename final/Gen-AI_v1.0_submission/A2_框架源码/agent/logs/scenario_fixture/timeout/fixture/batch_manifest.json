@@ -1,0 +1,12 @@
+{
+  "execution_mode": "fixture",
+  "setting_id": "E3",
+  "task_set": "core32",
+  "task_ids": [
+    "S03"
+  ],
+  "repeat": 1,
+  "seed": 42,
+  "code_hash": "223b59c204ac13c54c77776db7730311b437aa1d929986294790ad52cb17a1d6",
+  "count": 1
+}

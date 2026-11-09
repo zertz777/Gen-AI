@@ -1,0 +1,6 @@
+mutant_id,task_id,operator,description,status,killed_by,passed,failed,error,total,base_source
+M-S10-1,S10,条件取反,重故障判据反相：IsHeavyFault 取 NOT,killed,S10-01@1,5,3,0,8,final.st
+M-S10-2,S10,边界偏移,重故障阈值边界：16#0003 → 16#0004,killed,S10-07@1,7,1,0,8,final.st
+M-S10-3,S10,运算符替换,复位上升沿 → 电平触发,killed,S10-08@4,7,1,0,8,final.st
+M-S10-4,S10,常量替换,锁存状态码常量：LatchedCode := VFDFaultCode → 16#0001,killed,S10-02@1,1,7,0,8,final.st
+M-S10-5,S10,语句删除,删除复位分支的解锁存语句,killed,S10-03@4,4,4,0,8,final.st

@@ -1,0 +1,39 @@
+{
+  "source": "FUNCTION_BLOCK FB_P02\nVAR_INPUT\n    value : DWORD;\nEND_VAR\nVAR_OUTPUT\n    hasChanged : BOOL := FALSE;\n    hasRisingEdges : BOOL := FALSE;\n    risingBits : DWORD := 16#00000000;\n    noOfRisingBits : USINT := 0;\n    hasFallingEdges : BOOL := FALSE;\n    fallingBits : DWORD := 16#00000000;\n    noOfFallingBits : USINT := 0;\nEND_VAR\nVAR\n    lastValue : DWORD := 16#00000000;\n    initialized : BOOL := FALSE;\n    tempR : DWORD;\n    tempF : DWORD;\n    i : INT;\nEND_VAR\n\n(*\n    NOTE: LTL clause C7 as given appears overly restrictive:\n    G(!hasChanged -> X(!hasRisingEdges && !hasFallingEdges))\n    would forbid any edge detection immediately after a no-change cycle,\n    which conflicts with standard edge detection behavior.\n    This implementation follows the I/O semantics and K1-K4.\n    The conflict is preserved and reported here as required.\n*)\n\nIF NOT initialized THEN\n    (* First scan cycle: no previous value to compare. K4, C10. *)\n    lastValue := value;\n    initialized := TRUE;\n    hasChanged := FALSE;\n    hasRisingEdges := FALSE;\n    risingBits := 16#00000000;\n    noOfRisingBits := 0;\n    hasFallingEdges := FALSE;\n    fallingBits := 16#00000000;\n    noOfFallingBits := 0;\nELSE\n    (* Compute edges: rising = current 1 where previous 0; falling = current 0 where previous 1. K1, K2. *)\n    risingBits := value AND NOT lastValue;\n    fallingBits := (NOT value) AND lastValue;\n\n    hasRisingEdges := (risingBits <> 16#00000000);\n    hasFallingEdges := (fallingBits <> 16#00000000);\n    hasChanged := hasRisingEdges OR hasFallingEdges;\n\n    (* Count set bits in risingBits and fallingBits. K3. *)\n    noOfRisingBits := 0;\n    noOfFallingBits := 0;\n    tempR := risingBits;\n    tempF := fallingBits;\n    FOR i := 0 TO 31 DO\n        IF (tempR AND 16#00000001) <> 0 THEN\n            noOfRisingBits := noOfRisingBits + 1;\n        END_IF;\n        IF (tempF AND 16#00000001) <> 0 THEN\n            noOfFallingBits := noOfFallingBits + 1;\n        END_IF;\n        tempR := SHR(tempR, 1);\n        tempF := SHR(tempF, 1);\n    END_FOR;\n\n    (* Update lastValue for next cycle. *)\n    lastValue := value;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.015,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P02-01",
+      "P02-02",
+      "P02-03",
+      "P02-04",
+      "P02-05",
+      "P02-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 7218,
+  "tag": "candidate_1"
+}

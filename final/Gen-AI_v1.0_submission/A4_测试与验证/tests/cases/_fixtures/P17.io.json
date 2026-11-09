@@ -1,0 +1,80 @@
+{
+  "task_id": "P17",
+  "io": [
+    {
+      "name": "addRecipe",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "deleteRecipe",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "modifyRecipe",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "queryRecipe",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "recipeIn",
+      "direction": "IN",
+      "type": "ST_Recipe"
+    },
+    {
+      "name": "recipeAdded",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "recipeDeleted",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "recipeModified",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "recipeQueryResult",
+      "direction": "OUT",
+      "type": "ST_Recipe"
+    },
+    {
+      "name": "error",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "status",
+      "direction": "OUT",
+      "type": "WORD"
+    },
+    {
+      "name": "recipe[].recipeID",
+      "direction": "IN",
+      "type": "ARRAY[1..10] OF INT"
+    },
+    {
+      "name": "recipe[].ingredientType",
+      "direction": "IN",
+      "type": "ARRAY[1..10] OF INT"
+    },
+    {
+      "name": "recipe[].ingredientRatio",
+      "direction": "IN",
+      "type": "ARRAY[1..10] OF REAL"
+    },
+    {
+      "name": "recipe[].productionTemperature",
+      "direction": "IN",
+      "type": "ARRAY[1..10] OF REAL"
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "task_id": "S13",
+  "io": [
+    {
+      "name": "LineRun",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "PartAtMerge",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "PartOnMain",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "JamSensor",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "ResetBtn",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "ModeAuto",
+      "direction": "IN",
+      "type": "BOOL"
+    },
+    {
+      "name": "MainMotor",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "MergeMotor",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "SpeedHigh",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "JamAlarm",
+      "direction": "OUT",
+      "type": "BOOL"
+    },
+    {
+      "name": "Status",
+      "direction": "OUT",
+      "type": "WORD"
+    }
+  ]
+}

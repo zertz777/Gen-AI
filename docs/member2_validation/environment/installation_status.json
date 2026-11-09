@@ -1,0 +1,8 @@
+{
+    "ended":  "2026-10-31T15:05:38.9324333+08:00",
+    "started":  "2026-10-31T14:19:39.3227402+08:00",
+    "target":  "<CODESYS_INSTALL>",
+    "status":  "finished",
+    "exit_code":  0,
+    "stage":  "development_system_retry"
+}

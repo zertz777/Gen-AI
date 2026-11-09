@@ -1,0 +1,6 @@
+{"task_id": "S01", "case_id": "S01-01", "status": "fail", "mismatch": {"cycle": 1, "variable": "ClampLeft", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "S01", "case_id": "S01-02", "status": "fail", "mismatch": {"cycle": 1, "variable": "ClampRight", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "S01", "case_id": "S01-03", "status": "pass", "mismatch": null, "latency_s": 0.001}
+{"task_id": "S01", "case_id": "S01-04", "status": "fail", "mismatch": {"cycle": 1, "variable": "ClampLeft", "expected": true, "actual": false}, "latency_s": 0.001}
+{"task_id": "S01", "case_id": "S01-05", "status": "fail", "mismatch": {"cycle": 1, "variable": "Status", "expected": 33025, "actual": 0}, "latency_s": 0.001}
+{"task_id": "S01", "case_id": "S01-06", "status": "pass", "mismatch": null, "latency_s": 0.001}

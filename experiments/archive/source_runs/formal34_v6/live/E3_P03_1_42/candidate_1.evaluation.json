@@ -1,0 +1,75 @@
+{
+  "source": "FUNCTION_BLOCK FB_P03\nVAR_INPUT\n    Value : REAL;\n    hiLevel : REAL;\n    loLevel : REAL;\n    hystWindow : REAL;\nEND_VAR\nVAR_OUTPUT\n    hiAlarm : BOOL;\n    loAlarm : BOOL;\n    error : BOOL;\n    status : WORD;\nEND_VAR\nVAR\n    initCount : INT := 0;       (* 用于前两个周期保持初态，满足 C10 G[0,1] *)\n    lastError : BOOL := FALSE;  (* 上一周期是否发生参数错误，用于 C1 错误后下一周期强制关断 *)\nEND_VAR\n\n(* 上电前两个周期保持初态：无报警、无错误、status = 0 (C10) *)\nIF initCount < 2 THEN\n    error := FALSE;\n    status := 16#0000;\n    hiAlarm := FALSE;\n    loAlarm := FALSE;\n    initCount := initCount + 1;\n    RETURN;\nEND_IF;\n\n(* K1: 若 loLevel >= hiLevel，立即报错并退出，同时强制关断报警 *)\nIF loLevel >= hiLevel THEN\n    error := TRUE;\n    status := 16#8001;\n    hiAlarm := FALSE;\n    loAlarm := FALSE;\n    lastError := TRUE;\n    RETURN;\nEND_IF;\n\n(* K2: 若 hystWindow >= (hiLevel - loLevel)，报错并退出，同时强制关断报警 *)\nIF hystWindow >= (hiLevel - loLevel) THEN\n    error := TRUE;\n    status := 16#8002;\n    hiAlarm := FALSE;\n    loAlarm := FALSE;\n    lastError := TRUE;\n    RETURN;\nEND_IF;\n\n(* 参数合法。若上一周期存在错误，则本周期必须保持报警关断 (C1)，并清除错误状态 *)\nIF lastError THEN\n    error := FALSE;\n    status := 16#0000;\n    hiAlarm := FALSE;\n    loAlarm := FALSE;\n    lastError := FALSE;\n    RETURN;\nEND_IF;\n\n(* 正常报警逻辑 *)\nerror := FALSE;\nstatus := 16#0000;\n\n(* K3: 高报滞回 *)\nIF Value > hiLevel THEN\n    hiAlarm := TRUE;\nELSIF Value < (hiLevel - hystWindow) THEN\n    hiAlarm := FALSE;\nEND_IF;\n\n(* K4: 低报滞回 *)\nIF Value < loLevel THEN\n    loAlarm := TRUE;\nELSIF Value > (loLevel + hystWindow) THEN\n    loAlarm := FALSE;\nEND_IF;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 24.719,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": [
+      {
+        "case_id": "P03-01",
+        "cycle": 1,
+        "signal": "hiAlarm",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P03-02",
+        "cycle": 2,
+        "signal": "hiAlarm",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P03-03",
+        "cycle": 2,
+        "signal": "loAlarm",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P03-04",
+        "cycle": 1,
+        "signal": "error",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P03-05",
+        "cycle": 1,
+        "signal": "error",
+        "expected": true,
+        "actual": false
+      },
+      {
+        "case_id": "P03-06",
+        "cycle": 1,
+        "signal": "hiAlarm",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 10056,
+  "tag": "candidate_1"
+}

@@ -1,0 +1,48 @@
+{
+  "source": "FUNCTION_BLOCK FB_P20\nVAR_INPUT\n    Mode : BOOL;\n    ForwardButton : BOOL;\n    ReverseButton : BOOL;\n    SensorFeed : BOOL;\n    SensorWash : BOOL;\n    SensorWeight : BOOL;\n    SensorFiring : BOOL;\n    SensorOutput : BOOL;\n    washComplete : BOOL;\n    weightComplete : BOOL;\n    weight : REAL;\n    firingComplete : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MotorForward : BOOL;\n    MotorReverse : BOOL;\n    kick : BOOL;\n    CompletionLight : BOOL;\n    firingTemp : REAL;\nEND_VAR\nVAR\n    tempHold : REAL := 0.0;\n    lastMF : BOOL := FALSE;\n    lastMR : BOOL := FALSE;\n    qualified : BOOL := FALSE;\nEND_VAR\n\n(*\n  语义冲突（保留并报告, 不静默消除）:\n  1) 需求原文: 在称重工位对不合格品发出 kick 剔除 (本实现遵循, 见自动分支)。\n     约束 K4 与形式规约 C2 又要求 kick 只能发生在成品工位且 G(kick -> SensorOutput)。\n     二者不可能同时成立，冲突保留上报。\n  2) 形式规约 C10 G[0,1](无输出) 要求上电周期输出为 FALSE;\n     而给定逐周期测试在首次调用即驱动输入并期望立即输出。二者不可能同时成立,\n     本实现按测试时序立即响应, 冲突保留上报。\n*)\n\n(* 每个扫描周期的默认输出 *)\nMotorForward := FALSE;\nMotorReverse := FALSE;\nkick := FALSE;\nCompletionLight := FALSE;\n\nIF NOT Mode THEN\n    (* ---------- 手动模式 ----------\n       K1: 正反转互斥；方向切换需要一个扫描周期的死区 (互锁记忆) *)\n    IF ForwardButton AND NOT ReverseButton AND NOT lastMR THEN\n        MotorForward := TRUE;\n    ELSIF ReverseButton AND NOT ForwardButton AND NOT lastMF THEN\n        MotorReverse := TRUE;\n    END_IF;\n    firingTemp := 0.0;\n    tempHold := 0.0;\nELSE\n    (* ---------- 自动模式 ----------\n       工位顺序 上料->清洗->称重->烧成->成品, 由到位传感器与完成信号推进,\n       传感器序列天然保证不跳站 (K2)。 *)\n    qualified := (weight >= 100.0) AND (weight <= 200.0);\n\n    IF SensorFeed THEN\n        (* 上料站: 正转送清洗站 *)\n        MotorForward := TRUE;\n    ELSIF SensorWash AND washComplete THEN\n        (* 清洗站: 清洗完成才推进 *)\n        MotorForward := TRUE;\n    ELSIF SensorWeight AND weightComplete THEN\n        (* 称重站: 到位停转; 完成信号到达后判定 *)\n        IF qualified THEN\n            (* 合格: 100..200 线性映射 500..550, 推进到烧成站 *)\n            tempHold := 500.0 + (weight - 100.0) * 0.5;\n            MotorForward := TRUE;\n        ELSE\n            (* 不合格: 在称重站剔除, 不推进 (遵循需求原文) *)\n            kick := TRUE;\n        END_IF;\n    ELSIF SensorFiring AND firingComplete THEN\n        (* 烧成站: 烧成完成才推进到成品站 *)\n        MotorForward := TRUE;\n    END_IF;\n\n    (* 成品站: 到位点亮完成灯, 产品取走后熄灭 (C6) *)\n    IF SensorOutput THEN\n        CompletionLight := TRUE;\n    END_IF;\n\n    firingTemp := tempHold;\nEND_IF;\n\nlastMF := MotorForward;\nlastMR := MotorReverse;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.312,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 8,
+    "passed": 7,
+    "passed_ids": [
+      "P20-01",
+      "P20-02",
+      "P20-03",
+      "P20-04",
+      "P20-05",
+      "P20-06",
+      "P20-07"
+    ],
+    "failures": [
+      {
+        "case_id": "P20-08",
+        "cycle": 1,
+        "signal": "kick",
+        "expected": true,
+        "actual": false
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

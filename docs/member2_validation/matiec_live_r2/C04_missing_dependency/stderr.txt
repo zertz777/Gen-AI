@@ -1,0 +1,4 @@
+.\validation\matiec_live_r2\C04_missing_dependency\source.st:3-8..3-41: error: invalid specification in variable declaration.
+.\validation\matiec_live_r2\C04_missing_dependency\source.st:5-4..5-4: error: syntax error
+
+Parsing failed because of too many consecutive syntax errors. Bailing out!

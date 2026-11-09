@@ -1,0 +1,285 @@
+{
+  "source": "TYPE P11_State :\n(\n    P11_IDLE,\n    P11_MOVE_TO_B,\n    P11_WAIT_B,\n    P11_MOVE_TO_C,\n    P11_WAIT_C,\n    P11_DONE\n);\nEND_TYPE\n\nFUNCTION_BLOCK FB_P11\nVAR_INPUT\n    Mode : BOOL;\n    ForwardButton : BOOL;\n    ReverseButton : BOOL;\n    SensorA : BOOL;\n    SensorB : BOOL;\n    SensorC : BOOL;\n    ButtonA : BOOL;\n    ButtonB : BOOL;\n    ButtonC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    MotorForward : BOOL;\n    MotorReverse : BOOL;\n    CompletionLight : BOOL;\nEND_VAR\nVAR\n    State : P11_State := P11_IDLE;\n    FirstScan : BOOL := TRUE;\n    ButtonATrig : R_TRIG;\n    ButtonBTrig : R_TRIG;\n    ButtonCTrig : R_TRIG;\nEND_VAR\n\nButtonATrig(CLK := ButtonA);\nButtonBTrig(CLK := ButtonB);\nButtonCTrig(CLK := ButtonC);\n\nIF FirstScan THEN\n    MotorForward := FALSE;\n    MotorReverse := FALSE;\n    CompletionLight := FALSE;\n    State := P11_IDLE;\n    FirstScan := FALSE;\nELSE\n    IF NOT Mode THEN\n        (* 手动模式：正反转按钮控制，软件互锁 *)\n        State := P11_IDLE;\n        IF ForwardButton AND NOT ReverseButton THEN\n            MotorForward := TRUE;\n            MotorReverse := FALSE;\n        ELSIF ReverseButton AND NOT ForwardButton THEN\n            MotorForward := FALSE;\n            MotorReverse := TRUE;\n        ELSE\n            MotorForward := FALSE;\n            MotorReverse := FALSE;\n        END_IF;\n    ELSE\n        (* 自动模式：A -> B -> C 顺序推进 *)\n        MotorForward := FALSE;\n        MotorReverse := FALSE;\n\n        CASE State OF\n            P11_IDLE:\n                IF SensorA AND ButtonATrig.Q THEN\n                    State := P11_MOVE_TO_B;\n                    MotorForward := TRUE;\n                    MotorReverse := FALSE;\n                END_IF;\n\n            P11_MOVE_TO_B:\n                IF SensorB THEN\n                    State := P11_WAIT_B;\n                    MotorForward := FALSE;\n                    MotorReverse := FALSE;\n                ELSE\n                    MotorForward := TRUE;\n                    MotorReverse := FALSE;\n                END_IF;\n\n            P11_WAIT_B:\n                IF NOT SensorB THEN\n                    State := P11_IDLE;\n                    MotorForward := FALSE;\n                    MotorReverse := FALSE;\n                ELSIF SensorB AND ButtonBTrig.Q THEN\n                    State := P11_MOVE_TO_C;\n                    MotorForward := TRUE;\n                    MotorReverse := FALSE;\n                END_IF;\n\n            P11_MOVE_TO_C:\n                IF SensorC THEN\n                    State := P11_WAIT_C;\n                    MotorForward := FALSE;\n                    MotorReverse := FALSE;\n                ELSE\n                    MotorForward := TRUE;\n                    MotorReverse := FALSE;\n                END_IF;\n\n            P11_WAIT_C:\n                IF NOT SensorC THEN\n                    State := P11_IDLE;\n                    MotorForward := FALSE;\n                    MotorReverse := FALSE;\n                ELSIF SensorC AND ButtonCTrig.Q THEN\n                    CompletionLight := TRUE;\n                    State := P11_DONE;\n                END_IF;\n\n            P11_DONE:\n                IF NOT SensorC THEN\n                    CompletionLight := FALSE;\n                    State := P11_IDLE;\n                END_IF;\n        END_CASE;\n    END_IF;\n\n    (* 硬互锁：正转与反转不能同时为 TRUE *)\n    IF MotorForward AND MotorReverse THEN\n        MotorForward := FALSE;\n        MotorReverse := FALSE;\n    END_IF;\n\n    (* 完成灯保持到 C 站产品离开；无产品时强制熄灭 *)\n    IF NOT SensorC THEN\n        CompletionLight := FALSE;\n    END_IF;\nEND_IF;\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "fail",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "fail",
+      "errors": [
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 32,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 33,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 34,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 37,
+          "message": "需要程序名、函数或功能块实例替代 'ButtonATrig'",
+          "raw": "需要程序名、函数或功能块实例替代 'ButtonATrig'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 38,
+          "message": "需要程序名、函数或功能块实例替代 'ButtonBTrig'",
+          "raw": "需要程序名、函数或功能块实例替代 'ButtonBTrig'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 39,
+          "message": "需要程序名、函数或功能块实例替代 'ButtonCTrig'",
+          "raw": "需要程序名、函数或功能块实例替代 'ButtonCTrig'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 68,
+          "message": "此处需要有类型 'BOOL'的表达式",
+          "raw": "此处需要有类型 'BOOL'的表达式"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 68,
+          "message": "未知的类型: 'ButtonATrig.Q'",
+          "raw": "未知的类型: 'ButtonATrig.Q'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 68,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 68,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 89,
+          "message": "此处需要有类型 'BOOL'的表达式",
+          "raw": "此处需要有类型 'BOOL'的表达式"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 89,
+          "message": "未知的类型: 'ButtonBTrig.Q'",
+          "raw": "未知的类型: 'ButtonBTrig.Q'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 89,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 89,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 110,
+          "message": "此处需要有类型 'BOOL'的表达式",
+          "raw": "此处需要有类型 'BOOL'的表达式"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 110,
+          "message": "未知的类型: 'ButtonCTrig.Q'",
+          "raw": "未知的类型: 'ButtonCTrig.Q'"
+        },
+        {
+          "code": "E_TYPE",
+          "severity": "error",
+          "line": 110,
+          "message": "未知的类型: 'R_TRIG'",
+          "raw": "未知的类型: 'R_TRIG'"
+        },
+        {
+          "code": "E_COMPILE",
+          "severity": "error",
+          "line": 110,
+          "message": "'' 不包含'Q'的定义",
+          "raw": "'' 不包含'Q'的定义"
+        }
+      ],
+      "elapsed_s": 23.547,
+      "evidence_kind": "live"
+    },
+    "errors": [
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 32,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 33,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 34,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 37,
+        "message": "需要程序名、函数或功能块实例替代 'ButtonATrig'",
+        "raw": "需要程序名、函数或功能块实例替代 'ButtonATrig'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 38,
+        "message": "需要程序名、函数或功能块实例替代 'ButtonBTrig'",
+        "raw": "需要程序名、函数或功能块实例替代 'ButtonBTrig'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 39,
+        "message": "需要程序名、函数或功能块实例替代 'ButtonCTrig'",
+        "raw": "需要程序名、函数或功能块实例替代 'ButtonCTrig'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 68,
+        "message": "此处需要有类型 'BOOL'的表达式",
+        "raw": "此处需要有类型 'BOOL'的表达式"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 68,
+        "message": "未知的类型: 'ButtonATrig.Q'",
+        "raw": "未知的类型: 'ButtonATrig.Q'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 68,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 68,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 89,
+        "message": "此处需要有类型 'BOOL'的表达式",
+        "raw": "此处需要有类型 'BOOL'的表达式"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 89,
+        "message": "未知的类型: 'ButtonBTrig.Q'",
+        "raw": "未知的类型: 'ButtonBTrig.Q'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 89,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 89,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 110,
+        "message": "此处需要有类型 'BOOL'的表达式",
+        "raw": "此处需要有类型 'BOOL'的表达式"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 110,
+        "message": "未知的类型: 'ButtonCTrig.Q'",
+        "raw": "未知的类型: 'ButtonCTrig.Q'"
+      },
+      {
+        "code": "E_TYPE",
+        "severity": "error",
+        "line": 110,
+        "message": "未知的类型: 'R_TRIG'",
+        "raw": "未知的类型: 'R_TRIG'"
+      },
+      {
+        "code": "E_COMPILE",
+        "severity": "error",
+        "line": 110,
+        "message": "'' 不包含'Q'的定义",
+        "raw": "'' 不包含'Q'的定义"
+      }
+    ],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "skipped",
+    "total": 0,
+    "passed": 0,
+    "passed_ids": [],
+    "failures": []
+  },
+  "repair_rounds": 0,
+  "token_count": 15552,
+  "tag": "candidate_1"
+}

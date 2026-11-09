@@ -1,0 +1,39 @@
+{
+  "source": "(*\n需求原文：\nWrite a function block FB that checks for rising and falling edges in each bit of a dual-word (DWord) input value every cycle. The function block should be able to detect and report changes, rising edges, and falling edges in the input value.\n\n中文摘要：双字（DWORD）逐位边沿检测：每周期比较本期与上期值，\n输出变化标志、上升沿位、下降沿位及其个数。\n扫描周期：20 ms。\n\n完整形式化规约：\nC2: G(hasChanged -> (hasRisingEdges || hasFallingEdges))\nC2b: G((hasRisingEdges || hasFallingEdges) -> hasChanged)\nC7: G(!hasChanged -> X(!hasRisingEdges && !hasFallingEdges))\nC8: G(hasChanged == FALSE -> noOfRisingBits == 0 && noOfFallingBits == 0)\nC10: G[0,1](!hasChanged && !hasRisingEdges && !hasFallingEdges && noOfRisingBits == 0 && noOfFallingBits == 0)\n\n约束：\nK1 每周期比较本周期 value 与上一周期保存的 value。\nK2 risingBits 仅标记 0 到 1；fallingBits 仅标记 1 到 0。\nK3 两个计数分别等于对应边沿位图中 1 的个数。\nK4 首周期三个标志均为 FALSE，避免上电误报。\n\n语义冲突报告：\nC7 禁止无变化周期之后的下一周期报告任何边沿，即使输入确实变化，\n与 K1、K2 及逐周期边沿检测需求冲突。\n结合 C2 和首周期无变化，C7 会使之后所有周期都无法报告变化。\n若 G[0,1] 包含扫描索引 0 和 1，C10 要求前两个周期均不报告变化，\n与 K4 仅抑制首周期及第二周期按 K1、K2 检测真实变化冲突。\n实现选择遵循 K1 至 K4：仅首周期抑制，随后逐周期检测。\n不声称同时满足上述互相冲突的全部形式化条款。\n\n修改说明：\n增加上一周期值和首周期状态；每周期重置输出，计算两类边沿位图，\n逐位统计数量，最后保存本周期输入。未新增或修改外部接口。\n\n验证状态：\n当前对话未提供可执行的测试环境或已配置测试命令，\n因此未运行真实编译或逐周期测试；不声称已经验证正确。\n*)\n\nFUNCTION_BLOCK FB_P02\nVAR_INPUT\n    value : DWORD;\nEND_VAR\nVAR_OUTPUT\n    hasChanged : BOOL := FALSE;\n    hasRisingEdges : BOOL := FALSE;\n    risingBits : DWORD := DWORD#16#00000000;\n    noOfRisingBits : USINT := USINT#0;\n    hasFallingEdges : BOOL := FALSE;\n    fallingBits : DWORD := DWORD#16#00000000;\n    noOfFallingBits : USINT := USINT#0;\nEND_VAR\nVAR\n    lastValue : DWORD := DWORD#16#00000000;\n    initialized : BOOL := FALSE;\n    currentValue : DWORD := DWORD#16#00000000;\n    changedBits : DWORD := DWORD#16#00000000;\n    bitMask : DWORD := DWORD#16#00000001;\n    bitIndex : INT := INT#0;\nEND_VAR\n\ncurrentValue := value;\n\nhasChanged := FALSE;\nhasRisingEdges := FALSE;\nrisingBits := DWORD#16#00000000;\nnoOfRisingBits := USINT#0;\nhasFallingEdges := FALSE;\nfallingBits := DWORD#16#00000000;\nnoOfFallingBits := USINT#0;\nchangedBits := DWORD#16#00000000;\n\nIF initialized THEN\n    changedBits := currentValue XOR lastValue;\n    risingBits := changedBits AND currentValue;\n    fallingBits := changedBits AND lastValue;\n\n    hasChanged := changedBits <> DWORD#16#00000000;\n    hasRisingEdges := risingBits <> DWORD#16#00000000;\n    hasFallingEdges := fallingBits <> DWORD#16#00000000;\n\n    bitMask := DWORD#16#00000001;\n    FOR bitIndex := INT#0 TO INT#31 DO\n        IF (risingBits AND bitMask) <> DWORD#16#00000000 THEN\n            noOfRisingBits := noOfRisingBits + USINT#1;\n        END_IF;\n        IF (fallingBits AND bitMask) <> DWORD#16#00000000 THEN\n            noOfFallingBits := noOfFallingBits + USINT#1;\n        END_IF;\n        bitMask := SHL(bitMask, INT#1);\n    END_FOR;\nELSE\n    initialized := TRUE;\nEND_IF;\n\nlastValue := currentValue;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.25,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 22.047,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "pass",
+    "total": 6,
+    "passed": 6,
+    "passed_ids": [
+      "P02-01",
+      "P02-02",
+      "P02-03",
+      "P02-04",
+      "P02-05",
+      "P02-06"
+    ],
+    "failures": [],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 0,
+  "tag": "baseline"
+}

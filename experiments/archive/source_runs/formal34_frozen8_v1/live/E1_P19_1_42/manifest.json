@@ -1,0 +1,102 @@
+{
+  "fingerprint": "991d0f6deea993dda43fa5e37c8407c257f13c387100ee603d9574ceded5c9bb",
+  "execution_mode": "live",
+  "run_id": "E1_P19_1_42",
+  "config": {
+    "config_version": "1.0",
+    "candidates": 3,
+    "temperatures": [
+      0.2,
+      0.6,
+      0.9
+    ],
+    "max_repairs": 5,
+    "stagnation_rounds": 2,
+    "task_timeout_s": 900,
+    "context_budget": 6000,
+    "total_token_budget": 100000,
+    "concurrency": 2,
+    "fixture_scenario": "repair",
+    "provider": {
+      "base_url": "https://www.dmxapi.cn/v1",
+      "key_env": "DMXAPI_API_KEY",
+      "request_timeout_s": 240,
+      "send_temperature": false,
+      "send_seed": false,
+      "max_output_tokens": null
+    },
+    "tools": {
+      "fast": {
+        "command": [
+          "E:/wttttt/_plc_tools/beremiz-1.5.0/matiec/iec2c.exe",
+          "-f",
+          "-I",
+          "E:/wttttt/_plc_tools/beremiz-1.5.0/matiec/lib",
+          "-T",
+          "{artifact_dir}",
+          "{source}"
+        ],
+        "timeout_s": 3,
+        "kind": "matiec"
+      },
+      "authoritative": {
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Programs/Python/Python312/python.exe",
+          "agent/scripts/codesys_bridge.py",
+          "--source",
+          "{source}",
+          "--result",
+          "{result}",
+          "--task-card",
+          "{task_card}",
+          "--exe",
+          "E:/wttttt/New Folder/CODESYS/Common/CODESYS.exe",
+          "--profile",
+          "CODESYS V3.5 SP22 Patch 4",
+          "--template",
+          "agent/templates/compile_template.project",
+          "--application",
+          "Application"
+        ],
+        "timeout_s": 90
+      },
+      "test": {
+        "command": [
+          "C:/Users/Administrator/AppData/Local/Programs/Python/Python312/python.exe",
+          "agent/scripts/member4_test.py",
+          "--source",
+          "{source}",
+          "--result",
+          "{result}",
+          "--task-card",
+          "{task_card}",
+          "--cases-dir",
+          "{cases_dir}",
+          "--artifact-dir",
+          "{artifact_dir}",
+          "--exe",
+          "E:/wttttt/New Folder/CODESYS/Common/CODESYS.exe",
+          "--profile",
+          "CODESYS V3.5 SP22 Patch 4"
+        ],
+        "timeout_s": 630,
+        "cases_dir": "tests/cases"
+      },
+      "verify": {
+        "command": [],
+        "timeout_s": 90
+      },
+      "unsupported_types": [
+        "VARIANT"
+      ],
+      "unsupported_test_tasks": []
+    },
+    "baseline": {
+      "kind": "aider",
+      "command": [
+        "E:/wttttt/_plc_tools/aider_venv/Scripts/aider.exe"
+      ],
+      "timeout_s": 900
+    }
+  }
+}

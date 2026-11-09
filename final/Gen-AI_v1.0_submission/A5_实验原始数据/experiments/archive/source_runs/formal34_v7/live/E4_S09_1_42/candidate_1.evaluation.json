@@ -1,0 +1,58 @@
+{
+  "source": "FUNCTION_BLOCK FB_S09\nVAR_INPUT\n    StartCIP : BOOL;\n    StepDone : BOOL;\n    EStop_NC : BOOL;\nEND_VAR\nVAR_OUTPUT\n    WaterValve : BOOL := FALSE;\n    LyeValve : BOOL := FALSE;\n    RinseValve : BOOL := FALSE;\n    PumpRun : BOOL := FALSE;\n    StepNo : INT := 0;\n    Status : WORD := WORD#16#0000;\nEND_VAR\nVAR\n    StepTicks : UINT := UINT#0;\n    StartCIPLast : BOOL := FALSE;\n    StepDoneLast : BOOL := FALSE;\n    StartRise : BOOL := FALSE;\n    DoneRise : BOOL := FALSE;\nEND_VAR\n\n(*\n    待审语义冲突，不能声称全部规约同时满足：\n    1. 原文仅明确 Step 2 可由 StepDone 提前结束；K4 则允许\n       当前任意步提前结束。本实现保留原文固定水洗、清水时长，\n       仅 Step 2 接受 StepDone 上升沿，K4 的其他解释待审。\n    2. C5 使用 StartCIP 电平且未限定急停正常，与上升沿启动及\n       急停优先相冲突。本实现只在空闲且急停正常时接受启动沿。\n    3. C10 若约束首次执行后的输出始终空闲，则与首次扫描\n       StartCIP 上升沿立即启动相冲突。本实现采用所给初态，\n       首次扫描仍执行正常逻辑，不额外屏蔽启动沿。\n    4. K1 的正常顺序不包含急停/非法步序直接归零；\n       此处按明示安全要求将其视为安全中断。\n\n    每次调用代表 20 ms。\n    入步扫描计数为零；随后经过 1500/3000/1500 次调用转步，\n    对应 30/60/30 s。每次调用最多执行一次正常步序转换。\n    Status 表示当前扫描状态，急停解除且步序合法时恢复正常。\n    本源码未声称经过编译或逐周期测试验证。\n*)\n\n(* 每次扫描都更新边沿记忆，急停期间的启动沿不予保存。 *)\nStartRise := StartCIP AND NOT StartCIPLast;\nDoneRise := StepDone AND NOT StepDoneLast;\nStartCIPLast := StartCIP;\nStepDoneLast := StepDone;\n\n(* 先关闭输出，再由最终步号统一映射，避免阀门重叠及泵空转。 *)\nWaterValve := FALSE;\nLyeValve := FALSE;\nRinseValve := FALSE;\nPumpRun := FALSE;\nStatus := WORD#16#0000;\n\nIF NOT EStop_NC THEN\n    StepNo := 0;\n    StepTicks := UINT#0;\n    Status := WORD#16#8902;\nELSIF (StepNo < 0) OR (StepNo > 3) THEN\n    StepNo := 0;\n    StepTicks := UINT#0;\n    Status := WORD#16#8901;\nELSE\n    CASE StepNo OF\n        0:\n            StepTicks := UINT#0;\n            IF StartRise THEN\n                StepNo := 1;\n            END_IF;\n\n        1:\n            IF StepTicks < UINT#1500 THEN\n                StepTicks := StepTicks + UINT#1;\n            END_IF;\n            IF StepTicks >= UINT#1500 THEN\n                StepNo := 2;\n                StepTicks := UINT#0;\n            END_IF;\n\n        2:\n            IF StepTicks < UINT#3000 THEN\n                StepTicks := StepTicks + UINT#1;\n            END_IF;\n            IF DoneRise OR (StepTicks >= UINT#3000) THEN\n                StepNo := 3;\n                StepTicks := UINT#0;\n            END_IF;\n\n        3:\n            IF StepTicks < UINT#1500 THEN\n                StepTicks := StepTicks + UINT#1;\n            END_IF;\n            IF StepTicks >= UINT#1500 THEN\n                StepNo := 0;\n                StepTicks := UINT#0;\n            END_IF;\n    END_CASE;\nEND_IF;\n\nIF EStop_NC AND (Status = WORD#16#0000) THEN\n    CASE StepNo OF\n        1:\n            WaterValve := TRUE;\n        2:\n            LyeValve := TRUE;\n        3:\n            RinseValve := TRUE;\n    END_CASE;\nEND_IF;\n\nPumpRun := WaterValve OR LyeValve OR RinseValve;\n\nEND_FUNCTION_BLOCK\n",
+  "compile": {
+    "status": "pass",
+    "fast": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 0.234,
+      "evidence_kind": "live"
+    },
+    "authoritative": {
+      "status": "pass",
+      "errors": [],
+      "elapsed_s": 23.094,
+      "evidence_kind": "live"
+    },
+    "errors": [],
+    "authoritative_available": true,
+    "evidence_kind": "live"
+  },
+  "test": {
+    "status": "fail",
+    "total": 6,
+    "passed": 3,
+    "passed_ids": [
+      "S09-01",
+      "S09-03",
+      "S09-05"
+    ],
+    "failures": [
+      {
+        "case_id": "S09-02",
+        "cycle": 3,
+        "signal": "WaterValve",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S09-04",
+        "cycle": 2,
+        "signal": "WaterValve",
+        "expected": false,
+        "actual": true
+      },
+      {
+        "case_id": "S09-06",
+        "cycle": 2,
+        "signal": "WaterValve",
+        "expected": false,
+        "actual": true
+      }
+    ],
+    "evidence_kind": "live"
+  },
+  "repair_rounds": 0,
+  "token_count": 2963,
+  "tag": "candidate_1"
+}

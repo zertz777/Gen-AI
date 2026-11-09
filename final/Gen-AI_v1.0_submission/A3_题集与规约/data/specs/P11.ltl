@@ -1,0 +1,12 @@
+# task: P11
+# meta: medium / C 状态机与节拍
+# spec: version 1.0, updated 2026-10-30, scan cycle 20 ms
+# 条款号对齐任务书 3.4 的条款库 C1—C10；[a,b] 单位为扫描周期。
+#
+# note: 题库未提供急停信号，C1 无法写成可判定的公式；停止语义由 C4（正反转互斥）与 C6（完成灯保持）覆盖，急停行为由 tests/cases/P11.csv 的异常用例验证。
+
+C4: G(!(MotorForward && MotorReverse))    -- 正转与反转互斥（手动模式下的硬约束）（K1）
+C2: G(MotorForward -> !MotorReverse)    -- 正转的许可是反转未动作（K1）
+C3: G(CompletionLight -> SensorC)    -- 完成灯只在 C 站到位后点亮（顺序推进的必要条件）（K2/K4）
+C6: G(CompletionLight -> (CompletionLight W !SensorC))    -- 完成灯保持到产品离开 C 站（K4）
+C10: G[0,1](!MotorForward && !MotorReverse && !CompletionLight)    -- 上电首周期无正反转、完成灯灭（初态）

@@ -1,0 +1,4 @@
+{"ts": "2026-10-31T11:44:41.831815+00:00", "event": "evaluation", "tag": "candidate_1", "compile_status": "fail", "test_status": "skipped", "test_passed": 0, "test_total": 0}
+{"ts": "2026-10-31T11:46:34.153855+00:00", "event": "evaluation", "tag": "candidate_2", "compile_status": "fail", "test_status": "skipped", "test_passed": 0, "test_total": 0}
+{"ts": "2026-10-31T11:49:00.957119+00:00", "event": "evaluation", "tag": "candidate_3", "compile_status": "fail", "test_status": "skipped", "test_passed": 0, "test_total": 0}
+{"ts": "2026-10-31T11:49:00.957119+00:00", "event": "stop", "reason": "budget"}

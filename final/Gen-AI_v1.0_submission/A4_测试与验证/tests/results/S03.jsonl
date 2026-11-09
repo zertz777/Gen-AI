@@ -1,0 +1,4 @@
+{"task_id": "S03", "case_id": "S03-01", "status": "pass", "mismatch": null, "latency_s": 0.001}
+{"task_id": "S03", "case_id": "S03-02", "status": "pass", "mismatch": null, "latency_s": 0.0}
+{"task_id": "S03", "case_id": "S03-03", "status": "pass", "mismatch": null, "latency_s": 0.0}
+{"task_id": "S03", "case_id": "S03-04", "status": "pass", "mismatch": null, "latency_s": 0.0}
